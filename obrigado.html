@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pedido confirmado · Escala 5x2 Pronta</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0F1B33">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900:#0B1428; --navy-800:#0F1B33; --navy-700:#16264A; --navy-600:#22345E;
+    --gold:#D4A72C; --gold-dark:#B88E1E; --gold-soft:rgba(212,167,44,.14);
+    --text-on-dark:#E7ECF5; --muted-on-dark:#A3AEC6;
+    --ink:#12203D; --ink-soft:#3B4866; --muted:#64708A; --line:#DDE2EC; --field:#F4F6FA; --paper:#fff; --wash:#F5F7FB;
+    --cost:#C8102E; --rest:#1F8A70; --rest-wash:#E6F4F0;
+    --serif:"Playfair Display", Georgia, serif; --sans:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; background:var(--wash); color:var(--ink); font:16px/1.6 var(--sans); }
+  header { background:radial-gradient(900px 500px at 85% 0%, rgba(212,167,44,.18), transparent 60%), linear-gradient(180deg, var(--navy-900), var(--navy-800)); color:var(--text-on-dark); padding:40px 20px 56px; }
+  .wrap { max-width:720px; margin:0 auto; }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:700; color:#fff; margin-bottom:28px; }
+  .brand .b { background:var(--gold); color:var(--navy-900); font-weight:800; font-size:13px; padding:4px 9px; border-radius:8px; }
+  .tag { display:inline-flex; align-items:center; gap:8px; background:var(--rest-wash); color:var(--rest); font-weight:700; font-size:13px; padding:6px 12px; border-radius:999px; }
+  h1 { font-family:var(--serif); font-size:clamp(30px, 6vw, 44px); line-height:1.08; margin:16px 0 12px; color:#fff; }
+  h1 em { font-style:normal; color:var(--gold); }
+  header p { color:var(--muted-on-dark); font-size:17px; margin:0; max-width:560px; }
+  .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:28px; }
+  .step { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:14px; font-size:14px; color:var(--text-on-dark); }
+  .step b { display:block; color:var(--gold); font-size:12px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:6px; }
+  @media (max-width:560px) { .steps { grid-template-columns:1fr; } }
+
+  main { padding:0 20px 60px; }
+  .card { background:var(--paper); border-radius:20px; box-shadow:0 20px 60px rgba(11,20,40,.12); padding:28px 24px; margin-top:-28px; }
+  h2 { font-family:var(--serif); font-size:24px; margin:0 0 6px; }
+  .sub { color:var(--muted); margin:0 0 22px; font-size:15px; }
+  fieldset { border:0; padding:0; margin:0 0 26px; }
+  legend { font-weight:700; font-size:15px; margin-bottom:12px; display:flex; align-items:center; gap:10px; }
+  legend span { background:var(--navy-800); color:#fff; font-size:12px; font-weight:700; width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; }
+  label { display:block; font-size:13px; font-weight:600; color:var(--ink-soft); margin-bottom:6px; }
+  input[type=text], input[type=tel], input[type=email], input[type=number], select, textarea { width:100%; border:1.5px solid var(--line); background:var(--field); border-radius:12px; padding:12px 14px; font:inherit; font-size:16px; color:var(--ink); }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--gold); background:#fff; }
+  textarea { min-height:90px; resize:vertical; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:560px) { .row { grid-template-columns:1fr; } }
+  .f { margin-bottom:14px; }
+  .hint { font-size:12px; color:var(--muted); margin-top:5px; }
+
+  table.dias { width:100%; border-collapse:separate; border-spacing:0 6px; }
+  table.dias th { text-align:left; font-size:12px; color:var(--muted); font-weight:600; padding:0 6px; }
+  table.dias td { padding:0 6px; vertical-align:middle; }
+  table.dias td:first-child { width:70px; font-weight:700; }
+  table.dias select { padding:9px 4px; font-size:14px; min-width:74px; }
+  table.dias input[type=number] { padding:9px 6px; font-size:14px; width:64px; text-align:center; }
+  .fechado { opacity:.45; }
+  .chk { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500; color:var(--ink); }
+  .chk input { width:18px; height:18px; accent-color:var(--navy-800); }
+
+  button { width:100%; border:0; border-radius:14px; padding:16px; font:inherit; font-weight:700; font-size:17px; color:#fff; background:linear-gradient(180deg, #2A9D83, var(--rest)); cursor:pointer; box-shadow:0 10px 24px rgba(31,138,112,.3); }
+  button:disabled { opacity:.6; cursor:default; }
+  .ok { text-align:center; padding:36px 10px; }
+  .ok .big { width:72px; height:72px; border-radius:50%; background:var(--rest-wash); color:var(--rest); font-size:36px; display:inline-flex; align-items:center; justify-content:center; margin-bottom:14px; }
+  .ok h2 { font-size:26px; }
+  .ok a { color:var(--navy-800); font-weight:700; }
+  footer { text-align:center; color:var(--muted); font-size:13px; padding:0 20px 40px; }
+  footer a { color:var(--muted); }
+  .err { color:var(--cost); font-size:14px; margin-top:10px; display:none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand"><span class="b">40h</span> Jornada 40h</div>
+    <span class="tag">✓ Pagamento confirmado</span>
+    <h1>Pedido recebido. Agora me conta como o seu negócio <em>funciona.</em></h1>
+    <p>Preencha o briefing abaixo (leva uns 3 minutos). É com essas informações que montamos a sua escala 5x2. Entrega em até <b style="color:#fff">48 horas úteis</b> por WhatsApp e e-mail.</p>
+    <div class="steps">
+      <div class="step"><b>Passo 1</b>Você preenche o briefing nesta página.</div>
+      <div class="step"><b>Passo 2</b>Montamos a escala com rodízio de folgas e cobertura de fim de semana.</div>
+      <div class="step"><b>Passo 3</b>Você recebe em PDF + planilha editável, com explicação de como aplicar.</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="card" id="card">
+      <form id="briefing" novalidate>
+        <h2>Briefing da escala</h2>
+        <p class="sub">Se não souber algum dado exato, coloque o mais próximo. A gente confirma pelo WhatsApp antes de fechar.</p>
+
+        <fieldset>
+          <legend><span>1</span> Seus dados</legend>
+          <div class="row">
+            <div class="f"><label>Seu nome</label><input type="text" name="nome" required autocomplete="name"></div>
+            <div class="f"><label>WhatsApp (com DDD)</label><input type="tel" name="whatsapp" required inputmode="tel" placeholder="(98) 99999-9999" autocomplete="tel"></div>
+          </div>
+          <div class="row">
+            <div class="f"><label>E-mail usado na compra</label><input type="email" name="email" required autocomplete="email"></div>
+            <div class="f"><label>Nome do negócio</label><input type="text" name="negocio" required placeholder="Ex.: Padaria Pão Quente"></div>
+          </div>
+          <div class="row">
+            <div class="f"><label>Tipo de negócio</label>
+              <select name="tipo"><option>Padaria</option><option>Restaurante ou lanchonete</option><option>Loja</option><option>Mercado</option><option>Farmácia</option><option>Salão ou barbearia</option><option>Outro</option></select></div>
+            <div class="f"><label>Cidade / UF</label><input type="text" name="cidade" placeholder="Ex.: São Luís / MA"></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend><span>2</span> Horário de funcionamento</legend>
+          <table class="dias">
+            <thead><tr><th></th><th>Abre</th><th>Fecha</th><th>Pessoas ao mesmo tempo</th></tr></thead>
+            <tbody id="dias"></tbody>
+          </table>
+          <p class="hint">Desmarque o dia em que não abre. "Pessoas ao mesmo tempo" = quantos funcionários precisam estar na loja juntos nesse dia. Se varia (manhã fraca, tarde cheia), use o maior número e explique no campo de observações.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend><span>3</span> Sua equipe</legend>
+          <div class="f"><label>Funcionários (um por linha: nome · função · restrição, se tiver)</label>
+            <textarea name="equipe" required placeholder="Ana · atendente · não pode domingo (igreja)&#10;Bruno · caixa · estuda à noite, só até 17h&#10;Carla · padeira · sem restrição"></textarea>
+            <div class="hint">Pode usar só o primeiro nome. Inclua você e sócios se também trabalham na escala.</div></div>
+          <div class="row">
+            <div class="f"><label>Dias de pico (mais movimento)</label><input type="text" name="pico" placeholder="Ex.: sexta à noite e sábado de manhã"></div>
+            <div class="f"><label>Salário médio (R$)</label><input type="number" name="salario_medio" inputmode="numeric" placeholder="1800"></div>
+          </div>
+          <div class="f"><label>Como você prefere resolver, se faltar gente?</label>
+            <select name="preferencia">
+              <option value="minimo_contratacao">Contratar o mínimo possível (ajustar escala e horários)</option>
+              <option value="contratar">Contratar quem precisar para manter tudo igual</option>
+              <option value="reduzir">Reduzir horário em dias fracos</option>
+              <option value="meio_periodo">Contratar meio período / fim de semana</option>
+            </select></div>
+          <div class="f"><label>Observações (feriados, revezamento de almoço, pessoas que não podem trabalhar juntas, etc.)</label><textarea name="observacoes"></textarea></div>
+        </fieldset>
+
+        <label class="chk f"><input type="checkbox" name="consent" checked required> Autorizo o uso desses dados para montar e entregar a minha escala. <a href="privacidade.html" target="_blank" style="color:var(--muted)">Privacidade</a></label>
+        <button type="submit" id="btn">Enviar briefing e iniciar minha escala</button>
+        <p class="err" id="err">Preencha nome, WhatsApp, e-mail, nome do negócio e a equipe.</p>
+      </form>
+
+      <div class="ok" id="ok" hidden>
+        <div class="big">✓</div>
+        <h2>Briefing recebido!</h2>
+        <p>Você vai receber um e-mail de confirmação agora e a escala pronta em até 48 horas úteis no WhatsApp <b id="okZap"></b>.</p>
+        <p>Dúvida ou mudança nos dados? Responda o e-mail ou escreva para <a href="mailto:calculadora40h@gmail.com">calculadora40h@gmail.com</a>.</p>
+      </div>
+    </div>
+  </div>
+</main>
+<footer>Jornada 40h · <a href="./">Calculadora</a> · <a href="privacidade.html">Privacidade</a></footer>
+
+<script>
+const CONFIG = {
+  webhookUrl: "https://script.google.com/macros/s/AKfycbw2emmFLgmIw_KBJK47i98oXQw3Z51eaFEVJE89r0oxS2FCQVITdwa8-g4BBY5mYg-JnQ/exec",
+  metaPixelId: "111763000796120",
+  valor: 77
+};
+/* Pixel: Purchase (a Kiwify também dispara no checkout; aqui fica como reforço com o mesmo valor) */
+if (CONFIG.metaPixelId) {
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq("init", CONFIG.metaPixelId); fbq("track", "PageView");
+}
+const q = new URLSearchParams(location.search);
+const $ = s => document.querySelector(s);
+/* Kiwify envia nome/e-mail/telefone/pedido por parâmetros quando configurado; preenchemos o que vier */
+const pre = { nome: q.get("name") || q.get("nome") || "", email: q.get("email") || "", whatsapp: q.get("phone") || q.get("telefone") || "", pedido: q.get("order_id") || q.get("pedido") || "" };
+for (const k of ["nome","email","whatsapp"]) if (pre[k]) document.querySelector(`[name=${k}]`).value = pre[k];
+
+/* tabela de dias */
+const DIAS = [["seg","Segunda"],["ter","Terça"],["qua","Quarta"],["qui","Quinta"],["sex","Sexta"],["sab","Sábado"],["dom","Domingo"]];
+const opts = () => { let h = ""; for (let m = 0; m < 24*60; m += 30) { const v = String(Math.floor(m/60)).padStart(2,"0") + ":" + String(m%60).padStart(2,"0"); h += `<option value="${v}">${v}</option>`; } return h; };
+$("#dias").innerHTML = DIAS.map(([k, n]) => `<tr data-dia="${k}">
+  <td><label class="chk"><input type="checkbox" name="aberto_${k}" ${k==="dom"?"":"checked"}> ${n.slice(0,3)}</label></td>
+  <td><select name="abre_${k}">${opts()}</select></td>
+  <td><select name="fecha_${k}">${opts()}</select></td>
+  <td><input type="number" name="pessoas_${k}" min="1" max="99" value="2" inputmode="numeric"></td></tr>`).join("");
+document.querySelectorAll("#dias tr").forEach(tr => {
+  const k = tr.dataset.dia, chk = tr.querySelector("input[type=checkbox]");
+  tr.querySelector(`[name=abre_${k}]`).value = "07:00";
+  tr.querySelector(`[name=fecha_${k}]`).value = k === "sab" ? "14:00" : "19:00";
+  const upd = () => { tr.querySelectorAll("select,input[type=number]").forEach(e => { e.disabled = !chk.checked; }); tr.classList.toggle("fechado", !chk.checked); };
+  chk.addEventListener("change", upd); upd();
+});
+
+$("#briefing").addEventListener("submit", async e => {
+  e.preventDefault();
+  const f = e.target, fd = new FormData(f);
+  const need = ["nome","whatsapp","email","negocio","equipe"];
+  if (need.some(n => !String(fd.get(n) || "").trim()) || !f.consent.checked) { $("#err").style.display = "block"; return; }
+  $("#err").style.display = "none"; $("#btn").disabled = true; $("#btn").textContent = "Enviando...";
+  const pedido = { tipo_registro: "pedido", pedido_kiwify: pre.pedido, valor: CONFIG.valor, pagina: location.href };
+  for (const [k, v] of fd.entries()) pedido[k] = v;
+  for (const [k] of DIAS) { pedido[`aberto_${k}`] = f[`aberto_${k}`].checked ? "sim" : "não"; }
+  for (const u of ["utm_source","utm_medium","utm_campaign","utm_content","utm_term"]) pedido[u] = q.get(u) || "";
+  try { await fetch(CONFIG.webhookUrl, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(pedido) }); } catch (err) {}
+  try { if (window.fbq) fbq("trackCustom", "BriefingEnviado", { tipo: pedido.tipo }); } catch (err) {}
+  $("#okZap").textContent = pedido.whatsapp; f.hidden = true; $("#ok").hidden = false; window.scrollTo({ top: 0, behavior: "smooth" });
+});
+</script>
+</body>
+</html>

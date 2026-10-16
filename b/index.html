@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quantas pessoas a mais o seu negócio vai precisar com o fim da 6x1?</title>
+<meta name="description" content="O fim da escala 6x1 foi aprovado. Calcule em 1 minuto quantos funcionários a mais o seu negócio vai precisar e receba sua escala 5x2 pronta.">
+<meta property="og:title" content="Quantas pessoas a mais o seu negócio vai precisar com o fim da 6x1?">
+<meta property="og:description" content="Calcule grátis em 1 minuto e receba sua escala 5x2 pronta em até 48 horas.">
+<meta name="theme-color" content="#0B1428">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-900: #0B1428;
+    --navy-800: #0F1B33;
+    --navy-700: #16264A;
+    --navy-600: #22345E;
+    --gold: #D4A72C;
+    --gold-dark: #B88E1E;
+    --gold-soft: rgba(212, 167, 44, .14);
+    --text: #E7ECF5;
+    --muted: #A3AEC6;
+    --line: rgba(255,255,255,.08);
+    --line-strong: rgba(255,255,255,.14);
+    --cost: #C8102E;
+    --cost-text: #F2566B;      /* o mesmo vermelho, clareado para ler sobre o navy */
+    --cost-wash: rgba(200,16,46,.16);
+    --rest: #1F8A70;
+    --rest-text: #4FCBAA;
+    --rest-wash: rgba(31,138,112,.18);
+    --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0; font: 16px/1.6 var(--sans); color: var(--text); background: var(--navy-900);
+    background-image:
+      radial-gradient(900px 520px at 88% -5%, rgba(212,167,44,.20), transparent 62%),
+      linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size: auto, 56px 56px, 56px 56px;
+    background-attachment: scroll;
+    padding-bottom: 84px; overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  @media (min-width: 960px) { body { padding-bottom: 0; } }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  .container { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 960px) { .container { padding: 0 24px; } }
+  h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; color: #fff; margin: 0; }
+
+  /* Barra do topo */
+  .topbar { position: sticky; top: 0; z-index: 20; background: rgba(11,20,40,.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+  .topbar .container { display: flex; align-items: center; justify-content: space-between; min-height: 60px; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; font-size: 16px; color: #fff; text-decoration: none; }
+  .brand .mark { width: 36px; height: 36px; border-radius: 10px; background: var(--gold); color: var(--navy-900); font-weight: 700; font-size: 13.5px; letter-spacing: -0.02em; display: grid; place-items: center; }
+  .badge { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(212,167,44,.45); background: var(--gold-soft); color: var(--gold); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+  @media (max-width: 420px) { .badge .long { display: none; } }
+
+  /* Hero */
+  .hero { padding: 56px 0 24px; }
+  @media (min-width: 960px) { .hero { padding: 96px 0 32px; } }
+  .hero h1 { font-size: clamp(38px, 6.2vw, 68px); line-height: 1.05; max-width: 15em; }
+  .hero h1 em { font-style: normal; color: var(--gold); }
+  .hero .sub { font-size: 18px; color: var(--muted); margin: 20px 0 28px; max-width: 32em; }
+  @media (min-width: 960px) { .hero .sub { font-size: 20px; } }
+
+  .start { display: grid; gap: 10px; max-width: 640px; }
+  @media (min-width: 640px) { .start { grid-template-columns: 1fr auto; } }
+  .start .sel { position: relative; }
+  .start select {
+    appearance: none; -webkit-appearance: none; width: 100%; min-height: 56px; font: 500 16px/1.2 var(--sans); color: #fff;
+    background: var(--navy-700); border: 1px solid var(--line-strong); border-radius: 14px; padding: 14px 44px 14px 16px; cursor: pointer;
+  }
+  .start select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
+  .start .sel::after { content: ""; position: absolute; right: 18px; top: 50%; width: 9px; height: 9px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-70%) rotate(45deg); pointer-events: none; }
+  .trust { margin: 14px 0 0; font-size: 14px; color: var(--muted); }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 56px; text-align: center; text-decoration: none; cursor: pointer; border: 0; border-radius: 14px;
+    font: 600 17px/1.2 var(--sans); padding: 14px 22px; color: var(--navy-900); background: var(--gold); box-shadow: 0 10px 28px rgba(212,167,44,.25); transition: background .15s ease, transform .15s ease; }
+  .btn:hover { background: #E2B53B; }
+  .btn:active { transform: translateY(1px); }
+  .btn.block { display: flex; flex-direction: column; gap: 2px; padding: 14px 18px; }
+  .btn small { font-size: 12.5px; font-weight: 500; opacity: .8; }
+  .btn.green { background: var(--rest); color: #fff; box-shadow: 0 10px 28px rgba(31,138,112,.25); }
+  .btn.green:hover { background: #25A083; }
+  @media (min-width: 640px) { .start .btn { width: auto; } }
+
+  /* Cards flutuantes */
+  .float-wrap { padding: 40px 0 8px; }
+  @media (min-width: 960px) { .float-wrap { padding: 56px 0 24px; } }
+  .cases { display: grid; gap: 14px; justify-items: center; }
+  .case { width: 100%; max-width: 360px; background: var(--navy-800); border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius); padding: 22px 22px 20px;
+    box-shadow: 0 30px 60px rgba(3,8,20,.5), 0 1px 0 rgba(255,255,255,.04) inset; position: relative; }
+  .case .who { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .case .tag { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 11px; font-size: 12.5px; font-weight: 600; background: rgba(255,255,255,.07); color: var(--text); border: 1px solid var(--line); }
+  .case .who span { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .case .num { font-size: 64px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: #fff; }
+  .case .num small { display: block; font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--muted); margin-top: 6px; }
+  .case p { margin: 12px 0 0; font-size: 15px; color: var(--text); }
+  .case p b { color: var(--cost-text); font-weight: 600; }
+  .case:nth-child(1) { transform: rotate(-2deg); }
+  .case:nth-child(3) { transform: rotate(2deg); }
+  @media (min-width: 960px) {
+    .cases { display: flex; justify-content: center; align-items: center; gap: 0; }
+    .case { width: 340px; }
+    .case:nth-child(1) { transform: rotate(-3deg) translateY(14px); margin-right: -10px; z-index: 1; }
+    .case:nth-child(2) { transform: none; z-index: 3; }
+    .case:nth-child(3) { transform: rotate(3deg) translateY(14px); margin-left: -10px; z-index: 2; }
+    @media (prefers-reduced-motion: no-preference) {
+      .case:nth-child(1) { animation: floatA 7s ease-in-out infinite; }
+      .case:nth-child(2) { animation: floatB 8s ease-in-out infinite; }
+      .case:nth-child(3) { animation: floatC 7.5s ease-in-out infinite; }
+    }
+  }
+  @keyframes floatA { 0%,100% { transform: rotate(-3deg) translateY(14px); } 50% { transform: rotate(-3deg) translateY(2px); } }
+  @keyframes floatB { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  @keyframes floatC { 0%,100% { transform: rotate(3deg) translateY(14px); } 50% { transform: rotate(3deg) translateY(2px); } }
+  .note { text-align: center; font-size: 13px; color: var(--muted); margin: 22px 0 0; }
+
+  /* Calculadora */
+  .calc-sec { padding: 40px 0 24px; }
+  @media (min-width: 960px) { .calc-sec { padding: 64px 0 40px; } }
+  .sec-head { text-align: center; max-width: 680px; margin: 0 auto 28px; }
+  .sec-head h2 { font-size: clamp(28px, 4.4vw, 40px); line-height: 1.1; }
+  .sec-head p { color: var(--muted); font-size: 17px; margin: 10px 0 0; }
+  .card { max-width: 680px; margin: 0 auto; background: var(--navy-800); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 24px 18px; box-shadow: 0 30px 70px rgba(3,8,20,.5); scroll-margin-top: 76px; }
+  @media (min-width: 640px) { .card { padding: 32px; } }
+  .progress { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 0 24px; }
+  .progress span { height: 4px; border-radius: 4px; background: rgba(255,255,255,.1); }
+  .progress span.on { background: var(--gold); }
+
+  .step { margin: 0 0 24px; padding: 0; border: 0; min-width: 0; }
+  .step legend { display: inline-flex; align-items: center; gap: 8px; padding: 0; margin: 0 0 12px; font-size: 15px; font-weight: 600; color: #fff; }
+  .step legend .n { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--gold-soft); color: var(--gold); font-size: 12.5px; font-weight: 700; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { position: relative; }
+  .chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .chip span { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: 12px; font-size: 15px; font-weight: 500; background: var(--navy-700); color: var(--text); user-select: none; transition: background .12s ease, border-color .12s ease; }
+  .chip input:checked + span { background: var(--gold); color: var(--navy-900); border-color: var(--gold); font-weight: 600; }
+  .chip input:focus-visible + span { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .chips.days .chip span { min-width: 48px; justify-content: center; padding: 10px 0; }
+  .hours { display: grid; gap: 8px; margin-top: 14px; }
+  .hours-row { display: grid; grid-template-columns: 80px 1fr 1fr; gap: 8px; align-items: center; font-size: 14.5px; color: var(--muted); }
+  .hours-row span { white-space: nowrap; }
+  label.field { display: block; margin-bottom: 14px; }
+  label.field > span { display: block; font-size: 13.5px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
+  input[type=time], input[type=number], input[type=text], input[type=email], input[type=tel], select.hsel {
+    font: inherit; font-size: 16px; color: #fff; background: var(--navy-700);
+    border: 1px solid var(--line-strong); border-radius: 12px; padding: 10px 14px; min-height: 48px; width: 100%; min-width: 0;
+  }
+  select.hsel { padding: 10px 8px; }
+  input::placeholder { color: rgba(163,174,198,.6); }
+  input:focus, select.hsel:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 3px var(--gold-soft); }
+  .money { position: relative; }
+  .money::before { content: "R$"; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 15px; }
+  .money input { padding-left: 42px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 360px) { .two { grid-template-columns: 1fr; } }
+  .secure { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+  .secure svg { width: 14px; height: 14px; }
+  .error { color: var(--cost-text); font-size: 14px; margin: 10px 0 0; min-height: 1em; text-align: center; }
+  .linkbtn { background: none; border: 0; padding: 10px; font: inherit; font-size: 14px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; display: block; margin: 10px auto 0; min-height: 44px; }
+
+  /* Resultado dentro do card */
+  .result { text-align: center; }
+  .result .label { font-size: 15px; color: var(--muted); margin: 0; }
+  .big { font-weight: 700; font-size: clamp(64px, 18vw, 96px); letter-spacing: -0.03em; line-height: 1; color: var(--cost-text); margin: 8px 0 0; }
+  .big.ok { color: var(--rest-text); }
+  .big .unit { display: block; font-size: 17px; font-weight: 600; letter-spacing: 0; color: var(--text); margin-top: 8px; }
+  .cost-line { font-size: 17px; margin: 14px 0 0; color: var(--text); }
+  .cost-line strong { color: var(--gold); font-weight: 600; }
+  .facts { color: var(--muted); font-size: 13.5px; margin: 10px 0 0; }
+  .divider { height: 1px; background: var(--line); margin: 24px 0; }
+  .gate h3, .report h3, .offer h3 { font-size: 22px; line-height: 1.25; margin: 0 0 6px; text-align: center; }
+  .gate p.lead { text-align: center; font-size: 14.5px; color: var(--muted); margin: 0 0 16px; }
+  .consent { display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: start; font-size: 12.5px; color: var(--muted); margin: 2px 0 16px; }
+  .consent input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--gold); }
+
+  .scen { border: 1px solid var(--line); background: rgba(255,255,255,.03); border-radius: 14px; padding: 14px 16px; margin-top: 10px; }
+  .scen-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .scen-head h4 { margin: 0; font-size: 16px; }
+  .scen-val { font-weight: 700; font-size: 17px; white-space: nowrap; color: var(--gold); }
+  .scen p { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+  .warn { display: inline-block; margin-top: 8px; font-size: 13px; color: var(--cost-text); background: var(--cost-wash); padding: 4px 9px; border-radius: 8px; }
+  .bridge { background: var(--rest-wash); border: 1px solid rgba(31,138,112,.35); border-radius: 12px; padding: 12px 14px; font-size: 15px; margin: 0 0 14px; }
+  .bridge b { color: #fff; }
+  .price { display: flex; justify-content: center; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 6px 0 2px; }
+  .price s { color: var(--muted); font-size: 18px; }
+  .price strong { font-size: 52px; line-height: 1; letter-spacing: -0.03em; color: #fff; }
+  .price span { font-size: 14px; color: var(--muted); }
+  .compare { text-align: center; font-size: 14px; color: var(--muted); margin: 4px 0 16px; }
+
+  /* Números */
+  .metrics { padding: 40px 0; }
+  @media (min-width: 960px) { .metrics { padding: 64px 0; } }
+  .metrics-grid { display: grid; gap: 12px; }
+  @media (min-width: 720px) { .metrics-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; } }
+  .metric { background: var(--navy-800); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 22px; }
+  .metric .v { font-size: 44px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: var(--gold); }
+  @media (min-width: 960px) { .metric .v { font-size: 52px; } }
+  .metric .v .arrow { color: var(--muted); font-weight: 500; margin: 0 4px; }
+  .metric b { display: block; margin-top: 12px; font-size: 16px; color: #fff; font-weight: 600; }
+  .metric p { margin: 4px 0 0; font-size: 14.5px; color: var(--muted); }
+
+  /* Oferta */
+  .offer-sec { padding: 24px 0 40px; }
+  @media (min-width: 960px) { .offer-sec { padding: 40px 0 64px; } }
+  .pricebox { max-width: 560px; margin: 0 auto; background: var(--navy-800); border: 1px solid rgba(212,167,44,.55); border-radius: var(--radius); padding: 28px 20px; box-shadow: 0 30px 70px rgba(3,8,20,.5), 0 0 0 6px rgba(212,167,44,.06); }
+  @media (min-width: 640px) { .pricebox { padding: 36px 32px; } }
+  .pricebox h3 { font-size: 26px; text-align: center; margin: 0 0 4px; }
+  .pricebox > p.tag { text-align: center; color: var(--muted); margin: 0 0 8px; }
+  .gets { list-style: none; padding: 0; margin: 18px 0 20px; }
+  .gets li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .gets li:last-child { border-bottom: 0; }
+  .gets svg { width: 20px; height: 20px; color: var(--rest-text); flex: none; margin-top: 2px; }
+  .gets b { display: block; color: #fff; font-weight: 600; }
+  .gets span { color: var(--muted); font-size: 14px; }
+  .limited { text-align: center; font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+  .guar { display: flex; align-items: center; gap: 12px; justify-content: center; margin: 18px 0 0; padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.04); font-size: 14px; color: var(--text); text-align: left; }
+  .guar svg { width: 22px; height: 22px; color: var(--gold); flex: none; }
+  .guar b { color: #fff; }
+
+  /* FAQ */
+  .faq { padding: 24px 0 48px; }
+  .faq .narrow { max-width: 720px; margin: 0 auto; }
+  .faq h2 { font-size: clamp(26px, 4vw, 34px); text-align: center; margin: 0 0 24px; }
+  details { border: 1px solid var(--line); background: var(--navy-800); border-radius: 14px; padding: 0 18px; margin-bottom: 10px; }
+  summary { cursor: pointer; font-weight: 600; font-size: 16px; color: #fff; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 56px; padding: 14px 0; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-size: 24px; font-weight: 400; line-height: 1; color: var(--gold); flex: none; }
+  details[open] summary::after { content: "−"; }
+  details p { margin: 0; padding: 0 0 18px; color: var(--muted); font-size: 15px; }
+
+  footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; padding: 28px 0 36px; background: rgba(11,20,40,.6); }
+  footer .row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin-bottom: 16px; }
+  footer .links { display: flex; gap: 20px; flex-wrap: wrap; }
+  footer .links a { color: var(--text); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+  footer .links a:hover { text-decoration: underline; }
+  footer p { margin: 0 0 8px; max-width: 70em; }
+
+  .sticky { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: rgba(11,20,40,.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); transform: translateY(110%); transition: transform .25s ease; }
+  .sticky.show { transform: none; }
+  .sticky .btn { max-width: 560px; margin: 0 auto; display: flex; min-height: 52px; font-size: 16px; }
+  @media (min-width: 960px) { .sticky { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .sticky, .btn { transition: none; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4" stroke-linecap="round"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+</svg>
+
+<div class="topbar">
+  <div class="container">
+    <a class="brand" href="#" data-scroll="h1" aria-label="Jornada 40h, início da página"><span class="mark">40h</span>Jornada 40h</a>
+    <span class="badge">Aprovado no Senado<span class="long"> · 75×1</span></span>
+  </div>
+</div>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="container">
+    <h1 id="h1">O fim da 6x1 foi aprovado. <em>Quantas pessoas a mais o seu negócio vai precisar?</em></h1>
+    <p class="sub">Faça a conta grátis em 1 minuto. Sem cadastro para ver o resultado.</p>
+    <form class="start" id="start" novalidate>
+      <div class="sel">
+        <select id="heroTipo" aria-label="Tipo de negócio">
+          <option value="" selected disabled>Tipo de negócio</option>
+          <option value="Padaria">Padaria</option>
+          <option value="Restaurante ou lanchonete">Restaurante ou lanchonete</option>
+          <option value="Loja">Loja</option>
+          <option value="Mercado">Mercado</option>
+          <option value="Farmácia">Farmácia</option>
+          <option value="Salão ou barbearia">Salão ou barbearia</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <button class="btn" type="submit" id="heroBtn">Calcular agora →</button>
+    </form>
+    <p class="trust">Resultado em 1 minuto · Grátis · Garantia de 7 dias na escala pronta</p>
+  </div>
+</header>
+
+<!-- CARDS FLUTUANTES (simulações calculadas com a mesma conta) -->
+<section class="float-wrap" aria-label="Simulações">
+  <div class="container">
+    <div class="cases" id="cases"></div>
+    <p class="note">Simulações com salários e horários típicos. O seu resultado depende dos seus números.</p>
+  </div>
+</section>
+
+<!-- CALCULADORA -->
+<section class="calc-sec">
+  <div class="container">
+    <div class="sec-head">
+      <h2>Calcule seu custo grátis</h2>
+      <p>3 perguntas, resultado na hora. Depois você compara contratar, pagar hora extra e reduzir o horário.</p>
+    </div>
+
+    <div class="card" id="card">
+      <!-- Etapa 1: calculadora -->
+      <form id="calc" novalidate>
+        <div class="progress" aria-hidden="true"><span class="on" id="p1"></span><span id="p2"></span><span id="p3"></span></div>
+        <fieldset class="step">
+          <legend><span class="n">1</span>Qual é o seu negócio?</legend>
+          <div class="chips" id="tipo">
+            <label class="chip"><input type="radio" name="tipo" value="Padaria"><span>Padaria</span></label>
+            <label class="chip"><input type="radio" name="tipo" value="Restaurante ou lanchonete"><span>Restaurante</span></label>
+            <label class="chip"><input type="radio" name="tipo" value="Loja"><span>Loja</span></label>
+            <label class="chip"><input type="radio" name="tipo" value="Mercado"><span>Mercado</span></label>
+            <label class="chip"><input type="radio" name="tipo" value="Farmácia"><span>Farmácia</span></label>
+            <label class="chip"><input type="radio" name="tipo" value="Salão ou barbearia"><span>Salão</span></label>
+            <label class="chip"><input type="radio" name="tipo" value="Outro"><span>Outro</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="step">
+          <legend><span class="n">2</span>Quando você fica aberto?</legend>
+          <div class="chips days" id="dias">
+            <label class="chip"><input type="checkbox" name="dia" value="1" checked><span>Seg</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="2" checked><span>Ter</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="3" checked><span>Qua</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="4" checked><span>Qui</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="5" checked><span>Sex</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="6" checked><span>Sáb</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="0"><span>Dom</span></label>
+          </div>
+          <div class="hours">
+            <div class="hours-row" id="rowSemana"><span>Seg a sex</span><select class="hsel" id="semAbre" data-v="07:00" aria-label="Abre de segunda a sexta"></select><select class="hsel" id="semFecha" data-v="19:00" aria-label="Fecha de segunda a sexta"></select></div>
+            <div class="hours-row" id="rowSab"><span>Sábado</span><select class="hsel" id="sabAbre" data-v="07:00" aria-label="Abre no sábado"></select><select class="hsel" id="sabFecha" data-v="14:00" aria-label="Fecha no sábado"></select></div>
+            <div class="hours-row" id="rowDom" hidden><span>Domingo</span><select class="hsel" id="domAbre" data-v="07:00" aria-label="Abre no domingo"></select><select class="hsel" id="domFecha" data-v="12:00" aria-label="Fecha no domingo"></select></div>
+          </div>
+        </fieldset>
+        <fieldset class="step">
+          <legend><span class="n">3</span>Sua equipe</legend>
+          <label class="field"><span>Pessoas trabalhando ao mesmo tempo</span>
+            <input type="number" id="simult" inputmode="numeric" min="1" max="500" placeholder="Ex.: 3"></label>
+          <div class="two">
+            <label class="field"><span>Funcionários hoje</span>
+              <input type="number" id="func" inputmode="numeric" min="0" max="2000" placeholder="Ex.: 4"></label>
+            <label class="field"><span>Salário médio</span>
+              <div class="money"><input type="number" id="salario" inputmode="decimal" min="0" step="50" placeholder="1.800"></div></label>
+          </div>
+        </fieldset>
+        <button class="btn block" type="submit">Quero ver meu resultado<small>Grátis · sem cadastro</small></button>
+        <p class="error" id="calcError" role="alert"></p>
+      </form>
+
+      <!-- Etapa 2: resultado + cadastro -->
+      <section class="result" id="result" hidden aria-live="polite">
+        <p class="label" id="resTitle">Com a jornada de 40 horas, você vai precisar de</p>
+        <div class="big" id="resBig"></div>
+        <p class="cost-line" id="resCost"></p>
+        <p class="facts" id="resFacts"></p>
+        <div class="divider"></div>
+      </section>
+
+      <form class="gate" id="gate" hidden novalidate>
+        <h3>Veja qual saída custa menos para você</h3>
+        <p class="lead">Comparamos contratar, pagar hora extra e reduzir o horário com os seus números. Enviamos uma cópia por e-mail.</p>
+        <label class="field"><span>Seu nome</span><input type="text" id="nome" autocomplete="given-name" placeholder="Como podemos te chamar?"></label>
+        <label class="field"><span>WhatsApp</span><input type="tel" id="whats" autocomplete="tel" inputmode="tel" placeholder="(98) 99999-9999"></label>
+        <label class="field"><span>E-mail</span><input type="email" id="email" autocomplete="email" placeholder="voce@email.com"></label>
+        <label class="consent"><input type="checkbox" id="consent" checked><span>Aceito receber o relatório e mensagens sobre a adaptação à jornada de 40 horas por WhatsApp e e-mail. Posso cancelar quando quiser.</span></label>
+        <button class="btn block" type="submit" id="gateBtn">Quero ver a comparação completa<small>Grátis · leva 10 segundos</small></button>
+        <p class="secure"><svg><use href="#i-lock"/></svg>Seus dados estão seguros e nunca são vendidos</p>
+        <p class="error" id="gateError" role="alert"></p>
+      </form>
+
+      <!-- Etapa 3: relatório + oferta -->
+      <section class="report" id="report" hidden>
+        <h3>As 3 saídas para o seu negócio</h3>
+        <div class="scen"><div class="scen-head"><h4>Contratar</h4><span class="scen-val" id="r1v"></span></div><p id="r1t"></p></div>
+        <div class="scen"><div class="scen-head"><h4>Pagar hora extra</h4><span class="scen-val" id="r2v"></span></div><p id="r2t"></p><span class="warn" id="r2w" hidden></span></div>
+        <div class="scen"><div class="scen-head"><h4>Reduzir o horário</h4><span class="scen-val" id="r3v"></span></div><p id="r3t"></p></div>
+        <div class="divider"></div>
+      </section>
+
+      <section class="offer" id="offer" hidden>
+        <h3>Receba sua escala 5x2 pronta</h3>
+        <p class="bridge" id="bridge"></p>
+        <div class="price"><s class="precoCheio"></s><strong class="precoFundador"></strong><span>pagamento único</span></div>
+        <p class="compare">Entrega em até 48 horas · garantia de 7 dias</p>
+        <a class="btn green block checkout" href="#" rel="noopener">Quero minha escala pronta<small>Pagamento seguro · Pix ou cartão</small></a>
+        <button class="linkbtn" type="button" data-scroll="oferta">Ver tudo o que está incluído</button>
+      </section>
+
+      <button class="linkbtn" type="button" id="redo" hidden>Refazer o cálculo</button>
+    </div>
+  </div>
+</section>
+
+<!-- NÚMEROS -->
+<section class="metrics" aria-label="O que muda">
+  <div class="container">
+    <div class="metrics-grid">
+      <div class="metric"><div class="v">44<span class="arrow">→</span>40</div><b>horas por semana</b><p>Cada funcionário passa a trabalhar 4 horas a menos.</p></div>
+      <div class="metric"><div class="v">2</div><b>folgas por pessoa</b><p>A escala 6x1 vira 5x2, com até 8 horas por dia.</p></div>
+      <div class="metric"><div class="v">75×1</div><b>votos no Senado</b><p>Aprovado nos dois turnos em outubro. Agora segue para promulgação, com transição curta.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- OFERTA -->
+<section class="offer-sec" id="oferta">
+  <div class="container">
+    <div class="sec-head">
+      <h2>Sua escala 5x2 pronta em até 48 horas</h2>
+      <p>Você não precisa virar especialista em escala. Você conta como o seu negócio funciona, e nós montamos.</p>
+    </div>
+    <div class="pricebox" id="offerMain">
+      <h3>Escala 5x2 pronta</h3>
+      <p class="tag">Feita sob medida para o seu negócio</p>
+      <ul class="gets">
+        <li><svg><use href="#i-check"/></svg><div><b>Escala completa, pessoa por pessoa</b><span>Dia por dia, com folgas em rodízio</span></div></li>
+        <li><svg><use href="#i-check"/></svg><div><b>Fim de semana e horários de pico cobertos</b><span>Montada com o movimento real, não só com o horário de abertura</span></div></li>
+        <li><svg><use href="#i-check"/></svg><div><b>Número exato de contratações</b><span>Para você não contratar ninguém a mais do que precisa</span></div></li>
+        <li><svg><use href="#i-check"/></svg><div><b>Dentro das regras da jornada nova</b><span>Até 8 horas por dia, 40 por semana e 2 folgas</span></div></li>
+        <li><svg><use href="#i-check"/></svg><div><b>PDF para imprimir e planilha para ajustar</b><span>Entregue em até 48 horas</span></div></li>
+      </ul>
+      <div class="price"><s class="precoCheio"></s><strong class="precoFundador"></strong><span>pagamento único</span></div>
+      <p class="compare">Menos do que um dia de trabalho de um funcionário.</p>
+      <a class="btn block checkout" href="#" rel="noopener">Quero minha escala pronta<small>Pagamento seguro · Pix ou cartão</small></a>
+      <p class="limited">Entregamos um número limitado de escalas por dia para cumprir o prazo de 48 horas.</p>
+      <div class="guar"><svg><use href="#i-shield"/></svg><div><b>Garantia incondicional de 7 dias.</b> Se a escala não servir para o seu negócio, devolvemos 100% do valor. Basta pedir.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq">
+  <div class="container"><div class="narrow">
+    <h2>Perguntas frequentes</h2>
+    <details><summary>O fim da escala 6x1 já foi aprovado?</summary><p>Sim. A proposta passou pela Câmara em maio e foi aprovada no Senado em outubro, por 75 votos a 1, nos dois turnos. Agora segue para promulgação.</p></details>
+    <details><summary>Quando a mudança começa a valer?</summary><p>O texto prevê um período curto de transição depois da promulgação. Confirme a data exata com o seu contador, mas o tempo para se organizar é de poucas semanas.</p></details>
+    <details><summary>Serve para o meu tipo de negócio?</summary><p>Serve para qualquer negócio que precisa manter pessoas trabalhando em horários fixos: padarias, restaurantes, lojas, mercados, farmácias, salões e similares, com 2 a 50 funcionários.</p></details>
+    <details><summary>Como e quando eu recebo?</summary><p>Depois do pagamento você recebe o formulário. Em até 48 horas depois de respondê-lo, a escala chega por e-mail e WhatsApp, em PDF e planilha. É pagamento único, sem mensalidade.</p></details>
+  </div></div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="row">
+      <span class="brand"><span class="mark">40h</span>Jornada 40h</span>
+      <div class="links"><a href="../privacidade.html" id="privacyLink">Privacidade</a><a href="mailto:calculadora40h@gmail.com">calculadora40h@gmail.com</a></div>
+    </div>
+    <p>Os resultados são estimativas baseadas em médias e nos dados informados. Não substituem a orientação do seu contador ou de um advogado trabalhista.</p>
+    <p>Seus dados são usados apenas para enviar o relatório e falar com você sobre a adaptação à jornada de 40 horas. Nunca são vendidos.</p>
+  </div>
+</footer>
+
+<div class="sticky" id="sticky"><a class="btn" id="stickyBtn" href="#card">Quero calcular meu custo</a></div>
+
+<script>
+/* =====================================================================
+   CONFIGURAÇÃO: ajuste aqui antes de publicar
+   ===================================================================== */
+const CONFIG = {
+  webhookUrl: "https://script.google.com/macros/s/AKfycbw2emmFLgmIw_KBJK47i98oXQw3Z51eaFEVJE89r0oxS2FCQVITdwa8-g4BBY5mYg-JnQ/exec", // planilha Leads Calculadora 40h (calculadora40h@gmail.com)
+  checkoutUrl: "https://pay.kiwify.com.br/yy3LT4h", // Kiwify: Escala 5x2 Pronta (R$ 77)
+  privacyUrl: "../privacidade.html",
+  metaPixelId: "111763000796120", // Pixel da conta de anúncios 237236181356571
+  precoCheio: 147,
+  precoFundador: 77,
+  // Custo total de um funcionário dividido pelo salário (encargos + benefícios).
+  // VALOR PROVISÓRIO: confirme com um contador.
+  fatorCustoFuncionario: 1.7,
+  jornadaAtual: 44,
+  jornadaNova: 40,
+  diasTrabalhoNovo: 5,
+  divisorHora: 200,
+  adicionalHoraExtra: 0.5,
+  semanasPorMes: 4.33,
+  limiteHoraExtraDia: 2
+};
+const VARIANTE = "B"; // teste A/B: identifica esta página na planilha e no checkout
+
+/* Simulações exibidas nos cards flutuantes (calculadas com a mesma conta) */
+const SIMULACOES = [
+  { sigla: "PD", nome: "Padaria de bairro", detalhe: "Seg a sáb · 4 funcionários", horasSemana: 5 * 12 + 7, P: 3, F: 4, S: 1800 },
+  { sigla: "RE", nome: "Restaurante", detalhe: "Ter a dom · 6 funcionários", horasSemana: 6 * 12, P: 4, F: 6, S: 1900 },
+  { sigla: "LJ", nome: "Loja de rua", detalhe: "Seg a sáb · 2 funcionários", horasSemana: 6 * 10, P: 2, F: 2, S: 1700 }
+];
+
+/* Título por setor: ?setor=padaria no link do anúncio */
+const SETORES = {
+  padaria:     { alvo: "a sua padaria", tipo: "Padaria" },
+  restaurante: { alvo: "o seu restaurante", tipo: "Restaurante ou lanchonete" },
+  lanchonete:  { alvo: "a sua lanchonete", tipo: "Restaurante ou lanchonete" },
+  loja:        { alvo: "a sua loja", tipo: "Loja" },
+  mercado:     { alvo: "o seu mercado", tipo: "Mercado" },
+  farmacia:    { alvo: "a sua farmácia", tipo: "Farmácia" },
+  salao:       { alvo: "o seu salão", tipo: "Salão ou barbearia" },
+  barbearia:   { alvo: "a sua barbearia", tipo: "Salão ou barbearia" }
+};
+
+/* ---------- utilidades ---------- */
+const $ = id => document.getElementById(id);
+const brl = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const num1 = v => v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+const toHours = t => { if (!t) return NaN; const [h, m] = t.split(":").map(Number); return h + m / 60; };
+const span = (a, f) => { const ha = toHours(a), hf = toHours(f); if (isNaN(ha) || isNaN(hf) || ha === hf) return 0; return hf > ha ? hf - ha : hf + 24 - ha; };
+const track = (ev, data, custom) => { try { if (window.fbq) custom ? fbq("trackCustom", ev, data || {}) : fbq("track", ev, data || {}); } catch (e) {} };
+const smooth = el => el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+
+/* ---------- conta central (usada pela calculadora e pelas simulações) ---------- */
+function conta(horasSemana, P, F, S) {
+  const C = horasSemana * P;
+  const precisaAtual = C / CONFIG.jornadaAtual;
+  const precisaNovo = C / CONFIG.jornadaNova;
+  const gap = precisaNovo - F;
+  const contratar = Math.max(0, Math.ceil(gap - 0.05));
+  const custoContratar = contratar * S * CONFIG.fatorCustoFuncionario;
+  const D = Math.max(0, C - F * CONFIG.jornadaNova);
+  const custoHE = D * CONFIG.semanasPorMes * (S / CONFIG.divisorHora) * (1 + CONFIG.adicionalHoraExtra);
+  const heDia = F > 0 ? D / (F * CONFIG.diasTrabalhoNovo) : Infinity;
+  const cortarHoras = D / P;
+  return { horasSemana, P, F, S, C, precisaAtual, precisaNovo, gap, contratar, custoContratar, D, custoHE, heDia, cortarHoras };
+}
+
+/* ---------- Pixel do Meta ---------- */
+if (CONFIG.metaPixelId) {
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version="2.0";n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,"script","https://connect.facebook.net/en_US/fbevents.js");
+  fbq("init", CONFIG.metaPixelId);
+  fbq("track", "PageView");
+}
+
+/* ---------- UTMs e setor ---------- */
+const params = new URLSearchParams(location.search);
+const utm = {};
+["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].forEach(k => { if (params.get(k)) utm[k] = params.get(k); });
+if (!utm.utm_term) utm.utm_term = "lp-b"; // separa a variante B na planilha e no checkout
+const setor = SETORES[(params.get("setor") || "").toLowerCase()];
+if (setor) {
+  $("h1").innerHTML = "O fim da 6x1 foi aprovado. <em>Quantas pessoas a mais " + setor.alvo + " vai precisar?</em>";
+  document.title = "Quantas pessoas a mais " + setor.alvo + " vai precisar com o fim da 6x1?";
+  const r = document.querySelector('input[name=tipo][value="' + setor.tipo + '"]');
+  if (r) r.checked = true;
+  $("heroTipo").value = setor.tipo;
+}
+
+/* ---------- simulações ---------- */
+$("cases").innerHTML = SIMULACOES.map(s => {
+  const r = conta(s.horasSemana, s.P, s.F, s.S);
+  const n = Math.max(0, r.gap);
+  return '<div class="case"><div class="who"><span class="tag">' + s.nome + '</span><span>' + s.detalhe + '</span></div>' +
+    '<div class="num">+' + num1(n) + '<small>' + (n < 1.95 ? "funcionário" : "funcionários") + '</small></div>' +
+    '<p><b>' + brl(r.custoContratar) + '/mês</b> a mais se contratar. Só com hora extra: ' + brl(r.custoHE) + '/mês' + (r.heDia > CONFIG.limiteHoraExtraDia ? ', acima do limite diário' : '') + '.</p></div>';
+}).join("");
+
+/* ---------- preços, links ---------- */
+document.querySelectorAll(".precoCheio").forEach(e => e.textContent = brl(CONFIG.precoCheio));
+document.querySelectorAll(".precoFundador").forEach(e => e.textContent = brl(CONFIG.precoFundador));
+if (CONFIG.privacyUrl) $("privacyLink").href = CONFIG.privacyUrl;
+
+let R = null, lastEmail = "", lastNome = "", fase = "inicio";
+
+function goCheckout(e) {
+  track("InitiateCheckout", { value: CONFIG.precoFundador, currency: "BRL" });
+  if (!CONFIG.checkoutUrl) { e.preventDefault(); alert("Configure o link de pagamento em CONFIG.checkoutUrl."); return; }
+  const url = new URL(CONFIG.checkoutUrl);
+  Object.entries(utm).forEach(([k, v]) => url.searchParams.set(k, v));
+  if (lastEmail) url.searchParams.set("email", lastEmail);
+  if (lastNome) url.searchParams.set("name", lastNome);
+  e.currentTarget.href = url.toString();
+}
+document.querySelectorAll(".checkout").forEach(a => a.addEventListener("click", goCheckout));
+document.querySelectorAll("[data-scroll]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); smooth($(a.dataset.scroll)); }));
+
+/* ---------- horários e progresso ---------- */
+document.querySelectorAll("select.hsel").forEach(sel => {
+  for (let m = 0; m < 24 * 60; m += 30) {
+    const v = String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+    const o = document.createElement("option"); o.value = v; o.textContent = v; sel.appendChild(o);
+  }
+  sel.value = sel.dataset.v;
+});
+function syncHours() {
+  const sel = [...document.querySelectorAll('input[name=dia]:checked')].map(i => i.value);
+  $("rowSemana").hidden = !sel.some(d => ["1", "2", "3", "4", "5"].includes(d));
+  $("rowSab").hidden = !sel.includes("6");
+  $("rowDom").hidden = !sel.includes("0");
+}
+document.querySelectorAll('input[name=dia]').forEach(i => i.addEventListener("change", syncHours));
+syncHours();
+
+function syncProgress() {
+  const t = !!document.querySelector('input[name=tipo]:checked');
+  const team = $("simult").value && $("func").value !== "" && $("salario").value;
+  $("p2").classList.toggle("on", t);
+  $("p3").classList.toggle("on", t && !!team);
+}
+let started = false;
+$("calc").addEventListener("input", () => { syncProgress(); if (!started) { started = true; track("IniciouCalculadora", {}, true); } });
+syncProgress();
+
+/* ---------- início pelo hero (variante B) ---------- */
+$("start").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("heroTipo").value;
+  if (v) {
+    const r = document.querySelector('input[name=tipo][value="' + v + '"]');
+    if (r) r.checked = true;
+    syncProgress();
+    if (!started) { started = true; track("IniciouCalculadora", {}, true); }
+  }
+  smooth($("card"));
+  if (!v) setTimeout(() => { const first = document.querySelector('input[name=tipo]'); if (first) first.focus({ preventScroll: true }); }, 400);
+});
+
+/* ---------- cálculo ---------- */
+function calcular() {
+  const dias = [...document.querySelectorAll('input[name=dia]:checked')].map(i => i.value);
+  const tipo = (document.querySelector('input[name=tipo]:checked') || {}).value || "";
+  let horasSemana = 0;
+  dias.forEach(d => {
+    if (["1", "2", "3", "4", "5"].includes(d)) horasSemana += span($("semAbre").value, $("semFecha").value);
+    if (d === "6") horasSemana += span($("sabAbre").value, $("sabFecha").value);
+    if (d === "0") horasSemana += span($("domAbre").value, $("domFecha").value);
+  });
+  const P = Number($("simult").value), F = Number($("func").value), S = Number($("salario").value);
+  if (!tipo) return { erro: "Escolha o tipo de negócio na pergunta 1." };
+  if (!dias.length || horasSemana <= 0) return { erro: "Marque os dias e confira os horários." };
+  if (!(P >= 1)) return { erro: "Informe quantas pessoas trabalham ao mesmo tempo." };
+  if ($("func").value === "" || !(F >= 0)) return { erro: "Informe quantos funcionários você tem hoje." };
+  if (!(S > 0)) return { erro: "Informe o salário médio." };
+  return Object.assign(conta(horasSemana, P, F, S), { tipo, dias: dias.length });
+}
+
+function mostrar(ids) { ["calc", "result", "gate", "report", "offer", "redo"].forEach(id => $(id).hidden = !ids.includes(id)); }
+
+$("calc").addEventListener("submit", e => {
+  e.preventDefault();
+  const r = calcular();
+  $("calcError").textContent = r.erro || "";
+  if (r.erro) return;
+  R = r;
+  track("CalculouResultado", { tipo: r.tipo }, true);
+  if (r.gap <= 0.05) {
+    $("resTitle").textContent = "Sua equipe cobre o horário com 40 horas, mas a escala muda";
+    $("resBig").innerHTML = "0<span class=\"unit\">contratações</span>";
+    $("resBig").classList.add("ok");
+    $("resCost").innerHTML = "Cada pessoa passa a ter <strong>2 folgas por semana</strong>. Sem uma escala nova, os buracos aparecem no fim de semana.";
+  } else {
+    $("resTitle").textContent = "Com a jornada de 40 horas, você vai precisar de";
+    $("resBig").innerHTML = "+" + num1(r.gap) + '<span class="unit">' + (r.gap < 1.95 ? "funcionário" : "funcionários") + "</span>";
+    $("resBig").classList.remove("ok");
+    $("resCost").innerHTML = "Se contratar, são cerca de <strong>" + brl(r.custoContratar) + " a mais por mês</strong>, ou " + brl(r.custoContratar * 12) + " por ano.";
+  }
+  $("resFacts").textContent = "Aberto " + num1(r.horasSemana) + "h por semana, com " + r.P + (r.P > 1 ? " pessoas" : " pessoa") + " ao mesmo tempo: " + num1(r.C) + "h de trabalho. Com 44h isso pedia " + num1(r.precisaAtual) + " funcionários; com 40h, pede " + num1(r.precisaNovo) + ".";
+  mostrar(["result", "gate", "redo"]);
+  fase = "resultado"; updateSticky();
+  smooth($("card"));
+});
+
+$("redo").addEventListener("click", () => { mostrar(["calc"]); fase = "inicio"; updateSticky(); smooth($("card")); });
+
+/* ---------- máscara de WhatsApp ---------- */
+$("whats").addEventListener("input", e => {
+  let d = e.target.value.replace(/\D/g, "").slice(0, 11);
+  if (d.length > 6) e.target.value = "(" + d.slice(0, 2) + ") " + d.slice(2, d.length - 4) + "-" + d.slice(-4);
+  else if (d.length > 2) e.target.value = "(" + d.slice(0, 2) + ") " + d.slice(2);
+  else e.target.value = d;
+});
+
+/* ---------- cadastro e relatório ---------- */
+$("gate").addEventListener("submit", async e => {
+  e.preventDefault();
+  const nome = $("nome").value.trim(), whats = $("whats").value.replace(/\D/g, ""), email = $("email").value.trim();
+  let erro = "";
+  if (!nome) erro = "Informe seu nome.";
+  else if (whats.length < 10) erro = "Informe um WhatsApp com DDD.";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) erro = "Informe um e-mail válido.";
+  else if (!$("consent").checked) erro = "Marque a autorização para receber o relatório.";
+  $("gateError").textContent = erro;
+  if (erro || !R) return;
+  const btn = $("gateBtn");
+  btn.disabled = true; btn.firstChild.textContent = "Gerando sua comparação…";
+  lastEmail = email; lastNome = nome;
+  const lead = {
+    nome, whatsapp: whats, email,
+    tipo: R.tipo, dias_abertos: R.dias, horas_abertas_semana: +R.horasSemana.toFixed(1),
+    pessoas_simultaneas: R.P, funcionarios: R.F, salario_medio: R.S,
+    funcionarios_a_mais: +Math.max(0, R.gap).toFixed(2), custo_contratar_mes: Math.round(R.custoContratar),
+    horas_descobertas_semana: +R.D.toFixed(1), custo_hora_extra_mes: Math.round(R.custoHE), horas_a_reduzir_semana: +R.cortarHoras.toFixed(1),
+    checkout_url: CONFIG.checkoutUrl, ...utm, variante: VARIANTE, pagina: location.href
+  };
+  if (CONFIG.webhookUrl) {
+    try { await fetch(CONFIG.webhookUrl, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(lead) }); } catch (err) {}
+  } else { console.warn("CONFIG.webhookUrl vazio: lead não foi salvo.", lead); }
+  track("Lead", { content_name: "calculadora-40h", content_category: R.tipo });
+  mostrarRelatorio();
+});
+
+function mostrarRelatorio() {
+  const r = R, primeiro = lastNome.split(" ")[0];
+  if (r.D <= 0.05) {
+    $("r1v").textContent = brl(0); $("r1t").textContent = "Sua equipe atual já cobre as horas. Não precisa contratar.";
+    $("r2v").textContent = brl(0); $("r2t").textContent = "Sem horas descobertas, não há hora extra obrigatória.";
+    $("r3v").textContent = "0 h"; $("r3t").textContent = "Não precisa reduzir o horário. O trabalho é reorganizar as folgas.";
+    $("r2w").hidden = true;
+    $("bridge").innerHTML = primeiro + ", você não precisa contratar, mas precisa de uma escala nova: <b>cada pessoa ganha uma folga a mais por semana</b>, e alguém tem que cobrir esses dias.";
+  } else {
+    $("r1v").textContent = brl(r.custoContratar) + "/mês";
+    $("r1t").textContent = "Contratar " + r.contratar + (r.contratar > 1 ? " pessoas" : " pessoa") + " para cobrir " + num1(r.D) + "h por semana que ficam sem ninguém. Inclui estimativa de encargos.";
+    $("r2v").textContent = brl(r.custoHE) + "/mês";
+    $("r2t").textContent = "Cobrir as " + num1(r.D) + "h semanais com a equipe atual, com adicional de " + Math.round(CONFIG.adicionalHoraExtra * 100) + "%.";
+    if (r.heDia > CONFIG.limiteHoraExtraDia) {
+      $("r2w").hidden = false;
+      $("r2w").textContent = r.F > 0 ? "Cerca de " + num1(r.heDia) + "h extras por pessoa por dia, acima do limite de " + CONFIG.limiteHoraExtraDia + "h. Não é sustentável." : "Sem funcionários atuais, hora extra não resolve.";
+    } else { $("r2w").hidden = true; }
+    $("r3v").textContent = "−" + num1(r.cortarHoras) + " h/sem";
+    $("r3t").textContent = "Fechar " + num1(r.cortarHoras) + "h a menos por semana. Sem custo extra, mas você perde as vendas desses horários.";
+    const menor = Math.min(r.custoContratar, r.heDia > CONFIG.limiteHoraExtraDia ? Infinity : r.custoHE);
+    $("bridge").innerHTML = primeiro + ", a saída mais barata ainda custa <b>" + brl(menor) + " por mês</b>. Uma escala montada com o movimento real do seu negócio pode reduzir esse número. Ela custa <b>" + brl(CONFIG.precoFundador) + ", uma única vez</b>.";
+  }
+  mostrar(["report", "offer", "redo"]);
+  fase = "oferta"; updateSticky();
+  smooth($("card"));
+}
+
+/* ---------- barra fixa no celular ---------- */
+const visible = new Set();
+const io = new IntersectionObserver(entries => {
+  entries.forEach(en => en.isIntersecting ? visible.add(en.target.id) : visible.delete(en.target.id));
+  updateSticky();
+}, { threshold: 0.12 });
+["card", "offerMain"].forEach(id => io.observe($(id)));
+
+function updateSticky() {
+  const btn = $("stickyBtn");
+  let show = !visible.has("card");
+  if (fase === "inicio") { btn.textContent = "Quero calcular meu custo"; btn.dataset.target = "card"; }
+  else if (fase === "resultado") { btn.textContent = "Quero ver a comparação completa"; btn.dataset.target = "card"; }
+  else { show = show && !visible.has("offerMain"); btn.textContent = "Quero minha escala pronta · " + brl(CONFIG.precoFundador); btn.dataset.target = "card"; }
+  $("sticky").classList.toggle("show", show);
+}
+$("stickyBtn").addEventListener("click", e => { e.preventDefault(); smooth($(e.currentTarget.dataset.target)); });
+updateSticky();
+</script>
+</body>
+</html>
