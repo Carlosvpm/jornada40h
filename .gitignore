@@ -1,0 +1,8 @@
+node_modules/
+remotion/out/**/*.zip
+.DS_Store
+*.log
+.env
+.env.*
+.netlify/
+.clasprc.json

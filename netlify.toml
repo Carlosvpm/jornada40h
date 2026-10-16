@@ -1,0 +1,15 @@
+[build]
+  # Site estático: nada para compilar. Só publicar a pasta site/.
+  publish = "site"
+  command = ""
+
+[[headers]]
+  for = "/posts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

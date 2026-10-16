@@ -1,0 +1,605 @@
+[
+  {
+    "id": "noticia",
+    "semana": 1,
+    "dia": "Segunda",
+    "type": "reel",
+    "setor": "geral",
+    "tema": "escuro",
+    "titulo": "Acabou a escala 6x1. E agora, quem cobre o sábado?",
+    "numeros": {
+      "funcionariosAMais": 0,
+      "custoContratarMes": 0,
+      "custoHoraExtraMes": 0,
+      "horasReduzir": 0
+    },
+    "cenas": [
+      {
+        "tipo": "manchete",
+        "duracao": 5,
+        "kicker": "Última hora · Senado aprova por 75 a 1",
+        "titulo": "Acabou a escala 6x1. E agora, quem cobre o sábado?",
+        "legenda": "Senado aprova o fim da escala 6x1 por 75 votos a 1."
+      },
+      {
+        "tipo": "stats",
+        "duracao": 5,
+        "kicker": "O que muda",
+        "itens": [
+          {
+            "de": 44,
+            "para": 40,
+            "rotulo": "horas por semana"
+          },
+          {
+            "valor": 2,
+            "rotulo": "folgas por semana"
+          },
+          {
+            "texto": "75×1",
+            "rotulo": "votos no Senado"
+          }
+        ],
+        "legenda": "Jornada máxima cai de 44 para 40 horas, com 2 folgas por semana."
+      },
+      {
+        "tipo": "texto",
+        "duracao": 4,
+        "kicker": "Para quem tem funcionário",
+        "titulo": "Mesmos horários. 4 horas a menos por pessoa.",
+        "corpo": "Quem abre no sábado vai precisar de rodízio, hora extra ou mais gente.",
+        "legenda": "Mesmos horários, 4 horas a menos por pessoa. Alguém precisa cobrir."
+      },
+      {
+        "tipo": "cta",
+        "duracao": 4,
+        "titulo": "Quanto isso custa para o seu negócio?",
+        "botao": "Calcule grátis em 1 minuto",
+        "rodape": "Sem cadastro · link na bio",
+        "legenda": "Resultado em 1 minuto, sem cadastro."
+      }
+    ],
+    "cta": "Calcule grátis em 1 minuto",
+    "legenda": "O Senado aprovou o fim da escala 6x1 por 75 votos a 1. A jornada máxima cai de 44 para 40 horas por semana, com duas folgas.\n\nPara quem tem funcionário e abre no sábado, a pergunta é simples: quem cobre as 4 horas a menos por pessoa?\n\nA conta dá para fazer agora, de graça, em 1 minuto. Link na bio.",
+    "hashtags": [
+      "#escala6x1",
+      "#fimda6x1",
+      "#jornada40h",
+      "#pequenonegocio",
+      "#empreendedorismo",
+      "#rh",
+      "#folhadepagamento",
+      "#comercio"
+    ]
+  },
+  {
+    "id": "a-conta",
+    "semana": 1,
+    "dia": "Terça",
+    "type": "carrossel",
+    "setor": "padaria",
+    "tema": "escuro",
+    "titulo": "A conta da jornada de 40h para uma padaria com 4 funcionários",
+    "numeros": {
+      "funcionarios": 4,
+      "horasAbertoSemana": 67,
+      "pessoasAoMesmoTempo": 3,
+      "salarioMedio": 1800,
+      "funcionariosAMais": 1,
+      "custoContratarMes": 3060,
+      "custoContratarAno": 36720,
+      "custoHoraExtraMes": 2397,
+      "horasReduzir": 13.7
+    },
+    "slides": [
+      {
+        "layout": "capa",
+        "kicker": "A conta · Padaria",
+        "titulo": "4 funcionários, aberta 67 horas por semana. Quanto custa a jornada de 40h?",
+        "corpo": "Fizemos a conta de uma padaria real. Arraste para ver."
+      },
+      {
+        "layout": "texto",
+        "kicker": "O que muda",
+        "titulo": "De 44 para 40 horas. Duas folgas por pessoa.",
+        "corpo": "Os mesmos 67 horários de funcionamento continuam. Só que cada pessoa cobre 4 horas a menos por semana.",
+        "bullets": [
+          "67 h abertas por semana",
+          "3 pessoas no balcão ao mesmo tempo",
+          "4 funcionários hoje"
+        ]
+      },
+      {
+        "layout": "conta",
+        "kicker": "A conta",
+        "titulo": "Faltam horas. Sobra custo.",
+        "linhas": [
+          {
+            "rotulo": "Horas necessárias por semana",
+            "valor": "201 h"
+          },
+          {
+            "rotulo": "Horas disponíveis com 40h",
+            "valor": "160 h"
+          },
+          {
+            "rotulo": "Diferença",
+            "valor": "41 h",
+            "cor": "vermelho"
+          }
+        ],
+        "numero": {
+          "prefixo": "+",
+          "valor": 1,
+          "sufixo": " funcionário",
+          "rotulo": "para fechar a escala"
+        },
+        "destaque": {
+          "rotulo": "custo extra",
+          "valor": "R$ 3.060/mês",
+          "sub": "R$ 36.720 por ano"
+        }
+      },
+      {
+        "layout": "saidas",
+        "kicker": "3 saídas",
+        "titulo": "Cada caminho custa diferente.",
+        "opcoes": [
+          {
+            "titulo": "Contratar",
+            "valor": "R$ 3.060/mês",
+            "nota": "1 pessoa a mais, escala fechada",
+            "cor": "verde"
+          },
+          {
+            "titulo": "Pagar hora extra",
+            "valor": "R$ 2.397/mês",
+            "nota": "Não é sustentável e pode virar processo",
+            "cor": "vermelho"
+          },
+          {
+            "titulo": "Reduzir horário",
+            "valor": "13,7 h a menos",
+            "nota": "Por semana, de funcionamento",
+            "cor": "ouro"
+          }
+        ]
+      },
+      {
+        "layout": "texto",
+        "kicker": "Antes da lei valer",
+        "titulo": "Quem faz a conta agora contrata com calma. Quem espera disputa candidato.",
+        "corpo": "Simulação com salário médio de R$ 1.800 e encargos estimados. O seu número pode ser outro."
+      },
+      {
+        "layout": "cta",
+        "kicker": "Calculadora grátis",
+        "titulo": "Faça a conta do seu negócio em 1 minuto.",
+        "botao": "Calcular grátis",
+        "rodape": "Sem cadastro · link na bio",
+        "corpo": "O resultado sai com o número de pessoas, o custo mensal e as 3 saídas para o seu caso."
+      }
+    ],
+    "cta": "Calcular grátis",
+    "legenda": "Padaria com 4 funcionários, aberta 67 horas por semana, 3 pessoas no balcão ao mesmo tempo.\n\nCom a jornada de 40 horas, faltam 41 horas por semana na escala. Resultado: +1 funcionário, R$ 3.060 por mês, R$ 36.720 por ano.\n\nAs 3 saídas: contratar (R$ 3.060/mês), cobrir com hora extra (R$ 2.397/mês, não é sustentável) ou reduzir 13,7 horas de funcionamento.\n\nFaça a conta do seu negócio, grátis, em 1 minuto. Link na bio.",
+    "hashtags": [
+      "#escala6x1",
+      "#jornada40h",
+      "#padaria",
+      "#pequenonegocio",
+      "#gestaodepessoas",
+      "#custos",
+      "#empreendedor",
+      "#escaladetrabalho"
+    ]
+  },
+  {
+    "id": "enquete",
+    "semana": 1,
+    "dia": "Quarta",
+    "type": "story",
+    "setor": "geral",
+    "tema": "escuro",
+    "titulo": "Seu negócio abre no sábado?",
+    "numeros": {
+      "funcionariosAMais": 0,
+      "custoContratarMes": 0,
+      "custoHoraExtraMes": 0,
+      "horasReduzir": 4
+    },
+    "cenas": [
+      {
+        "tipo": "enquete",
+        "duracao": 4,
+        "kicker": "Responde aí",
+        "titulo": "Seu negócio abre no sábado?",
+        "opcoes": [
+          "Sim",
+          "Não"
+        ]
+      },
+      {
+        "tipo": "texto",
+        "duracao": 4,
+        "kicker": "Se abre",
+        "titulo": "Então alguém precisa cobrir 4 horas a menos por pessoa.",
+        "corpo": "Com a jornada de 40h, cada funcionário trabalha 4 horas a menos por semana. O horário da loja continua o mesmo."
+      },
+      {
+        "tipo": "cta",
+        "duracao": 4,
+        "titulo": "Quantas pessoas você vai precisar?",
+        "botao": "Calcule grátis",
+        "rodape": "Toca no link · 1 minuto · sem cadastro"
+      }
+    ],
+    "cta": "Calcule grátis",
+    "legenda": "Seu negócio abre no sábado? Então alguém precisa cobrir 4 horas a menos por pessoa com a jornada de 40h. Calcule grátis quantas pessoas você vai precisar.",
+    "hashtags": [
+      "#escala6x1",
+      "#jornada40h",
+      "#pequenonegocio",
+      "#comercio"
+    ]
+  },
+  {
+    "id": "setor-restaurante",
+    "semana": 1,
+    "dia": "Quinta",
+    "type": "carrossel",
+    "setor": "restaurante",
+    "tema": "escuro",
+    "titulo": "A conta da jornada de 40h para um restaurante com 3 funcionários",
+    "numeros": {
+      "funcionarios": 3,
+      "horasAbertoSemana": 67,
+      "pessoasAoMesmoTempo": 2,
+      "salarioMedio": 2000,
+      "funcionariosAMais": 1,
+      "custoContratarMes": 3400,
+      "custoContratarAno": 40800,
+      "custoHoraExtraMes": 909,
+      "horasReduzir": 7
+    },
+    "slides": [
+      {
+        "layout": "capa",
+        "kicker": "A conta · Restaurante",
+        "titulo": "Restaurante com 3 funcionários, aberto 67 horas por semana. E agora?",
+        "corpo": "Almoço e jantar, de terça a domingo. A conta da jornada de 40h."
+      },
+      {
+        "layout": "texto",
+        "kicker": "O que muda",
+        "titulo": "2 pessoas no salão, o tempo todo. Com 4 horas a menos por pessoa.",
+        "corpo": "O cliente não vai chegar mais cedo nem sair mais tarde. A escala é que tem de mudar.",
+        "bullets": [
+          "67 h abertas por semana",
+          "2 pessoas ao mesmo tempo",
+          "3 funcionários hoje"
+        ]
+      },
+      {
+        "layout": "conta",
+        "kicker": "A conta",
+        "titulo": "Faltam 14 horas por semana.",
+        "linhas": [
+          {
+            "rotulo": "Horas necessárias por semana",
+            "valor": "134 h"
+          },
+          {
+            "rotulo": "Horas disponíveis com 40h",
+            "valor": "120 h"
+          },
+          {
+            "rotulo": "Diferença",
+            "valor": "14 h",
+            "cor": "vermelho"
+          }
+        ],
+        "numero": {
+          "prefixo": "+",
+          "valor": 1,
+          "sufixo": " funcionário",
+          "rotulo": "para fechar a escala"
+        },
+        "destaque": {
+          "rotulo": "custo extra",
+          "valor": "R$ 3.400/mês",
+          "sub": "R$ 40.800 por ano"
+        }
+      },
+      {
+        "layout": "saidas",
+        "kicker": "3 saídas",
+        "titulo": "Aqui a hora extra parece barata. Parece.",
+        "opcoes": [
+          {
+            "titulo": "Contratar",
+            "valor": "R$ 3.400/mês",
+            "nota": "1 pessoa a mais, escala fechada",
+            "cor": "verde"
+          },
+          {
+            "titulo": "Pagar hora extra",
+            "valor": "R$ 909/mês",
+            "nota": "14 h a mais por semana. Limite legal e risco de processo",
+            "cor": "vermelho"
+          },
+          {
+            "titulo": "Reduzir horário",
+            "valor": "7 h a menos",
+            "nota": "Por semana, de funcionamento",
+            "cor": "ouro"
+          }
+        ]
+      },
+      {
+        "layout": "texto",
+        "kicker": "O detalhe",
+        "titulo": "Com 14 horas de buraco, um meio período resolve.",
+        "corpo": "Nem toda contratação precisa ser de 40 horas. Um contrato parcial de fim de semana fecha a conta por menos."
+      },
+      {
+        "layout": "cta",
+        "kicker": "Calculadora grátis",
+        "titulo": "Faça a conta do seu restaurante em 1 minuto.",
+        "botao": "Calcular grátis",
+        "rodape": "Sem cadastro · link na bio",
+        "corpo": "Informe horário de funcionamento, pessoas por turno e salário médio. O resto a calculadora faz."
+      }
+    ],
+    "cta": "Calcular grátis",
+    "legenda": "Restaurante com 3 funcionários, 2 pessoas no salão ao mesmo tempo, aberto 67 horas por semana.\n\nCom a jornada de 40h, faltam 14 horas na escala. Resultado: +1 funcionário, R$ 3.400 por mês, R$ 40.800 por ano.\n\nAs 3 saídas: contratar (R$ 3.400/mês), hora extra (R$ 909/mês, com limite legal e risco) ou reduzir 7 horas de funcionamento. Aqui, um meio período de fim de semana pode fechar a conta.\n\nFaça a conta do seu negócio, grátis. Link na bio.",
+    "hashtags": [
+      "#escala6x1",
+      "#jornada40h",
+      "#restaurante",
+      "#bar",
+      "#foodservice",
+      "#pequenonegocio",
+      "#gestaodepessoas",
+      "#escaladetrabalho"
+    ]
+  },
+  {
+    "id": "escala-se-montando",
+    "semana": 1,
+    "dia": "Sexta",
+    "type": "reel",
+    "setor": "padaria",
+    "tema": "escuro",
+    "titulo": "Com a 5x2, quem fica no sábado?",
+    "numeros": {
+      "funcionariosAMais": 1,
+      "custoContratarMes": 3060,
+      "custoHoraExtraMes": 2397,
+      "horasReduzir": 13.7
+    },
+    "escala": {
+      "dias": [
+        "Seg",
+        "Ter",
+        "Qua",
+        "Qui",
+        "Sex",
+        "Sáb",
+        "Dom"
+      ],
+      "funcionarios": [
+        {
+          "nome": "Ana",
+          "folgas": [
+            5,
+            6
+          ]
+        },
+        {
+          "nome": "Bruno",
+          "folgas": [
+            5,
+            6
+          ]
+        },
+        {
+          "nome": "Carla",
+          "folgas": [
+            0,
+            6
+          ]
+        },
+        {
+          "nome": "Diego",
+          "folgas": [
+            1,
+            6
+          ]
+        }
+      ],
+      "minimo": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        0
+      ],
+      "solucao": {
+        "nome": "+1 meio período",
+        "trabalha": [
+          5
+        ]
+      }
+    },
+    "cenas": [
+      {
+        "tipo": "manchete",
+        "duracao": 3,
+        "kicker": "Escala 5x2 · 4 funcionários",
+        "titulo": "Com a 5x2, quem fica no sábado?",
+        "legenda": "4 funcionários, 2 folgas cada. Vamos montar a escala."
+      },
+      {
+        "tipo": "grade",
+        "duracao": 9,
+        "kicker": "Montando a escala",
+        "titulo": "4 pessoas, 2 folgas cada, 3 no balcão.",
+        "legenda": "Segunda a sexta fecha. No sábado falta 1 pessoa."
+      },
+      {
+        "tipo": "grade-solucao",
+        "duracao": 4,
+        "kicker": "A solução",
+        "titulo": "Um meio período no sábado fecha a escala.",
+        "legenda": "Solução: +1 meio período só no sábado."
+      },
+      {
+        "tipo": "cta",
+        "duracao": 4,
+        "titulo": "Quantas pessoas a sua escala precisa?",
+        "botao": "Calcule grátis",
+        "rodape": "Escala 5x2 pronta · link na bio",
+        "legenda": "Resultado em 1 minuto, sem cadastro."
+      }
+    ],
+    "cta": "Calcule grátis",
+    "legenda": "4 funcionários, 2 folgas cada, 3 pessoas no balcão. De segunda a sexta a escala fecha. No sábado, falta 1.\n\nA solução mais barata costuma ser um meio período só para o fim de semana, e não uma contratação cheia.\n\nQuer saber quantas pessoas a sua escala precisa com a jornada de 40h? Calcule grátis em 1 minuto. Link na bio.",
+    "hashtags": [
+      "#escala5x2",
+      "#escala6x1",
+      "#jornada40h",
+      "#escaladetrabalho",
+      "#pequenonegocio",
+      "#rh",
+      "#padaria",
+      "#comercio"
+    ]
+  },
+  {
+    "id": "3-erros",
+    "semana": 1,
+    "dia": "Sábado",
+    "type": "carrossel",
+    "setor": "geral",
+    "tema": "papel",
+    "titulo": "3 erros que vão encarecer a sua folha com o fim da 6x1",
+    "numeros": {
+      "funcionariosAMais": 0,
+      "custoContratarMes": 0,
+      "custoHoraExtraMes": 0,
+      "horasReduzir": 0
+    },
+    "slides": [
+      {
+        "layout": "capa",
+        "kicker": "Fim da escala 6x1",
+        "titulo": "3 erros que vão encarecer a sua folha.",
+        "corpo": "E o que fazer no lugar de cada um."
+      },
+      {
+        "layout": "erro",
+        "numeroErro": 1,
+        "kicker": "Erro 1",
+        "titulo": "Esperar a lei valer para se mexer.",
+        "corpo": "Quem contrata em cima da hora disputa os mesmos candidatos que todo mundo, e paga mais por isso.",
+        "solucao": "Faça a conta agora e contrate com calma."
+      },
+      {
+        "layout": "erro",
+        "numeroErro": 2,
+        "kicker": "Erro 2",
+        "titulo": "Cobrir tudo com hora extra.",
+        "corpo": "Custa 50% a mais por hora, tem limite legal e, quando vira rotina, vira processo trabalhista.",
+        "solucao": "Hora extra é para imprevisto, não para escala."
+      },
+      {
+        "layout": "erro",
+        "numeroErro": 3,
+        "kicker": "Erro 3",
+        "titulo": "Montar a escala no improviso.",
+        "corpo": "Sobra gente na segunda e falta no sábado. O cliente percebe, e a equipe também.",
+        "solucao": "Escala 5x2 planejada, com rodízio de fim de semana."
+      },
+      {
+        "layout": "cta",
+        "kicker": "Calculadora grátis",
+        "titulo": "Veja quanto a jornada de 40h vai custar para você.",
+        "botao": "Calcular grátis",
+        "rodape": "Sem cadastro · link na bio",
+        "corpo": "Número de pessoas, custo mensal e as saídas para o seu caso, sem cadastro."
+      }
+    ],
+    "cta": "Calcular grátis",
+    "legenda": "3 erros que vão encarecer a sua folha com o fim da escala 6x1:\n\n1. Esperar a lei valer para se mexer. Quem contrata em cima da hora disputa candidato e paga mais.\n2. Cobrir tudo com hora extra. Custa 50% a mais por hora e pode virar processo.\n3. Montar a escala no improviso. Sobra gente na segunda e falta no sábado.\n\nFaça a conta do seu negócio agora, grátis. Link na bio.",
+    "hashtags": [
+      "#escala6x1",
+      "#jornada40h",
+      "#horaextra",
+      "#gestaodepessoas",
+      "#pequenonegocio",
+      "#empreendedorismo",
+      "#rh",
+      "#direitotrabalhista"
+    ]
+  },
+  {
+    "id": "resultado",
+    "semana": 1,
+    "dia": "Domingo",
+    "type": "story",
+    "setor": "padaria",
+    "tema": "escuro",
+    "titulo": "Padaria com 4 funcionários: +1 pessoa com 40h",
+    "numeros": {
+      "funcionariosAMais": 1,
+      "custoContratarMes": 3060,
+      "custoContratarAno": 36720,
+      "custoHoraExtraMes": 2397,
+      "horasReduzir": 13.7
+    },
+    "cenas": [
+      {
+        "tipo": "texto",
+        "duracao": 4,
+        "kicker": "Resultado da calculadora",
+        "titulo": "Padaria com 4 funcionários, aberta 67 horas por semana.",
+        "corpo": "Com a jornada de 40h, a escala não fecha mais com 4."
+      },
+      {
+        "tipo": "numero",
+        "duracao": 4,
+        "kicker": "Com 40 horas",
+        "numero": {
+          "prefixo": "+",
+          "valor": 1,
+          "sufixo": " pessoa",
+          "rotulo": "para fechar a escala"
+        },
+        "destaque": {
+          "rotulo": "custo extra",
+          "valor": 3060,
+          "formato": "moeda",
+          "sufixo": "/mês",
+          "sub": "R$ 36.720 por ano"
+        }
+      },
+      {
+        "tipo": "cta",
+        "duracao": 4,
+        "titulo": "E no seu negócio, quanto vai ser?",
+        "botao": "Calcule grátis",
+        "rodape": "Toca no link · 1 minuto · sem cadastro"
+      }
+    ],
+    "cta": "Calcule grátis",
+    "legenda": "Padaria com 4 funcionários, aberta 67 horas por semana: com a jornada de 40h, precisa de +1 pessoa. Custo extra de R$ 3.060 por mês. E no seu negócio? Calcule grátis.",
+    "hashtags": [
+      "#escala6x1",
+      "#jornada40h",
+      "#padaria",
+      "#pequenonegocio"
+    ]
+  }
+]
