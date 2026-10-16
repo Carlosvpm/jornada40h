@@ -2,13 +2,13 @@
 
 Cada agente é uma tarefa agendada (sessão nova a cada execução). Todos leem `docs/REGRAS.md` e `docs/ESTADO.md` antes de agir e registram o que fizeram em `docs/ESTADO.md` (commit na `main`). Quem precisa de algo de outro agente escreve um **pedido** na seção "Pedidos abertos".
 
-| Agente | Horário (America/Fortaleza) | Lê | Faz | Pode mexer em |
+| Agente | Tarefa agendada | Horário (America/Fortaleza) | Faz | Pode mexer em |
 |---|---|---|---|---|
-| **Gestor de tráfego** | diário 07:52 | Meta Ads (Windsor), planilha Leads/Vendas, ESTADO | pausa anúncios ruins, redistribui orçamento dentro do teto, cria variação como **pausada** quando o Analista pedir | Meta Ads |
-| **Analista** | diário 08:30 | Meta Ads, Leads, Vendas, Pedidos, Netlify analytics (se houver) | consolida funil por criativo e por variante de LP (CPC, CTR, visita→lead, CPL, lead→venda, CAC), escreve diagnóstico e pedidos | `docs/ESTADO.md` |
-| **Conteúdo/Designer** | diário 09:00 + domingo 17:00 | fila em `remotion/data/posts.json`, ESTADO | publica o post do dia no @jornada40h via Windsor; domingo gera a semana seguinte (Remotion) e deixa como `pendente` para OK; cria criativos de anúncio quando pedido | Instagram, `remotion/`, `site/posts/`, `criativos/` |
-| **Dev** | sob demanda (disparado por pedido no ESTADO; checagem diária 10:00) | ESTADO, código | ajusta LP/variantes/copy/Apps Script, roda testes Playwright, faz push | `site/`, `apps-script/` |
-| **Orquestrador** | domingo 18:00 | tudo | revisa a semana, fecha pedidos, propõe mudanças que exigem OK (teto, preço, oferta, novo produto) e manda resumo ao Carlos | `docs/ESTADO.md`, mensagens |
+| **Gestor de tráfego** | trig_01RfxNojvherH5MV1HxyXSGv | diário 07:52 | lê Meta + planilha; pausa anúncios ruins, redistribui dentro do teto; abre pedidos | Meta Ads (Windsor) |
+| **Conteúdo/Designer** | trig_01KZZbsxx1Cbmxjm2JHmMei7 | diário 09:08 | publica o item do dia de `docs/FILA.md` no @jornada40h; domingo redige a semana seguinte e pede OK; cria criativos sob pedido | Instagram (Windsor), `remotion/`, `site/posts/`, `criativos/` |
+| **Orquestrador / Analista / Dev** | trig_01QHchXShWC4KkQbVVvCYaeP | domingo 18:10 | consolida funil (Meta + IG + planilha), avalia os agentes, fecha/abre pedidos, implementa pedidos ao Dev com teste Playwright, manda resumo com decisões para o Carlos | `docs/`, `site/`, `apps-script/` (só repo) |
+
+Todas rodam em sessão nova, com aprovação automática, notificação push + e-mail. O repo é a memória: cada uma clona, lê REGRAS/ESTADO, age, registra e faz push.
 
 ## Métricas de referência (iniciais, revisar após 7 dias)
 - CTR link ≥ 1,5% (bom ≥ 3%)
