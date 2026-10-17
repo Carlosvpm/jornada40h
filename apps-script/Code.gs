@@ -142,7 +142,7 @@ function enviarRelatorio(lead) {
     "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:16px\"><tr><td style=\"background:" + C.green + ";border-radius:10px\">" +
     "<a href=\"" + checkout + "\" style=\"display:inline-block;padding:14px 24px;" + font + "font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none\">Quero minha escala pronta →</a>" +
     "</td></tr></table>" +
-    "<div style=\"" + font + "font-size:12px;color:" + C.muted + ";margin-top:12px\">Entrega em até 48 horas · Pix ou cartão · Garantia de 7 dias: não serviu, devolvemos.</div>" +
+    "<div style=\"" + font + "font-size:12px;color:" + C.muted + ";margin-top:12px\">Preço de fundador até 31/10 · Entrega em até 48 horas · Pix ou cartão · Garantia de 7 dias: não serviu, devolvemos.</div>" +
     "</td></tr></table></td></tr>";
 
   const dados =
