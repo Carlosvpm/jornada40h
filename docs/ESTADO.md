@@ -1,10 +1,13 @@
 # Estado do projeto
 
-_Atualizado: 2026-10-17 11:35 (America/Fortaleza)_
+_Atualizado: 2026-10-17 12:05 (America/Fortaleza)_
 
 ## Resumo
 - Campanha Meta Ads no ar desde 16/10 ~12:20, CBO R$ 50/dia, 5 anúncios. **Dia 1 (16/10): R$ 31,78 gastos, 2.135 impr., 49 cliques, 39 visitas, 4 leads (CPL R$ 7,95), 0 checkout, 0 vendas.** N2 concentra a entrega (R$ 28,91, 3 leads); N2B aprovou ~18h (R$ 2,39, 3 visitas, 1 lead); N3/B/C quase sem entrega (R$ 0,48). Planilha: 4 pessoas reais (1 duplicada), todas restaurante/lanchonete ou outro, 3–10 funcionários; 1 lead sem UTM (provável bio IG).
 - Funil validado ponta a ponta (lead → planilha → e-mail; Kiwify → webhook → Vendas → e-mail de briefing → obrigado.html → Pedidos).
+- **Duas campanhas desde 17/10 ~12:00, R$ 25/dia cada (teto R$ 50 mantido):**
+  - `[LEADS] Calculadora 40h - Teste de criativos` (120253290480490421): CBO reduzido de R$ 50 → R$ 25; 5 anúncios (N2, N3, B, C, N2B).
+  - `[VENDAS] Escala 5x2 - Checkout (CBO 1-1-3)` (120253303430340421): objetivo Vendas, otimização **InitiateCheckout** (Pixel 111763000796120), CBO R$ 25; conjunto 120253303431430421 "BR 25-60 - Feed FB + Feed/Stories/Reels IG - IC" (Brasil, 25–60, todos os gêneros, posicionamentos manuais: Feed FB; Feed/Stories/Reels IG; sem Advantage+ audience); 3 anúncios V-N2 (120253303455860421), V-C (120253303455850421), V-N3 (120253303455840421), CTA Saiba mais, URLs com `utm_campaign=vendas-checkout`. Estratégia pedida pelo Carlos (CBO 1-1-3). Migrar para otimização Compra quando houver ~5 vendas/semana.
 - Teste A/B de LP no ar: anúncio **N2B - Capa de jornal (LP B)** (id 120253295409460421) publicado 16/10 17:53 no mesmo conjunto, destino `/b/`, `utm_content=n2-capa-jornal-b`, `utm_term=lp-b`. Mesmo criativo do N2 → compara só a página. Campanha agora com 5 anúncios, CBO R$ 50/dia inalterado.
 - Instagram @jornada40h conectado no Windsor; semana 1 renderizada em `site/posts/semana-1/`. Reel `noticia` publicado 16/10 17:05 (media_id 18123326782908294); Carrossel `a-conta` publicado 17/10 09:12 (media_id 18106213565458459). Fila em `docs/FILA.md`.
 - Repo **público** desde 17/10 11:28 (Netlify free bloqueava deploys de contribuidor não verificado em repo privado). Push na `main` publica.
@@ -47,6 +50,7 @@ Status: feito (Carlos: "vc consegue postar, cuidar dos anúncios e fazer deploy"
 - 16/10: conteúdo IG sem câmera (Remotion); eventual apresentador IA só com rótulo de IA.
 
 ## Histórico
+- 17/10 12:00 · Gestor (sessão com Carlos): campanha [VENDAS] criada e ativada (API + Gerenciador), [LEADS] reduzida para R$ 25/dia. Soma = R$ 50.
 - 17/10 11:35 · Dev: Pedido #3 implementado (resultado/relatório com ângulo horas descobertas e folgas; contratação mínima integral+meio período). Repo tornado público para destravar Netlify.
 - 17/10 09:12 · Conteúdo: publicado Carrossel `a-conta` media_id 18106213565458459 (URLs da Netlify não verificáveis pelo sandbox — proxy 403; Instagram aceitou as 6 imagens). Semana 2 será redigida no domingo 18/10.
 - 17/10 01:05 · Analista: fechamento do dia 1 (4 leads, CPL R$ 7,95); pedidos #3 e #4 abertos.
