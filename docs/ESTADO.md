@@ -1,24 +1,24 @@
 # Estado do projeto
 
-_Atualizado: 2026-10-17 01:05 (America/Fortaleza)_
+_Atualizado: 2026-10-17 09:15 (America/Fortaleza)_
 
 ## Resumo
 - Campanha Meta Ads no ar desde 16/10 ~12:20, CBO R$ 50/dia, 5 anúncios. **Dia 1 (16/10): R$ 31,78 gastos, 2.135 impr., 49 cliques, 39 visitas, 4 leads (CPL R$ 7,95), 0 checkout, 0 vendas.** N2 concentra a entrega (R$ 28,91, 3 leads); N2B aprovou ~18h (R$ 2,39, 3 visitas, 1 lead); N3/B/C quase sem entrega (R$ 0,48). Planilha: 4 pessoas reais (1 duplicada), todas restaurante/lanchonete ou outro, 3–10 funcionários; 1 lead sem UTM (provável bio IG).
 - Funil validado ponta a ponta (lead → planilha → e-mail; Kiwify → webhook → Vendas → e-mail de briefing → obrigado.html → Pedidos).
 - Teste A/B de LP no ar: anúncio **N2B - Capa de jornal (LP B)** (id 120253295409460421) publicado 16/10 17:53 no mesmo conjunto, destino `/b/`, `utm_content=n2-capa-jornal-b`, `utm_term=lp-b`. Mesmo criativo do N2 → compara só a página. Campanha agora com 5 anúncios, CBO R$ 50/dia inalterado.
-- Instagram @jornada40h conectado no Windsor; semana 1 renderizada em `site/posts/semana-1/`. Primeiro Reel (`noticia`) publicado 16/10 17:05, media_id 18123326782908294. Fila em `docs/FILA.md`.
+- Instagram @jornada40h conectado no Windsor; semana 1 renderizada em `site/posts/semana-1/`. Reel `noticia` publicado 16/10 17:05 (media_id 18123326782908294); Carrossel `a-conta` publicado 17/10 09:12 (media_id 18106213565458459). Fila em `docs/FILA.md`.
 - Repo + Netlify ligados (push na `main` publica).
 
 ## Semana atual · fila de conteúdo
 | Dia | Post | Status |
 |---|---|---|
 | 16/10 | Reel `noticia` | publicado |
-| ter | Carrossel `a-conta` | aprovado |
-| qua | Story `enquete` | aprovado |
-| qui | Carrossel `setor-restaurante` | aprovado |
-| sex | Reel `escala-se-montando` | aprovado |
-| sáb | Carrossel `3-erros` | aprovado |
-| dom | Story `resultado` | aprovado |
+| 17/10 | Carrossel `a-conta` | publicado |
+| 18/10 | Story `resultado` | aprovado |
+| 19/10 | Carrossel `setor-restaurante` | aprovado |
+| 20/10 | Story `enquete` | aprovado |
+| 21/10 | Reel `escala-se-montando` | aprovado |
+| 22/10 | Carrossel `3-erros` | aprovado |
 
 ## Pedidos abertos
 ### Pedido #3 · Analista → Dev · 2026-10-17 · prioridade ALTA
@@ -47,6 +47,7 @@ Status: feito (Carlos: "vc consegue postar, cuidar dos anúncios e fazer deploy"
 - 16/10: conteúdo IG sem câmera (Remotion); eventual apresentador IA só com rótulo de IA.
 
 ## Histórico
+- 17/10 09:12 · Conteúdo: publicado Carrossel `a-conta` media_id 18106213565458459 (URLs da Netlify não verificáveis pelo sandbox — proxy 403; Instagram aceitou as 6 imagens). Semana 2 será redigida no domingo 18/10.
 - 17/10 01:05 · Analista: fechamento do dia 1 (4 leads, CPL R$ 7,95); pedidos #3 e #4 abertos.
 - 16/10 17:53 · Anúncio N2B (LP B) publicado; teste A/B de página iniciado.
 - 16/10 17:05 · Reel `noticia` publicado no @jornada40h.
