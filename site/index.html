@@ -541,13 +541,25 @@ function conta(horasSemana, P, F, S) {
   const precisaAtual = C / CONFIG.jornadaAtual;
   const precisaNovo = C / CONFIG.jornadaNova;
   const gap = precisaNovo - F;
-  const contratar = Math.max(0, Math.ceil(gap - 0.05));
-  const custoContratar = contratar * S * CONFIG.fatorCustoFuncionario;
   const D = Math.max(0, C - F * CONFIG.jornadaNova);
+  // Contratação mínima: N pessoas em tempo integral + (se sobrar) 1 meio período (20h) ou 3/4 (30h).
+  const fracaoDe = h => h <= 4 ? 0 : h <= 20 ? 0.5 : h <= 30 ? 0.75 : 1; // até 4h de sobra: absorve na escala, não contrata
+  const inteiros = D > 0.05 ? Math.floor(D / CONFIG.jornadaNova + 0.001) : 0;
+  const resto = Math.max(0, D - inteiros * CONFIG.jornadaNova);
+  const fracaoResto = fracaoDe(resto);
+  const contratar = inteiros + (fracaoResto > 0 ? 1 : 0);
+  const custoContratar = (inteiros + fracaoResto) * S * CONFIG.fatorCustoFuncionario;
+  const contratarTexto = contratar === 0 ? "" :
+    (inteiros > 0 ? inteiros + (inteiros === 1 ? " pessoa em tempo integral" : " pessoas em tempo integral") : "") +
+    (inteiros > 0 && fracaoResto > 0 ? " + " : "") +
+    (fracaoResto > 0 ? "1 em " + (fracaoResto <= 0.5 ? "meio período (20h)" : fracaoResto <= 0.75 ? "contrato parcial (30h)" : "tempo integral") : "");
   const custoHE = D * CONFIG.semanasPorMes * (S / CONFIG.divisorHora) * (1 + CONFIG.adicionalHoraExtra);
   const heDia = F > 0 ? D / (F * CONFIG.diasTrabalhoNovo) : Infinity;
   const cortarHoras = D / P;
-  return { horasSemana, P, F, S, C, precisaAtual, precisaNovo, gap, contratar, custoContratar, D, custoHE, heDia, cortarHoras };
+  const fracao = inteiros === 0 ? fracaoResto : 1;
+  const custoParcial = custoContratar;
+  const parcial = D > 0.05 && inteiros === 0; // falta menos de 1 funcionário inteiro
+  return { horasSemana, P, F, S, C, precisaAtual, precisaNovo, gap, contratar, custoContratar, contratarTexto, D, custoHE, heDia, cortarHoras, fracao, custoParcial, parcial };
 }
 
 /* ---------- Pixel do Meta ---------- */
@@ -652,16 +664,21 @@ $("calc").addEventListener("submit", e => {
   if (r.erro) return;
   R = r;
   track("CalculouResultado", { tipo: r.tipo }, true);
-  if (r.gap <= 0.05) {
+  if (r.D <= 0.05) {
     $("resTitle").textContent = "Sua equipe cobre o horário com 40 horas, mas a escala muda";
-    $("resBig").innerHTML = "0<span class=\"unit\">contratações</span>";
+    $("resBig").innerHTML = "+" + r.F + '<span class="unit">' + (r.F === 1 ? "folga por semana" : "folgas por semana") + "</span>";
     $("resBig").classList.add("ok");
-    $("resCost").innerHTML = "Cada pessoa passa a ter <strong>2 folgas por semana</strong>. Sem uma escala nova, os buracos aparecem no fim de semana.";
+    $("resCost").innerHTML = "Você <strong>não precisa contratar</strong>. Mas cada pessoa ganha uma folga a mais, e são <strong>" + r.F + (r.F === 1 ? " folga nova" : " folgas novas") + " por semana</strong> para encaixar sem furar o " + (r.dias >= 7 ? "fim de semana" : "sábado") + ".";
+  } else if (r.parcial) {
+    $("resTitle").textContent = "Com a jornada de 40 horas, faltam na sua escala";
+    $("resBig").innerHTML = num1(r.D) + '<span class="unit">horas por semana sem ninguém</span>';
+    $("resBig").classList.remove("ok");
+    $("resCost").innerHTML = "Cobrir isso com hora extra custa cerca de <strong>" + brl(r.custoHE) + " por mês</strong> (" + brl(r.custoHE * 12) + " por ano). Um " + (r.fracao <= 0.5 ? "meio período" : "contrato parcial") + " sai por " + brl(r.custoParcial) + "/mês.";
   } else {
     $("resTitle").textContent = "Com a jornada de 40 horas, você vai precisar de";
     $("resBig").innerHTML = "+" + num1(r.gap) + '<span class="unit">' + (r.gap < 1.95 ? "funcionário" : "funcionários") + "</span>";
     $("resBig").classList.remove("ok");
-    $("resCost").innerHTML = "Se contratar, são cerca de <strong>" + brl(r.custoContratar) + " a mais por mês</strong>, ou " + brl(r.custoContratar * 12) + " por ano.";
+    $("resCost").innerHTML = "Contratando " + r.contratarTexto + ", são cerca de <strong>" + brl(r.custoContratar) + " a mais por mês</strong>, ou " + brl(r.custoContratar * 12) + " por ano.";
   }
   $("resFacts").textContent = "Aberto " + num1(r.horasSemana) + "h por semana, com " + r.P + (r.P > 1 ? " pessoas" : " pessoa") + " ao mesmo tempo: " + num1(r.C) + "h de trabalho. Com 44h isso pedia " + num1(r.precisaAtual) + " funcionários; com 40h, pede " + num1(r.precisaNovo) + ".";
   mostrar(["result", "gate", "redo"]);
@@ -699,6 +716,7 @@ $("gate").addEventListener("submit", async e => {
     pessoas_simultaneas: R.P, funcionarios: R.F, salario_medio: R.S,
     funcionarios_a_mais: +Math.max(0, R.gap).toFixed(2), custo_contratar_mes: Math.round(R.custoContratar),
     horas_descobertas_semana: +R.D.toFixed(1), custo_hora_extra_mes: Math.round(R.custoHE), horas_a_reduzir_semana: +R.cortarHoras.toFixed(1),
+    custo_parcial_mes: Math.round(R.custoParcial), fracao_contrato: R.fracao, contratar_texto: R.contratarTexto, contratar_pessoas: R.contratar,
     checkout_url: CONFIG.checkoutUrl, ...utm, pagina: location.href
   };
   if (CONFIG.webhookUrl) {
@@ -713,12 +731,24 @@ function mostrarRelatorio() {
   if (r.D <= 0.05) {
     $("r1v").textContent = brl(0); $("r1t").textContent = "Sua equipe atual já cobre as horas. Não precisa contratar.";
     $("r2v").textContent = brl(0); $("r2t").textContent = "Sem horas descobertas, não há hora extra obrigatória.";
-    $("r3v").textContent = "0 h"; $("r3t").textContent = "Não precisa reduzir o horário. O trabalho é reorganizar as folgas.";
+    $("r3v").textContent = "+" + r.F + " folga" + (r.F === 1 ? "" : "s") + "/sem"; $("r3t").textContent = "Cada pessoa ganha 1 folga a mais por semana. São " + r.F + " dias de folga novos para distribuir sem deixar o " + (r.dias >= 7 ? "fim de semana" : "sábado") + " descoberto.";
     $("r2w").hidden = true;
-    $("bridge").innerHTML = primeiro + ", você não precisa contratar, mas precisa de uma escala nova: <b>cada pessoa ganha uma folga a mais por semana</b>, e alguém tem que cobrir esses dias.";
+    $("bridge").innerHTML = primeiro + ", você não precisa contratar, mas precisa de uma escala nova: <b>" + r.F + " folga" + (r.F === 1 ? "" : "s") + " a mais por semana</b> e " + r.P + (r.P > 1 ? " pessoas" : " pessoa") + " em cada turno. Montada no improviso, sobra gente na segunda e falta no sábado. A escala 5x2 pronta resolve isso por <b>" + brl(CONFIG.precoFundador) + ", uma única vez</b>.";
+  } else if (r.parcial) {
+    $("r1v").textContent = brl(r.custoParcial) + "/mês";
+    $("r1t").textContent = "Contratar 1 pessoa em " + (r.fracao <= 0.5 ? "meio período (20h)" : r.fracao <= 0.75 ? "contrato parcial (30h)" : "tempo integral") + " para cobrir as " + num1(r.D) + "h por semana que ficam sem ninguém. Inclui estimativa de encargos.";
+    $("r2v").textContent = brl(r.custoHE) + "/mês";
+    $("r2t").textContent = "Cobrir as " + num1(r.D) + "h semanais com a equipe atual, com adicional de " + Math.round(CONFIG.adicionalHoraExtra * 100) + "%. Todo mês, para sempre.";
+    if (r.heDia > CONFIG.limiteHoraExtraDia) {
+      $("r2w").hidden = false;
+      $("r2w").textContent = "Cerca de " + num1(r.heDia) + "h extras por pessoa por dia, acima do limite de " + CONFIG.limiteHoraExtraDia + "h. Não é sustentável.";
+    } else { $("r2w").hidden = true; }
+    $("r3v").textContent = "−" + num1(r.cortarHoras) + " h/sem";
+    $("r3t").textContent = "Fechar " + num1(r.cortarHoras) + "h a menos por semana. Sem custo extra, mas você perde as vendas desses horários.";
+    $("bridge").innerHTML = primeiro + ", são só <b>" + num1(r.D) + " horas por semana</b> descobertas. Isso quase sempre se resolve com <b>revezamento de folgas e um reforço de fim de semana</b>, sem contratar ninguém em tempo integral. A escala 5x2 montada no movimento real do seu negócio mostra exatamente como. Custa <b>" + brl(CONFIG.precoFundador) + ", uma única vez</b>.";
   } else {
     $("r1v").textContent = brl(r.custoContratar) + "/mês";
-    $("r1t").textContent = "Contratar " + r.contratar + (r.contratar > 1 ? " pessoas" : " pessoa") + " para cobrir " + num1(r.D) + "h por semana que ficam sem ninguém. Inclui estimativa de encargos.";
+    $("r1t").textContent = "Contratar " + r.contratarTexto + " para cobrir " + num1(r.D) + "h por semana que ficam sem ninguém. Inclui estimativa de encargos.";
     $("r2v").textContent = brl(r.custoHE) + "/mês";
     $("r2t").textContent = "Cobrir as " + num1(r.D) + "h semanais com a equipe atual, com adicional de " + Math.round(CONFIG.adicionalHoraExtra * 100) + "%.";
     if (r.heDia > CONFIG.limiteHoraExtraDia) {

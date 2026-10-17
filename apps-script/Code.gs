@@ -65,9 +65,27 @@ function enviarRelatorio(lead) {
   const esc = s => String(s || "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;" }[c]));
   const primeiroNome = esc(String(lead.nome || "").trim().split(" ")[0]) || "tudo bem";
   const tipo = esc(lead.tipo || "negócio");
-  const coberto = Number(lead.horas_descobertas_semana) <= 0.05;
+  const D = Number(lead.horas_descobertas_semana) || 0;
+  const coberto = D <= 0.05;
   const checkout = lead.checkout_url || CHECKOUT_URL;
   const faltam = Math.max(0, Math.ceil(Number(lead.funcionarios_a_mais) - 0.05));
+  const gapNum = Math.max(0, Number(lead.funcionarios_a_mais) || 0);
+  const faltamTxt = n1(gapNum); // igual à página: "+1,2 funcionário"
+  const funcTxt = gapNum < 1.95 ? "funcionário" : "funcionários";
+  // Falta menos de 1 funcionário inteiro: o ângulo é "horas descobertas", não "contratar".
+  const parcial = !coberto && D < 36;
+  const F = Number(lead.funcionarios) || 0;
+  const diasAbertos = Number(lead.dias_abertos) || 6;
+  const fimDeSemana = diasAbertos >= 7 ? "fim de semana" : "sábado";
+  // Contratação mínima (mesma regra da página): N integrais + 1 meio período/parcial se sobrar > 4h.
+  const fracaoDe = h => h <= 4 ? 0 : h <= 20 ? 0.5 : h <= 30 ? 0.75 : 1;
+  const inteiros = coberto ? 0 : Math.floor(D / 40 + 0.001);
+  const fracaoResto = fracaoDe(Math.max(0, D - inteiros * 40));
+  const custoContratar = lead.custo_parcial_mes != null ? Number(lead.custo_parcial_mes) : (inteiros + fracaoResto) * (Number(lead.salario_medio) || 0) * 1.7;
+  const contratarTexto = lead.contratar_texto || (
+    (inteiros > 0 ? inteiros + (inteiros === 1 ? " pessoa em tempo integral" : " pessoas em tempo integral") : "") +
+    (inteiros > 0 && fracaoResto > 0 ? " + " : "") +
+    (fracaoResto > 0 ? "1 em " + (fracaoResto <= 0.5 ? "meio período (20h)" : fracaoResto <= 0.75 ? "contrato parcial (30h)" : "tempo integral") : ""));
   const dataHoje = Utilities.formatDate(new Date(), "America/Fortaleza", "dd/MM/yyyy");
 
   // Paleta (mesma da página): fundo escuro, dourado, verde da oferta.
@@ -88,18 +106,22 @@ function enviarRelatorio(lead) {
   // Destaque principal
   const destaque = coberto
     ? "<div style=\"" + font + "font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:" + C.gold + ";font-weight:bold\">Resultado</div>" +
-      "<div style=\"" + font + "font-size:30px;line-height:1.15;font-weight:bold;color:#fff;margin-top:8px\">Sua equipe já cobre o horário com 40 horas</div>" +
-      "<div style=\"" + font + "font-size:15px;line-height:1.5;color:#C9D2E3;margin-top:10px\">O que muda é a escala: cada pessoa passa a ter 2 folgas por semana e o fim de semana precisa de rodízio.</div>"
+      "<div style=\"" + font + "font-size:30px;line-height:1.15;font-weight:bold;color:#fff;margin-top:8px\">Sua equipe cobre o horário com 40 horas, mas a escala muda</div>" +
+      "<div style=\"" + font + "font-size:15px;line-height:1.5;color:#C9D2E3;margin-top:10px\">Você não precisa contratar. Mas cada pessoa ganha uma folga a mais: são <b style=\"color:#fff\">" + F + (F === 1 ? " folga nova" : " folgas novas") + " por semana</b> para encaixar sem deixar o " + fimDeSemana + " descoberto.</div>"
+    : parcial
+    ? "<div style=\"" + font + "font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:" + C.gold + ";font-weight:bold\">Com a jornada de 40 horas faltam na sua escala</div>" +
+      "<div style=\"" + font + "font-size:56px;line-height:1;font-weight:bold;color:#fff;margin-top:10px\">" + n1(D) + " <span style=\"font-size:22px;font-weight:normal;color:#C9D2E3\">horas por semana</span></div>" +
+      "<div style=\"" + font + "font-size:15px;line-height:1.5;color:#C9D2E3;margin-top:10px\">Menos de um funcionário inteiro. Cobrir com hora extra custa <b style=\"color:#fff\">" + brl(lead.custo_hora_extra_mes) + " por mês</b>, todo mês. Abaixo, o que cada saída custa.</div>"
     : "<div style=\"" + font + "font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:" + C.gold + ";font-weight:bold\">Com a jornada de 40 horas você vai precisar de</div>" +
-      "<div style=\"" + font + "font-size:56px;line-height:1;font-weight:bold;color:#fff;margin-top:10px\">+" + faltam + " <span style=\"font-size:22px;font-weight:normal;color:#C9D2E3\">funcionário" + (faltam === 1 ? "" : "s") + "</span></div>" +
+      "<div style=\"" + font + "font-size:56px;line-height:1;font-weight:bold;color:#fff;margin-top:10px\">+" + faltamTxt + " <span style=\"font-size:22px;font-weight:normal;color:#C9D2E3\">" + funcTxt + "</span></div>" +
       "<div style=\"" + font + "font-size:15px;line-height:1.5;color:#C9D2E3;margin-top:10px\">Hoje você fica com <b style=\"color:#fff\">" + n1(lead.horas_descobertas_semana) + " horas por semana</b> sem ninguém para cobrir. Abaixo, o que cada saída custa.</div>";
 
   // 3 saídas
   const saidas = coberto ? "" :
     "<tr><td style=\"padding:28px 32px 8px;" + font + "font-size:18px;font-weight:bold;color:" + C.ink + "\">As 3 saídas para o seu negócio</td></tr>" +
     "<tr><td style=\"padding:0 32px\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">" +
-    bloco("Contratar", brl(lead.custo_contratar_mes) + "/mês", "Contratar " + faltam + " pessoa" + (faltam === 1 ? "" : "s") + " para cobrir as " + n1(lead.horas_descobertas_semana) + "h por semana que ficam sem ninguém. Inclui estimativa de encargos.", C.ink) +
-    bloco("Pagar hora extra", brl(lead.custo_hora_extra_mes) + "/mês", "Cobrir as mesmas horas com a equipe atual, com adicional de 50%. Costuma estourar o limite de 2h extras por dia e não é sustentável.", C.red) +
+    bloco(parcial ? "Contratar meio período" : "Contratar", brl(custoContratar) + "/mês", "Contratar " + contratarTexto + " para cobrir as " + n1(D) + "h por semana que ficam sem ninguém. Inclui estimativa de encargos.", C.ink) +
+    bloco("Pagar hora extra", brl(lead.custo_hora_extra_mes) + "/mês", parcial ? "Cobrir as " + n1(D) + "h com a equipe atual, com adicional de 50%. Parece pouco, mas é todo mês, para sempre: " + brl(Number(lead.custo_hora_extra_mes) * 12) + " por ano." : "Cobrir as mesmas horas com a equipe atual, com adicional de 50%. Costuma estourar o limite de 2h extras por dia e não é sustentável.", C.red) +
     bloco("Reduzir o horário", "−" + n1(lead.horas_a_reduzir_semana) + " h/sem", "Fechar " + n1(lead.horas_a_reduzir_semana) + " horas a menos por semana. Sem custo extra, mas você perde as vendas desses horários.", C.green) +
     "</table></td></tr>";
 
@@ -111,8 +133,10 @@ function enviarRelatorio(lead) {
     "<div style=\"" + font + "font-size:20px;font-weight:bold;color:" + C.ink + ";margin-top:6px\">Receba a escala 5x2 pronta do seu negócio</div>" +
     "<div style=\"" + font + "font-size:14px;line-height:1.55;color:" + C.muted + ";margin-top:8px\">" +
     (coberto
-      ? "Montamos a escala com rodízio de folgas e cobertura de sábado e domingo, já no formato 5x2, para você aplicar sem improviso."
-      : "A saída mais barata ainda custa <b>" + brl(Math.min(Number(lead.custo_contratar_mes) || 1e9, Number(lead.custo_hora_extra_mes) || 1e9)) + " por mês</b>. Uma escala montada com o movimento real do seu negócio pode reduzir esse número: rodízio de folgas, cobertura de fim de semana e o mínimo de contratações.") +
+      ? "São " + F + " folga" + (F === 1 ? "" : "s") + " a mais por semana e " + esc(lead.pessoas_simultaneas) + " pessoa(s) em cada turno. Montada no improviso, sobra gente na segunda e falta no " + fimDeSemana + ". Entregamos a escala com rodízio de folgas e cobertura de fim de semana, já no formato 5x2."
+      : parcial
+      ? "São só <b>" + n1(D) + " horas por semana</b> descobertas. Isso quase sempre se resolve com <b>revezamento de folgas e um reforço de fim de semana</b>, sem contratar ninguém em tempo integral. A escala 5x2 montada no movimento real do seu negócio mostra exatamente como."
+      : "A saída mais barata ainda custa <b>" + brl(Math.min(custoContratar || 1e9, Number(lead.custo_hora_extra_mes) || 1e9)) + " por mês</b>. Uma escala montada com o movimento real do seu negócio pode reduzir esse número: rodízio de folgas, cobertura de fim de semana e o mínimo de contratações.") +
     "</div>" +
     "<div style=\"" + font + "margin-top:14px;color:" + C.ink + "\"><span style=\"font-size:14px;color:" + C.muted + ";text-decoration:line-through\">R$ " + PRECO_CHEIO + "</span> &nbsp;<span style=\"font-size:30px;font-weight:bold\">R$ " + PRECO_OFERTA + "</span> <span style=\"font-size:13px;color:" + C.muted + "\">pagamento único</span></div>" +
     "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:16px\"><tr><td style=\"background:" + C.green + ";border-radius:10px\">" +
@@ -130,7 +154,7 @@ function enviarRelatorio(lead) {
 
   const html =
     "<!doctype html><html><body style=\"margin:0;padding:0;background:" + C.bg + "\">" +
-    "<div style=\"display:none;max-height:0;overflow:hidden;opacity:0\">" + (coberto ? "Sua equipe já cobre o horário. Veja o que muda na escala." : "Você vai precisar de +" + faltam + " funcionário(s). Veja quanto custa cada saída.") + "</div>" +
+    "<div style=\"display:none;max-height:0;overflow:hidden;opacity:0\">" + (coberto ? "Sua equipe cobre o horário, mas são " + F + " folgas a mais por semana para encaixar." : parcial ? "Faltam " + n1(D) + "h por semana na sua escala. Hora extra: " + brl(lead.custo_hora_extra_mes) + "/mês." : "Você vai precisar de +" + faltamTxt + " " + funcTxt + ". Veja quanto custa cada saída.") + "</div>" +
     "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:" + C.bg + "\"><tr><td align=\"center\" style=\"padding:24px 12px\">" +
     "<table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden\">" +
 
@@ -164,12 +188,12 @@ function enviarRelatorio(lead) {
     "</table></td></tr></table></body></html>";
 
   const texto = "Oi, " + primeiroNome + "! Relatório do seu " + tipo + ": " +
-    (coberto ? "sua equipe já cobre o horário com 40h." : "você vai precisar de +" + faltam + " funcionário(s). Contratar: " + brl(lead.custo_contratar_mes) + "/mês. Hora extra: " + brl(lead.custo_hora_extra_mes) + "/mês. Reduzir: " + n1(lead.horas_a_reduzir_semana) + "h/semana.") +
+    (coberto ? "sua equipe cobre o horário com 40h, mas são " + F + " folga(s) a mais por semana para encaixar." : parcial ? "faltam " + n1(D) + "h por semana na escala. Meio período: " + brl(custoContratar) + "/mês. Hora extra: " + brl(lead.custo_hora_extra_mes) + "/mês. Reduzir: " + n1(lead.horas_a_reduzir_semana) + "h/semana." : "você vai precisar de +" + faltamTxt + " " + funcTxt + ". Contratar (" + contratarTexto + "): " + brl(custoContratar) + "/mês. Hora extra: " + brl(lead.custo_hora_extra_mes) + "/mês. Reduzir: " + n1(lead.horas_a_reduzir_semana) + "h/semana.") +
     " Escala 5x2 pronta por R$ " + PRECO_OFERTA + ": " + checkout;
 
   MailApp.sendEmail({
     to: lead.email,
-    subject: coberto ? "Seu relatório: a equipe cobre as 40 horas (veja o que muda)" : "Seu relatório: +" + faltam + " funcionário" + (faltam === 1 ? "" : "s") + " com a jornada de 40h",
+    subject: coberto ? "Seu relatório: " + F + " folga" + (F === 1 ? "" : "s") + " a mais por semana para encaixar" : parcial ? "Seu relatório: faltam " + n1(D) + "h por semana na sua escala" : "Seu relatório: +" + faltamTxt + " " + funcTxt + " com a jornada de 40h",
     htmlBody: html,
     body: texto,
     name: NOME_REMETENTE,
