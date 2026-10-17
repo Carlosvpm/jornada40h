@@ -12,6 +12,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  .exemplo-img { display:block; width:100%; height:auto; border-radius:12px; margin:14px 0 4px; box-shadow:0 10px 30px rgba(3,8,20,.18); }
+  .exemplo-cap { text-align:center; font-size:12px; color:var(--muted); margin:0 0 14px; }
+
   :root {
     --navy-900: #0B1428;
     --navy-800: #0F1B33;
@@ -421,6 +424,8 @@
     <div class="pricebox" id="offerMain">
       <h3>Escala 5x2 pronta</h3>
       <p class="tag">Feita sob medida para o seu negócio</p>
+      <img class="exemplo-img" src="../img/exemplo-escala.png" width="1200" height="578" alt="Exemplo de escala 5x2 de uma padaria com 4 funcionários: turnos de abertura e fechamento, folgas em rodízio e cobertura por dia" loading="lazy">
+      <p class="exemplo-cap">Exemplo real gerado pela nossa ferramenta. A sua vem com os nomes, horários e regras do seu negócio.</p>
       <ul class="gets">
         <li><svg><use href="#i-check"/></svg><div><b>Escala completa, pessoa por pessoa</b><span>Dia por dia, com folgas em rodízio</span></div></li>
         <li><svg><use href="#i-check"/></svg><div><b>Fim de semana e horários de pico cobertos</b><span>Montada com o movimento real, não só com o horário de abertura</span></div></li>
@@ -487,9 +492,9 @@ const VARIANTE = "B"; // teste A/B: identifica esta página na planilha e no che
 
 /* Simulações exibidas nos cards flutuantes (calculadas com a mesma conta) */
 const SIMULACOES = [
-  { sigla: "PD", nome: "Padaria de bairro", detalhe: "Seg a sáb · 4 funcionários", horasSemana: 5 * 12 + 7, P: 3, F: 4, S: 1800 },
-  { sigla: "RE", nome: "Restaurante", detalhe: "Ter a dom · 6 funcionários", horasSemana: 6 * 12, P: 4, F: 6, S: 1900 },
-  { sigla: "LJ", nome: "Loja de rua", detalhe: "Seg a sáb · 2 funcionários", horasSemana: 6 * 10, P: 2, F: 2, S: 1700 }
+  { sigla: "PD", nome: "Padaria de bairro", detalhe: "Seg a sáb · 4 funcionários", horasSemana: 5 * 12 + 7, horasDias: [12, 12, 12, 12, 12, 7], P: 3, F: 4, S: 1800 },
+  { sigla: "RE", nome: "Restaurante", detalhe: "Ter a dom · 6 funcionários", horasSemana: 6 * 12, horasDias: [12, 12, 12, 12, 12, 12], P: 4, F: 6, S: 1900 },
+  { sigla: "LJ", nome: "Loja de rua", detalhe: "Seg a sáb · 2 funcionários", horasSemana: 6 * 10, horasDias: [10, 10, 10, 10, 10, 10], P: 2, F: 2, S: 1700 }
 ];
 
 /* Título por setor: ?setor=padaria no link do anúncio */
@@ -514,12 +519,19 @@ const track = (ev, data, custom) => { try { if (window.fbq) custom ? fbq("trackC
 const smooth = el => el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 
 /* ---------- conta central (usada pela calculadora e pelas simulações) ---------- */
-function conta(horasSemana, P, F, S) {
+function conta(horasSemana, P, F, S, horasDias) {
   const C = horasSemana * P;
+  // Capacidade real de 1 pessoa na semana: 5 dias de trabalho (2 folgas), até 8h por dia.
+  // Se o dia aberto tem menos de 8h (ex.: 7h), a pessoa não chega a 40h — e isso aparece na escala.
+  let capacidade = CONFIG.jornadaNova;
+  if (Array.isArray(horasDias) && horasDias.length) {
+    const tops = horasDias.map(h => Math.min(CONFIG.jornadaNova / CONFIG.diasTrabalhoNovo, h)).sort((a, b) => b - a).slice(0, CONFIG.diasTrabalhoNovo);
+    capacidade = Math.min(CONFIG.jornadaNova, tops.reduce((a, b) => a + b, 0));
+  }
   const precisaAtual = C / CONFIG.jornadaAtual;
-  const precisaNovo = C / CONFIG.jornadaNova;
+  const precisaNovo = C / capacidade;
   const gap = precisaNovo - F;
-  const D = Math.max(0, C - F * CONFIG.jornadaNova);
+  const D = Math.max(0, C - F * capacidade);
   // Contratação mínima: N pessoas em tempo integral + (se sobrar) 1 meio período (20h) ou 3/4 (30h).
   const fracaoDe = h => h <= 4 ? 0 : h <= 20 ? 0.5 : h <= 30 ? 0.75 : 1; // até 4h de sobra: absorve na escala, não contrata
   const inteiros = D > 0.05 ? Math.floor(D / CONFIG.jornadaNova + 0.001) : 0;
@@ -537,7 +549,7 @@ function conta(horasSemana, P, F, S) {
   const fracao = inteiros === 0 ? fracaoResto : 1;
   const custoParcial = custoContratar;
   const parcial = D > 0.05 && inteiros === 0; // falta menos de 1 funcionário inteiro
-  return { horasSemana, P, F, S, C, precisaAtual, precisaNovo, gap, contratar, custoContratar, contratarTexto, D, custoHE, heDia, cortarHoras, fracao, custoParcial, parcial };
+  return { horasSemana, P, F, S, C, capacidade, precisaAtual, precisaNovo, gap, contratar, custoContratar, contratarTexto, D, custoHE, heDia, cortarHoras, fracao, custoParcial, parcial };
 }
 
 /* ---------- Pixel do Meta ---------- */
@@ -563,7 +575,7 @@ if (setor) {
 
 /* ---------- simulações ---------- */
 $("cases").innerHTML = SIMULACOES.map(s => {
-  const r = conta(s.horasSemana, s.P, s.F, s.S);
+  const r = conta(s.horasSemana, s.P, s.F, s.S, s.horasDias);
   const n = Math.max(0, r.gap);
   return '<div class="case"><div class="who"><span class="tag">' + s.nome + '</span><span>' + s.detalhe + '</span></div>' +
     '<div class="num">+' + num1(n) + '<small>' + (n < 1.95 ? "funcionário" : "funcionários") + '</small></div>' +
@@ -634,11 +646,13 @@ $("start").addEventListener("submit", e => {
 function calcular() {
   const dias = [...document.querySelectorAll('input[name=dia]:checked')].map(i => i.value);
   const tipo = (document.querySelector('input[name=tipo]:checked') || {}).value || "";
-  let horasSemana = 0;
+  let horasSemana = 0; const horasDias = [];
   dias.forEach(d => {
-    if (["1", "2", "3", "4", "5"].includes(d)) horasSemana += span($("semAbre").value, $("semFecha").value);
-    if (d === "6") horasSemana += span($("sabAbre").value, $("sabFecha").value);
-    if (d === "0") horasSemana += span($("domAbre").value, $("domFecha").value);
+    let h = 0;
+    if (["1", "2", "3", "4", "5"].includes(d)) h = span($("semAbre").value, $("semFecha").value);
+    if (d === "6") h = span($("sabAbre").value, $("sabFecha").value);
+    if (d === "0") h = span($("domAbre").value, $("domFecha").value);
+    horasSemana += h; horasDias.push(h);
   });
   const P = Number($("simult").value), F = Number($("func").value), S = Number($("salario").value);
   if (!tipo) return { erro: "Escolha o tipo de negócio na pergunta 1." };
@@ -646,7 +660,7 @@ function calcular() {
   if (!(P >= 1)) return { erro: "Informe quantas pessoas trabalham ao mesmo tempo." };
   if ($("func").value === "" || !(F >= 0)) return { erro: "Informe quantos funcionários você tem hoje." };
   if (!(S > 0)) return { erro: "Informe o salário médio." };
-  return Object.assign(conta(horasSemana, P, F, S), { tipo, dias: dias.length });
+  return Object.assign(conta(horasSemana, P, F, S, horasDias), { tipo, dias: dias.length });
 }
 
 function mostrar(ids) { ["calc", "result", "gate", "report", "offer", "redo"].forEach(id => $(id).hidden = !ids.includes(id)); }
@@ -674,7 +688,7 @@ $("calc").addEventListener("submit", e => {
     $("resBig").classList.remove("ok");
     $("resCost").innerHTML = "Contratando " + r.contratarTexto + ", são cerca de <strong>" + brl(r.custoContratar) + " a mais por mês</strong>, ou " + brl(r.custoContratar * 12) + " por ano.";
   }
-  $("resFacts").textContent = "Aberto " + num1(r.horasSemana) + "h por semana, com " + r.P + (r.P > 1 ? " pessoas" : " pessoa") + " ao mesmo tempo: " + num1(r.C) + "h de trabalho. Com 44h isso pedia " + num1(r.precisaAtual) + " funcionários; com 40h, pede " + num1(r.precisaNovo) + ".";
+  $("resFacts").textContent = "Aberto " + num1(r.horasSemana) + "h por semana, com " + r.P + (r.P > 1 ? " pessoas" : " pessoa") + " ao mesmo tempo: " + num1(r.C) + "h de trabalho. Com 44h isso pedia " + num1(r.precisaAtual) + " funcionários; com 40h, pede " + num1(r.precisaNovo) + (r.capacidade < CONFIG.jornadaNova - 0.05 ? " (com 2 folgas e dias de menos de 8h, cada pessoa só cobre " + num1(r.capacidade) + "h por semana)" : "") + ".";
   mostrar(["result", "gate", "redo"]);
   fase = "resultado"; updateSticky();
   smooth($("card"));

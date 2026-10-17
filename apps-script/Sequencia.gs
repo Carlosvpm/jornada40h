@@ -1,8 +1,9 @@
 /**
  * Sequência de e-mails pós-cálculo (D+1, D+3, D+7) com PDF personalizado.
  *
- * Depende de escala.gs (gerarEscala, exemploEquipe) e pdf-template.gs (renderRelatorioHTML),
- * copiados de /engine no repositório para arquivos deste projeto Apps Script.
+ * O motor (engine/escala.js) e o template (engine/pdf-template.js) são carregados do repositório
+ * público no GitHub em tempo de execução (carregarMotor_), então um push na main atualiza o PDF
+ * sem redeploy do Apps Script.
  *
  * Instalação: rode `instalarGatilhoSequencia` UMA vez pelo editor (cria gatilho de hora em hora).
  * Controle: aba "Sequencia" (uma linha por e-mail). Para parar alguém: status = "sair".
@@ -14,6 +15,21 @@ const SEQ_HORA_INICIO = 8;   // só envia entre 8h e 20h (America/Fortaleza)
 const SEQ_HORA_FIM = 20;
 const SEQ_MAX_POR_RODADA = 20; // limite de e-mails por execução (cota diária do Gmail ~100)
 const OFERTA_ATE = "31/10";
+const MOTOR_BASE = "https://raw.githubusercontent.com/Carlosvpm/jornada40h/main/engine/";
+
+/** Carrega escala.js e pdf-template.js do GitHub (cache de 1h) e define as funções no escopo global. */
+function carregarMotor_() {
+  if (typeof gerarEscala === "function" && typeof renderRelatorioHTML === "function") return;
+  const cache = CacheService.getScriptCache();
+  ["escala.js", "pdf-template.js"].forEach(nome => {
+    let code = cache.get("motor:" + nome);
+    if (!code) {
+      code = UrlFetchApp.fetch(MOTOR_BASE + nome + "?t=" + Math.floor(Date.now() / 36e5), { muteHttpExceptions: false }).getContentText();
+      try { cache.put("motor:" + nome, code, 3600); } catch (e) { /* >100KB não cabe no cache; segue sem */ }
+    }
+    (0, eval)(code); // eval indireto: declarações viram globais
+  });
+}
 
 /** Cria o gatilho horário (idempotente). */
 function instalarGatilhoSequencia() {
@@ -24,6 +40,7 @@ function instalarGatilhoSequencia() {
 
 /** Executada pelo gatilho. Lê Leads + Vendas, decide quem recebe o quê, envia e registra. */
 function processarSequencia() {
+  carregarMotor_();
   const tz = "America/Fortaleza";
   const hora = Number(Utilities.formatDate(new Date(), tz, "H"));
   if (hora < SEQ_HORA_INICIO || hora >= SEQ_HORA_FIM) return;
@@ -269,6 +286,7 @@ function testarSequenciaD1() {
     funcionarios_a_mais: 0.2, custo_contratar_mes: 4165, custo_parcial_mes: 2083, contratar_texto: "1 em meio período (20h)",
     horas_descobertas_semana: 8, custo_hora_extra_mes: 637, horas_a_reduzir_semana: 2, data: new Date(Date.now() - 864e5)
   };
+  carregarMotor_();
   enviarD1_(lead);
   Logger.log("Enviado para " + lead.email);
 }

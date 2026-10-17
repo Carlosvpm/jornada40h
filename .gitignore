@@ -6,3 +6,4 @@ remotion/out/**/*.zip
 .env.*
 .netlify/
 .clasprc.json
+engine/out/
