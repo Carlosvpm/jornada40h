@@ -101,7 +101,7 @@ function enviarD1_(lead) {
     "<p>" + situacao + "</p>" +
     "<p>No PDF anexo está a prévia de como ficaria a escala 5x2 de uma equipe do tamanho da sua (nomes fictícios). A sua vem com os nomes, horários e regras do seu negócio, nas versões de 42h e 40h, pronta para imprimir em até 48h.</p>" +
     "<p><b>Oferta para quem fez a conta:</b> de <s>R$ " + precoTxt_(PRECO_CHEIO) + "</s> por <b>R$ " + precoTxt_(PRECO_OFERTA) + "</b>, pagamento único, com garantia de 7 dias.</p>" +
-    botao_(lead.checkout_url || CHECKOUT_URL, "Quero minha escala por R$ " + precoTxt_(PRECO_OFERTA)) +
+    botao_(checkoutDe_(lead), "Quero minha escala por R$ " + precoTxt_(PRECO_OFERTA)) +
     "<p style=\"font-size:13px;color:#5B6478\">Ficou com dúvida? É só responder este e-mail.</p>";
   enviarEmailSequencia_(lead, assunto, "A prévia da sua escala 5x2", corpo, pdf ? [pdf] : []);
 }
@@ -121,7 +121,7 @@ function enviarD3_(lead) {
       "<p>No seu caso são <b>" + n1_(D) + " horas por semana</b> sem ninguém. Cobrir com hora extra custa cerca de <b>" + brl_(he) + " por mês</b>, todo mês. Na maioria dos negócios desse tamanho, dá para resolver com <b>revezamento de folgas + um reforço só no fim de semana</b> (meio período ou diarista), sem contrato integral.</p>" +
       "<p>A escala 5x2 pronta mostra exatamente isso para o seu horário e a sua equipe: quem trabalha quando, onde sobra, onde falta, e qual é a opção mais barata para fechar a conta.</p>";
   enviarEmailSequencia_(lead, assunto, D <= 0.05 ? "O erro mais comum" : "Sem contratar ninguém",
-    corpo + botao_(lead.checkout_url || CHECKOUT_URL, "Montar minha escala · R$ " + precoTxt_(PRECO_OFERTA)) +
+    corpo + botao_(checkoutDe_(lead), "Montar minha escala · R$ " + precoTxt_(PRECO_OFERTA)) +
     "<p style=\"font-size:13px;color:#5B6478\">Preço de fundador até " + OFERTA_ATE + ". Entrega em até 48h · garantia de 7 dias: não serviu, devolvemos.</p>", []);
 }
 
@@ -132,7 +132,7 @@ function enviarD7_(lead) {
     "<p>Oi, " + esc_(primeiro) + ". Este é o último e-mail desta série.</p>" +
     "<p>A escala 5x2 pronta do seu " + esc_(lead.tipo || "negócio") + " continua por <b>R$ " + precoTxt_(PRECO_OFERTA) + "</b> até " + OFERTA_ATE + ". Depois disso volta para R$ " + precoTxt_(PRECO_CHEIO) + ".</p>" +
     "<p>Se a jornada de 40h ainda não é prioridade, tudo bem: a calculadora continua grátis em <a href=\"" + SITE_URL + "\">" + SITE_URL.replace(/^https?:\/\//, "") + "</a> quando precisar.</p>" +
-    botao_(lead.checkout_url || CHECKOUT_URL, "Garantir os R$ " + precoTxt_(PRECO_OFERTA)) +
+    botao_(checkoutDe_(lead), "Garantir os R$ " + precoTxt_(PRECO_OFERTA)) +
     "<p style=\"font-size:13px;color:#5B6478\">Entrega em até 48h · garantia de 7 dias.</p>";
   enviarEmailSequencia_(lead, assunto, "Último aviso", corpo, []);
 }
@@ -176,7 +176,7 @@ function gerarPdfRelatorio_(lead) {
         contratarTexto: lead.contratar_texto || "", horasReduzir: Number(lead.horas_a_reduzir_semana) || 0, funcionariosAMais: Number(lead.funcionarios_a_mais) || 0
       },
       escala,
-      oferta: { precoCheio: PRECO_CHEIO, precoFundador: PRECO_OFERTA, ate: OFERTA_ATE, checkoutUrl: lead.checkout_url || CHECKOUT_URL },
+      oferta: { precoCheio: PRECO_CHEIO, precoFundador: PRECO_OFERTA, ate: OFERTA_ATE, checkoutUrl: checkoutDe_(lead) },
       marca: { nome: "Jornada 40h", site: SITE_URL, email: EMAIL_CONTATO },
       data: Utilities.formatDate(new Date(), "America/Fortaleza", "dd/MM/yyyy")
     });
@@ -276,7 +276,7 @@ function enviarEmailSequencia_(lead, assunto, titulo, corpoHtml, anexos) {
     "<tr><td style=\"padding:28px 32px;" + font + "font-size:15px;line-height:1.6;color:#14213D\"><div style=\"font-size:22px;font-weight:bold;color:#14213D;margin-bottom:8px\">" + titulo + "</div>" + corpoHtml + "</td></tr>" +
     "<tr><td style=\"padding:0 32px 28px;" + font + "font-size:12px;color:#5B6478;line-height:1.6\">Jornada 40h · <a href=\"mailto:" + EMAIL_CONTATO + "\" style=\"color:#5B6478\">" + EMAIL_CONTATO + "</a> · <a href=\"" + SITE_URL + "privacidade.html\" style=\"color:#5B6478\">Privacidade</a><br>Você recebe estes e-mails porque pediu o relatório na calculadora. Para não receber mais, responda com <b>sair</b>.</td></tr>" +
     "</table></td></tr></table></body></html>";
-  const texto = corpoHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() + " " + (lead.checkout_url || CHECKOUT_URL);
+  const texto = corpoHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() + " " + (checkoutDe_(lead));
   const opcoes = { to: lead.email, subject: assunto, htmlBody: html, body: texto, name: NOME_REMETENTE, replyTo: EMAIL_CONTATO };
   if (anexos && anexos.length) opcoes.attachments = anexos;
   MailApp.sendEmail(opcoes);

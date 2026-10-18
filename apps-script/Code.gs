@@ -59,6 +59,12 @@ const EMAIL_CONTATO = "calculadora40h@gmail.com";
 const PRECO_CHEIO = 77;
 const PRECO_OFERTA = 47.9;
 /** 47.9 -> "47,90"; 77 -> "77". */
+/** Checkout da oferta atual; ignora links antigos gravados no lead (ex.: o de R$ 77). */
+function checkoutDe_(lead) {
+  const u = String(lead.checkout_url || "");
+  if (u.indexOf(CHECKOUT_URL) === 0) return u;
+  return CHECKOUT_URL + (lead.email ? "?email=" + encodeURIComponent(String(lead.email).trim()) : "");
+}
 function precoTxt_(v) { return Math.round(v) === v ? String(v) : v.toFixed(2).replace(".", ","); }
 
 function enviarRelatorio(lead) {
@@ -69,7 +75,7 @@ function enviarRelatorio(lead) {
   const tipo = esc(lead.tipo || "negócio");
   const D = Number(lead.horas_descobertas_semana) || 0;
   const coberto = D <= 0.05;
-  const checkout = lead.checkout_url || CHECKOUT_URL;
+  const checkout = checkoutDe_(lead);
   const faltam = Math.max(0, Math.ceil(Number(lead.funcionarios_a_mais) - 0.05));
   const gapNum = Math.max(0, Number(lead.funcionarios_a_mais) || 0);
   const faltamTxt = n1(gapNum); // igual à página: "+1,2 funcionário"
