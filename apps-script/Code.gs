@@ -140,7 +140,7 @@ function enviarRelatorio(lead) {
       ? "São só <b>" + n1(D) + " horas por semana</b> descobertas. Isso quase sempre se resolve com <b>revezamento de folgas e um reforço de fim de semana</b>, sem contratar ninguém em tempo integral. A escala 5x2 montada no movimento real do seu negócio mostra exatamente como."
       : "A saída mais barata ainda custa <b>" + brl(Math.min(custoContratar || 1e9, Number(lead.custo_hora_extra_mes) || 1e9)) + " por mês</b>. Uma escala montada com o movimento real do seu negócio pode reduzir esse número: rodízio de folgas, cobertura de fim de semana e o mínimo de contratações.") +
     "</div>" +
-    "<div style=\"" + font + "margin-top:14px;color:" + C.ink + "\"><span style=\"font-size:14px;color:" + C.muted + ";text-decoration:line-through\">R$ " + PRECO_CHEIO + "</span> &nbsp;<span style=\"font-size:30px;font-weight:bold\">R$ " + PRECO_OFERTA + "</span> <span style=\"font-size:13px;color:" + C.muted + "\">pagamento único</span></div>" +
+    "<div style=\"" + font + "margin-top:14px;color:" + C.ink + "\"><span style=\"font-size:14px;color:" + C.muted + ";text-decoration:line-through\">R$ " + precoTxt_(PRECO_CHEIO) + "</span> &nbsp;<span style=\"font-size:30px;font-weight:bold\">R$ " + precoTxt_(PRECO_OFERTA) + "</span> <span style=\"font-size:13px;color:" + C.muted + "\">pagamento único</span></div>" +
     "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:16px\"><tr><td style=\"background:" + C.green + ";border-radius:10px\">" +
     "<a href=\"" + checkout + "\" style=\"display:inline-block;padding:14px 24px;" + font + "font-size:16px;font-weight:bold;color:#ffffff;text-decoration:none\">Quero minha escala pronta →</a>" +
     "</td></tr></table>" +
@@ -191,7 +191,7 @@ function enviarRelatorio(lead) {
 
   const texto = "Oi, " + primeiroNome + "! Relatório do seu " + tipo + ": " +
     (coberto ? "sua equipe cobre o horário com 40h, mas são " + F + " folga(s) a mais por semana para encaixar." : parcial ? "faltam " + n1(D) + "h por semana na escala. Meio período: " + brl(custoContratar) + "/mês. Hora extra: " + brl(lead.custo_hora_extra_mes) + "/mês. Reduzir: " + n1(lead.horas_a_reduzir_semana) + "h/semana." : "você vai precisar de +" + faltamTxt + " " + funcTxt + ". Contratar (" + contratarTexto + "): " + brl(custoContratar) + "/mês. Hora extra: " + brl(lead.custo_hora_extra_mes) + "/mês. Reduzir: " + n1(lead.horas_a_reduzir_semana) + "h/semana.") +
-    " Escala 5x2 pronta por R$ " + PRECO_OFERTA + ": " + checkout;
+    " Escala 5x2 pronta por R$ " + precoTxt_(PRECO_OFERTA) + ": " + checkout;
 
   MailApp.sendEmail({
     to: lead.email,
@@ -204,10 +204,10 @@ function enviarRelatorio(lead) {
 }
 
 /* ---------- Pedidos (briefing da escala, vindo de obrigado.html) ---------- */
-const DIAS = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
+const DIAS_BRIEFING = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
 const COLUNAS_PEDIDO = [
   "data", "status", "pedido_kiwify", "valor", "nome", "whatsapp", "email", "negocio", "tipo", "cidade",
-  ...DIAS.flatMap(d => ["aberto_" + d, "abre_" + d, "fecha_" + d, "pessoas_" + d]),
+  ...DIAS_BRIEFING.flatMap(d => ["aberto_" + d, "abre_" + d, "fecha_" + d, "pessoas_" + d]),
   "equipe", "pico", "salario_medio", "preferencia", "observacoes",
   "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "pagina"
 ];
@@ -225,7 +225,7 @@ function registrarPedido(ss, p) {
   const esc = s => String(s || "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;" }[c]));
   const nomeDia = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado", dom: "Domingo" };
   const font = "font-family:Arial,Helvetica,sans-serif;";
-  const linhasDias = DIAS.map(d => "<tr><td style=\"padding:6px 10px;border-bottom:1px solid #E6EBF5;" + font + "font-size:13px\"><b>" + nomeDia[d] + "</b></td><td style=\"padding:6px 10px;border-bottom:1px solid #E6EBF5;" + font + "font-size:13px\">" +
+  const linhasDias = DIAS_BRIEFING.map(d => "<tr><td style=\"padding:6px 10px;border-bottom:1px solid #E6EBF5;" + font + "font-size:13px\"><b>" + nomeDia[d] + "</b></td><td style=\"padding:6px 10px;border-bottom:1px solid #E6EBF5;" + font + "font-size:13px\">" +
     (p["aberto_" + d] === "sim" ? esc(p["abre_" + d]) + " às " + esc(p["fecha_" + d]) + " · " + esc(p["pessoas_" + d]) + " pessoa(s)" : "<span style=\"color:#999\">fechado</span>") + "</td></tr>").join("");
   const resumo =
     "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"border:1px solid #E6EBF5;border-radius:10px;width:100%\">" + linhasDias + "</table>" +
