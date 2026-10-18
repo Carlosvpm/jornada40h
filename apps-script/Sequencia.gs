@@ -15,6 +15,8 @@ const SEQ_HORA_INICIO = 8;   // só envia entre 8h e 20h (America/Fortaleza)
 const SEQ_HORA_FIM = 20;
 const SEQ_MAX_POR_RODADA = 20; // limite de e-mails por execução (cota diária do Gmail ~100)
 const OFERTA_ATE = "31/10";
+// Receberam o e-mail manual com a prévia e a oferta de R$ 47,90 em 18/10/2026: contam como D1 já enviado.
+const JA_CONTATADOS_18_10 = ["gabrielaraujo2041@gmail.com", "tatianestecanella285@gmail.com", "marcos.mppacajus@gmail.com", "rhayanemmenegussi@gmail.com", "chicoramosbc@gmail.com"];
 const MOTOR_BASE = "https://raw.githubusercontent.com/Carlosvpm/jornada40h/main/engine/";
 
 /** Carrega escala.js e pdf-template.js do GitHub (cache de 1h) e define as funções no escopo global. */
@@ -66,11 +68,11 @@ function processarSequencia() {
 
     const dias = (agora - new Date(lead.data)) / 36e5 / 24;
     try {
-      if (!linha.d1_enviado && dias >= 0.8 && dias < 6) {
+      if (!linha.d1_enviado && dias >= 0.08 && dias < 6) {
         enviarD1_(lead); atualizarLinha_(seq, linha, { d1_enviado: agora }); enviados++;
-      } else if (linha.d1_enviado && !linha.d3_enviado && dias >= 3 && dias < 9) {
+      } else if (linha.d1_enviado && !linha.d3_enviado && dias >= 2 && dias < 9) {
         enviarD3_(lead); atualizarLinha_(seq, linha, { d3_enviado: agora }); enviados++;
-      } else if (linha.d3_enviado && !linha.d7_enviado && dias >= 7 && dias < 14) {
+      } else if (linha.d3_enviado && !linha.d7_enviado && dias >= 5 && dias < 14) {
         enviarD7_(lead); atualizarLinha_(seq, linha, { d7_enviado: agora, status: "concluido" }); enviados++;
       }
     } catch (err) {
@@ -87,19 +89,21 @@ function enviarD1_(lead) {
   const D = Number(lead.horas_descobertas_semana) || 0;
   const gap = Number(lead.funcionarios_a_mais) || 0;
   const F = Number(lead.funcionarios) || 0;
-  const assunto = D <= 0.05
-    ? primeiro + ", veja como ficam as " + F + " folgas a mais na sua escala (PDF)"
+  const assunto = primeiro + ", a prévia da sua escala 5x2 (e uma oferta de R$ " + precoTxt_(PRECO_OFERTA) + ")";
+  const situacao = D <= 0.05
+    ? "Pelos números que você passou, a sua equipe dá conta das horas. O desafio é encaixar <b>" + (F * 2) + " folgas por semana</b> sem deixar o " + (Number(lead.dias_abertos) >= 7 ? "fim de semana" : "sábado") + " descoberto."
     : gap < 0.95
-      ? primeiro + ", como cobrir as " + n1_(D) + "h descobertas sem contratar (PDF)"
-      : primeiro + ", como ficaria sua escala 5x2 com +" + n1_(gap) + " funcionário (PDF)";
+      ? "Com 2 folgas por pessoa, ficam cerca de <b>" + n1_(D) + " horas por semana sem ninguém</b>. Dá para resolver com rodízio e um reforço pontual, sem contratar em tempo integral."
+      : "Com 2 folgas por pessoa, ficam cerca de <b>" + n1_(D) + " horas por semana sem ninguém</b>, algo como <b>+" + n1_(gap) + " funcionário</b>. A escala certa mostra a forma mais barata de cobrir isso.";
   const corpo =
-    "<p>Oi, " + esc_(primeiro) + "! Ontem você fez a conta da jornada de 40h para o seu " + esc_(lead.tipo || "negócio") + ".</p>" +
-    "<p>Montei em PDF o que a conta não mostra: <b>como ficaria uma escala 5x2 para uma equipe do tamanho da sua</b>, com as folgas distribuídas, o " + (Number(lead.dias_abertos) >= 7 ? "fim de semana" : "sábado") + " coberto e os pontos onde a escala " +
-    (D <= 0.05 ? "precisa de rodízio." : "fica descoberta e quanto isso custa.") + "</p>" +
-    "<p>É um exemplo com nomes fictícios. A sua vem com os nomes, horários e regras do seu negócio, pronta para colar na parede.</p>" +
-    botao_(lead.checkout_url || CHECKOUT_URL, "Quero a escala do meu negócio · R$ " + PRECO_OFERTA) +
-    "<p style=\"font-size:13px;color:#5B6478\">Preço de fundador até " + OFERTA_ATE + " (depois R$ " + PRECO_CHEIO + "). Entrega em até 48h · garantia de 7 dias.</p>";
-  enviarEmailSequencia_(lead, assunto, "Como ficaria a sua escala 5x2", corpo, pdf ? [pdf] : []);
+    "<p>Oi, " + esc_(primeiro) + "! Aqui é o Carlos, da Jornada 40h. Você fez a conta do fim da escala 6x1 para o seu " + esc_(lead.tipo || "negócio") + ".</p>" +
+    "<p>A emenda já foi publicada (EC 141): por volta de 16 de dezembro, cada funcionário passa a ter 2 folgas por semana e a jornada cai para 42h. Em dezembro de 2027, para 40h, sem reduzir salário.</p>" +
+    "<p>" + situacao + "</p>" +
+    "<p>No PDF anexo está a prévia de como ficaria a escala 5x2 de uma equipe do tamanho da sua (nomes fictícios). A sua vem com os nomes, horários e regras do seu negócio, nas versões de 42h e 40h, pronta para imprimir em até 48h.</p>" +
+    "<p><b>Oferta para quem fez a conta:</b> de <s>R$ " + precoTxt_(PRECO_CHEIO) + "</s> por <b>R$ " + precoTxt_(PRECO_OFERTA) + "</b>, pagamento único, com garantia de 7 dias.</p>" +
+    botao_(lead.checkout_url || CHECKOUT_URL, "Quero minha escala por R$ " + precoTxt_(PRECO_OFERTA)) +
+    "<p style=\"font-size:13px;color:#5B6478\">Ficou com dúvida? É só responder este e-mail.</p>";
+  enviarEmailSequencia_(lead, assunto, "A prévia da sua escala 5x2", corpo, pdf ? [pdf] : []);
 }
 
 function enviarD3_(lead) {
@@ -117,18 +121,18 @@ function enviarD3_(lead) {
       "<p>No seu caso são <b>" + n1_(D) + " horas por semana</b> sem ninguém. Cobrir com hora extra custa cerca de <b>" + brl_(he) + " por mês</b>, todo mês. Na maioria dos negócios desse tamanho, dá para resolver com <b>revezamento de folgas + um reforço só no fim de semana</b> (meio período ou diarista), sem contrato integral.</p>" +
       "<p>A escala 5x2 pronta mostra exatamente isso para o seu horário e a sua equipe: quem trabalha quando, onde sobra, onde falta, e qual é a opção mais barata para fechar a conta.</p>";
   enviarEmailSequencia_(lead, assunto, D <= 0.05 ? "O erro mais comum" : "Sem contratar ninguém",
-    corpo + botao_(lead.checkout_url || CHECKOUT_URL, "Montar minha escala · R$ " + PRECO_OFERTA) +
+    corpo + botao_(lead.checkout_url || CHECKOUT_URL, "Montar minha escala · R$ " + precoTxt_(PRECO_OFERTA)) +
     "<p style=\"font-size:13px;color:#5B6478\">Preço de fundador até " + OFERTA_ATE + ". Entrega em até 48h · garantia de 7 dias: não serviu, devolvemos.</p>", []);
 }
 
 function enviarD7_(lead) {
   const primeiro = primeiroNome_(lead.nome);
-  const assunto = primeiro + ", último aviso: R$ " + PRECO_OFERTA + " só até " + OFERTA_ATE;
+  const assunto = primeiro + ", último aviso: R$ " + precoTxt_(PRECO_OFERTA) + " só até " + OFERTA_ATE;
   const corpo =
     "<p>Oi, " + esc_(primeiro) + ". Este é o último e-mail desta série.</p>" +
-    "<p>A escala 5x2 pronta do seu " + esc_(lead.tipo || "negócio") + " continua por <b>R$ " + PRECO_OFERTA + "</b> até " + OFERTA_ATE + ". Depois disso volta para R$ " + PRECO_CHEIO + ".</p>" +
+    "<p>A escala 5x2 pronta do seu " + esc_(lead.tipo || "negócio") + " continua por <b>R$ " + precoTxt_(PRECO_OFERTA) + "</b> até " + OFERTA_ATE + ". Depois disso volta para R$ " + precoTxt_(PRECO_CHEIO) + ".</p>" +
     "<p>Se a jornada de 40h ainda não é prioridade, tudo bem: a calculadora continua grátis em <a href=\"" + SITE_URL + "\">" + SITE_URL.replace(/^https?:\/\//, "") + "</a> quando precisar.</p>" +
-    botao_(lead.checkout_url || CHECKOUT_URL, "Garantir o preço de fundador") +
+    botao_(lead.checkout_url || CHECKOUT_URL, "Garantir os R$ " + precoTxt_(PRECO_OFERTA)) +
     "<p style=\"font-size:13px;color:#5B6478\">Entrega em até 48h · garantia de 7 dias.</p>";
   enviarEmailSequencia_(lead, assunto, "Último aviso", corpo, []);
 }
@@ -234,7 +238,7 @@ function abrirSequencia_(ss) {
 }
 
 function criarLinhaSequencia_(seq, lead) {
-  const linha = { email: String(lead.email).trim().toLowerCase(), nome: lead.nome || "", data_lead: lead.data, status: "ativo", d1_enviado: "", d3_enviado: "", d7_enviado: "", ultimo_erro: "", atualizado: new Date() };
+  const linha = { email: String(lead.email).trim().toLowerCase(), nome: lead.nome || "", data_lead: lead.data, status: "ativo", d1_enviado: JA_CONTATADOS_18_10.indexOf(String(lead.email).trim().toLowerCase()) >= 0 ? new Date("2026-10-18T19:20:00Z") : "", d3_enviado: "", d7_enviado: "", ultimo_erro: "", atualizado: new Date() };
   seq.aba.appendRow(SEQ_COLUNAS.map(c => linha[c]));
   linha._row = seq.aba.getLastRow();
   seq.porEmail[linha.email] = linha;

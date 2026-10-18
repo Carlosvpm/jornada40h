@@ -43,6 +43,13 @@ function brl(v) {
   return (neg ? "−" : "") + "R$ " + s + out;
 }
 
+/** Preço com centavos quando houver: 47.9 -> "R$ 47,90"; 77 -> "R$ 77". */
+function brlPreco(v) {
+  var n = Number(v) || 0;
+  if (Math.round(n) === n) return brl(n);
+  return "R$ " + n.toFixed(2).replace(".", ",");
+}
+
 /** 8.25 -> "8,3"; 8 -> "8". */
 function num1(v) {
   var n = Math.round((Number(v) || 0) * 10) / 10;
@@ -308,8 +315,8 @@ function pagina2(d) {
     '<li>Onde falta gente e a opção mais barata para cobrir</li>' +
     '<li>Entrega em até 48 h · Garantia de 7 dias: não serviu, devolvemos</li>' +
     '</ul></td>' +
-    '<td class="of-r"><div class="of-de">de <s>' + esc(brl(oferta.precoCheio)) + '</s></div>' +
-    '<div class="of-preco">' + esc(brl(oferta.precoFundador)) + '</div>' +
+    '<td class="of-r"><div class="of-de">de <s>' + esc(brlPreco(oferta.precoCheio)) + '</s></div>' +
+    '<div class="of-preco">' + esc(brlPreco(oferta.precoFundador)) + '</div>' +
     '<div class="of-ate">preço de fundador até ' + esc(oferta.ate) + ' · pagamento único</div>' +
     '<a class="btn" href="' + esc(oferta.checkoutUrl) + '">Quero minha escala pronta</a>' +
     '<div class="of-url">' + esc(oferta.checkoutUrl) + '</div></td>' +

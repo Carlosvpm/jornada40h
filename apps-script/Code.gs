@@ -53,11 +53,13 @@ function doPost(e) {
 }
 
 // Link de pagamento usado no e-mail quando a página não enviar um (fallback).
-const CHECKOUT_URL = "https://pay.kiwify.com.br/yy3LT4h";
+const CHECKOUT_URL = "https://pay.kiwify.com.br/xftQB3Y"; // oferta de R$ 47,90 (a de R$ 77 é yy3LT4h)
 const SITE_URL = "https://jornada40h.com.br/";
 const EMAIL_CONTATO = "calculadora40h@gmail.com";
-const PRECO_CHEIO = 147;
-const PRECO_OFERTA = 77;
+const PRECO_CHEIO = 77;
+const PRECO_OFERTA = 47.9;
+/** 47.9 -> "47,90"; 77 -> "77". */
+function precoTxt_(v) { return Math.round(v) === v ? String(v) : v.toFixed(2).replace(".", ","); }
 
 function enviarRelatorio(lead) {
   const brl = v => "R$ " + Math.round(Number(v) || 0).toLocaleString("pt-BR");
