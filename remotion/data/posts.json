@@ -601,5 +601,696 @@
       "#padaria",
       "#pequenonegocio"
     ]
+  },
+  {
+    "id": "calendario",
+    "semana": 2,
+    "dia": "Segunda",
+    "type": "reel",
+    "setor": "geral",
+    "tema": "escuro",
+    "status": "pendente de aprovação",
+    "titulo": "O fim da 6x1 tem data. Anote.",
+    "numeros": {
+      "funcionariosAMais": 0,
+      "custoContratarMes": 0,
+      "custoHoraExtraMes": 0,
+      "horasReduzir": 0
+    },
+    "cenas": [
+      {
+        "tipo": "manchete",
+        "duracao": 5,
+        "kicker": "Emenda Constitucional 141 · publicada em 16/10",
+        "titulo": "O fim da 6x1 tem data. Anote.",
+        "legenda": "A emenda do fim da escala 6x1 foi publicada em 16 de outubro de 2026."
+      },
+      {
+        "tipo": "stats",
+        "duracao": 5,
+        "kicker": "O calendário",
+        "itens": [
+          {
+            "texto": "dez/26",
+            "rotulo": "2 folgas por semana e 42 h"
+          },
+          {
+            "texto": "dez/27",
+            "rotulo": "limite de 40 h"
+          },
+          {
+            "texto": "R$ 0",
+            "rotulo": "de redução no salário"
+          }
+        ],
+        "legenda": "Em 2 meses: 2 folgas e 42 horas. Um ano depois: 40 horas. Sem reduzir salário."
+      },
+      {
+        "tipo": "texto",
+        "duracao": 5,
+        "kicker": "Na prática",
+        "titulo": "Com 2 folgas e 8 horas por dia, são 40 horas já em dezembro.",
+        "corpo": "5 dias de 8 horas somam 40. A etapa de 42 horas só rende mais com convenção coletiva que amplie a jornada diária.",
+        "legenda": "Para a maioria dos pequenos negócios, a conta das 40h já vale em dezembro."
+      },
+      {
+        "tipo": "cta",
+        "duracao": 4,
+        "titulo": "Quantas pessoas a sua escala vai precisar?",
+        "botao": "Calcule grátis em 1 minuto",
+        "rodape": "Sem cadastro · link na bio",
+        "legenda": "Resultado em 1 minuto, sem cadastro."
+      }
+    ],
+    "cta": "Calcule grátis em 1 minuto",
+    "legenda": "A Emenda Constitucional 141 foi publicada em 16/10/2026. Em cerca de 2 meses (por volta de 16/12), cada funcionário passa a ter 2 folgas por semana e a jornada máxima cai para 42 horas. Um ano depois, 40 horas. Sem redução de salário.\n\nNa prática, com 2 folgas e até 8 horas por dia, 5 dias somam 40 horas: para a maioria dos pequenos negócios a conta das 40h já vale em dezembro, salvo convenção coletiva que amplie a jornada diária. Confirme as datas com o seu contador.\n\nQuantas pessoas a sua escala vai precisar? Calcule grátis em 1 minuto. Link na bio.",
+    "hashtags": [
+      "#escala6x1",
+      "#fimda6x1",
+      "#jornada40h",
+      "#escala5x2",
+      "#pequenonegocio",
+      "#empreendedorismo",
+      "#rh",
+      "#direitotrabalhista"
+    ]
+  },
+  {
+    "id": "setor-farmacia",
+    "semana": 2,
+    "dia": "Terça",
+    "type": "carrossel",
+    "setor": "farmácia",
+    "tema": "escuro",
+    "status": "pendente de aprovação",
+    "titulo": "A conta da jornada de 40h para uma farmácia com 7 funcionários",
+    "numeros": {
+      "funcionarios": 7,
+      "horasAbertoSemana": 102,
+      "pessoasAoMesmoTempo": 3,
+      "salarioMedio": 2200,
+      "funcionariosAMais": 0.65,
+      "custoContratarMes": 2805,
+      "custoContratarAno": 33660,
+      "custoHoraExtraMes": 1858,
+      "horasReduzir": 8.7
+    },
+    "slides": [
+      {
+        "layout": "capa",
+        "kicker": "A conta · Farmácia",
+        "titulo": "Farmácia com 7 funcionários, aberta 102 horas por semana. Quanto custa a jornada de 40h?",
+        "corpo": "De segunda a sábado das 7h às 22h e domingo das 8h às 20h. Arraste para ver a conta."
+      },
+      {
+        "layout": "texto",
+        "kicker": "O que muda",
+        "titulo": "3 pessoas no balcão o tempo todo. Cada uma com 4 horas a menos por semana.",
+        "corpo": "E um detalhe que só a farmácia tem: o farmacêutico precisa estar presente durante todo o horário de funcionamento (Lei 13.021/2014). A escala dele não pode ter buraco.",
+        "bullets": [
+          "102 h abertas por semana",
+          "3 pessoas ao mesmo tempo",
+          "7 funcionários hoje"
+        ]
+      },
+      {
+        "layout": "conta",
+        "kicker": "A conta",
+        "titulo": "Faltam 26 horas por semana.",
+        "linhas": [
+          {
+            "rotulo": "Horas necessárias por semana",
+            "valor": "306 h"
+          },
+          {
+            "rotulo": "Horas disponíveis com 40h",
+            "valor": "280 h"
+          },
+          {
+            "rotulo": "Diferença",
+            "valor": "26 h",
+            "cor": "vermelho"
+          }
+        ],
+        "numero": {
+          "prefixo": "+",
+          "valor": 1,
+          "sufixo": " contrato de 30 h",
+          "rotulo": "para fechar a escala"
+        },
+        "destaque": {
+          "rotulo": "custo extra",
+          "valor": "R$ 2.805/mês",
+          "sub": "R$ 33.660 por ano"
+        }
+      },
+      {
+        "layout": "saidas",
+        "kicker": "3 saídas",
+        "titulo": "Cada caminho custa diferente.",
+        "opcoes": [
+          {
+            "titulo": "Contratar",
+            "valor": "R$ 2.805/mês",
+            "nota": "1 contrato parcial de 30 h, escala fechada",
+            "cor": "verde"
+          },
+          {
+            "titulo": "Pagar hora extra",
+            "valor": "R$ 1.858/mês",
+            "nota": "26 h a mais por semana. Limite de 2 h por pessoa por dia e risco de processo",
+            "cor": "vermelho"
+          },
+          {
+            "titulo": "Reduzir horário",
+            "valor": "8,7 h a menos",
+            "nota": "Por semana, de funcionamento",
+            "cor": "ouro"
+          }
+        ]
+      },
+      {
+        "layout": "texto",
+        "kicker": "O detalhe",
+        "titulo": "Quem abre domingo precisa de rodízio, não de hora extra.",
+        "corpo": "Com 2 folgas por semana e uma delas de preferência no domingo, a escala do fim de semana tem de ser desenhada. Simulação com salário médio de R$ 2.200 e encargos estimados. O seu número pode ser outro."
+      },
+      {
+        "layout": "cta",
+        "kicker": "Calculadora grátis",
+        "titulo": "Faça a conta da sua farmácia em 1 minuto.",
+        "botao": "Calcular grátis",
+        "rodape": "Sem cadastro · link na bio",
+        "corpo": "Informe horário de funcionamento, pessoas por turno e salário médio. O resto a calculadora faz."
+      }
+    ],
+    "cta": "Calcular grátis",
+    "legenda": "Farmácia com 7 funcionários, 3 pessoas no balcão ao mesmo tempo, aberta 102 horas por semana.\n\nCom a jornada de 40h, faltam 26 horas na escala. Resultado: +1 contrato parcial de 30 horas, R$ 2.805 por mês, R$ 33.660 por ano.\n\nAs 3 saídas: contratar (R$ 2.805/mês), hora extra (R$ 1.858/mês, com limite de 2 h por dia e risco) ou reduzir 8,7 horas de funcionamento. E lembre: o farmacêutico precisa estar presente durante todo o horário de funcionamento.\n\nNúmeros de exemplo, com salário médio de R$ 2.200 e encargos estimados. Faça a conta do seu negócio, grátis. Link na bio.",
+    "hashtags": [
+      "#escala6x1",
+      "#jornada40h",
+      "#farmacia",
+      "#drogaria",
+      "#pequenonegocio",
+      "#gestaodepessoas",
+      "#custos",
+      "#escaladetrabalho"
+    ]
+  },
+  {
+    "id": "hora-extra-limite",
+    "semana": 2,
+    "dia": "Quarta",
+    "type": "story",
+    "setor": "geral",
+    "tema": "escuro",
+    "status": "pendente de aprovação",
+    "titulo": "Hora extra tem limite: 2 horas por pessoa por dia",
+    "numeros": {
+      "funcionariosAMais": 0,
+      "custoContratarMes": 0,
+      "custoHoraExtraMes": 909,
+      "horasReduzir": 0
+    },
+    "cenas": [
+      {
+        "tipo": "texto",
+        "duracao": 4,
+        "kicker": "Você sabia?",
+        "titulo": "Hora extra tem limite: 2 horas por pessoa, por dia.",
+        "corpo": "E custa no mínimo 50% a mais. Cobrir a escala inteira com hora extra não é saída legal nem barata."
+      },
+      {
+        "tipo": "numero",
+        "duracao": 4,
+        "kicker": "Exemplo: 14 h descobertas por semana",
+        "numero": {
+          "prefixo": "",
+          "valor": 2,
+          "sufixo": " h",
+          "rotulo": "limite de hora extra por pessoa, por dia"
+        },
+        "destaque": {
+          "rotulo": "custo da hora extra",
+          "valor": 909,
+          "formato": "moeda",
+          "sufixo": "/mês",
+          "sub": "salário médio de R$ 2.000, adicional de 50%"
+        }
+      },
+      {
+        "tipo": "cta",
+        "duracao": 4,
+        "titulo": "Quantas horas vão ficar descobertas no seu negócio?",
+        "botao": "Calcule grátis",
+        "rodape": "Toca no link · 1 minuto · sem cadastro"
+      }
+    ],
+    "cta": "Calcule grátis",
+    "legenda": "Hora extra tem limite legal de 2 horas por pessoa por dia e custa no mínimo 50% a mais. Exemplo: 14 horas descobertas por semana, com salário médio de R$ 2.000, dão cerca de R$ 909 por mês em hora extra. Calcule grátis quantas horas vão ficar descobertas no seu negócio.",
+    "hashtags": [
+      "#escala6x1",
+      "#jornada40h",
+      "#horaextra",
+      "#pequenonegocio"
+    ]
+  },
+  {
+    "id": "setor-loja",
+    "semana": 2,
+    "dia": "Quinta",
+    "type": "carrossel",
+    "setor": "loja",
+    "tema": "escuro",
+    "status": "pendente de aprovação",
+    "titulo": "A conta da jornada de 40h para uma loja com 3 funcionários",
+    "numeros": {
+      "funcionarios": 3,
+      "horasAbertoSemana": 66,
+      "pessoasAoMesmoTempo": 2,
+      "salarioMedio": 1700,
+      "funcionariosAMais": 0.3,
+      "custoContratarMes": 1445,
+      "custoContratarAno": 17340,
+      "custoHoraExtraMes": 662,
+      "horasReduzir": 6
+    },
+    "slides": [
+      {
+        "layout": "capa",
+        "kicker": "A conta · Loja",
+        "titulo": "Loja com 3 funcionários, aberta 66 horas por semana. A conta fecha?",
+        "corpo": "De segunda a sábado, das 9h às 20h. Arraste para ver."
+      },
+      {
+        "layout": "texto",
+        "kicker": "O que muda",
+        "titulo": "2 pessoas na loja o tempo todo. Hoje, com 44 horas, a conta fecha exata.",
+        "corpo": "Com 40 horas por pessoa, sobra buraco na escala. Pequeno, mas todo sábado.",
+        "bullets": [
+          "66 h abertas por semana",
+          "2 pessoas ao mesmo tempo",
+          "3 funcionários hoje"
+        ]
+      },
+      {
+        "layout": "conta",
+        "kicker": "A conta",
+        "titulo": "Faltam 12 horas por semana.",
+        "linhas": [
+          {
+            "rotulo": "Horas necessárias por semana",
+            "valor": "132 h"
+          },
+          {
+            "rotulo": "Horas disponíveis com 40h",
+            "valor": "120 h"
+          },
+          {
+            "rotulo": "Diferença",
+            "valor": "12 h",
+            "cor": "vermelho"
+          }
+        ],
+        "numero": {
+          "prefixo": "+",
+          "valor": 1,
+          "sufixo": " meio período",
+          "rotulo": "para fechar a escala"
+        },
+        "destaque": {
+          "rotulo": "custo extra",
+          "valor": "R$ 1.445/mês",
+          "sub": "R$ 17.340 por ano"
+        }
+      },
+      {
+        "layout": "saidas",
+        "kicker": "3 saídas",
+        "titulo": "Aqui o buraco é pequeno. A saída barata existe.",
+        "opcoes": [
+          {
+            "titulo": "Contratar",
+            "valor": "R$ 1.445/mês",
+            "nota": "1 meio período (20 h), escala fechada",
+            "cor": "verde"
+          },
+          {
+            "titulo": "Pagar hora extra",
+            "valor": "R$ 662/mês",
+            "nota": "12 h a mais por semana. Parece barato, mas quando vira rotina vira passivo",
+            "cor": "vermelho"
+          },
+          {
+            "titulo": "Reduzir horário",
+            "valor": "6 h a menos",
+            "nota": "Por semana, de funcionamento. Ex.: fechar 1 hora mais cedo",
+            "cor": "ouro"
+          }
+        ]
+      },
+      {
+        "layout": "texto",
+        "kicker": "O detalhe",
+        "titulo": "Um jovem aprendiz ou um meio período de sábado resolve.",
+        "corpo": "Nem toda contratação precisa ser de 40 horas. Simulação com salário médio de R$ 1.700 e encargos estimados. O seu número pode ser outro."
+      },
+      {
+        "layout": "cta",
+        "kicker": "Calculadora grátis",
+        "titulo": "Faça a conta da sua loja em 1 minuto.",
+        "botao": "Calcular grátis",
+        "rodape": "Sem cadastro · link na bio",
+        "corpo": "O resultado sai com o número de pessoas, o custo mensal e as 3 saídas para o seu caso."
+      }
+    ],
+    "cta": "Calcular grátis",
+    "legenda": "Loja com 3 funcionários, 2 pessoas atendendo ao mesmo tempo, aberta 66 horas por semana. Hoje, com 44 horas, a conta fecha exata.\n\nCom a jornada de 40h, faltam 12 horas na escala. Resultado: +1 meio período, R$ 1.445 por mês, R$ 17.340 por ano.\n\nAs 3 saídas: contratar um meio período (R$ 1.445/mês), hora extra (R$ 662/mês, que vira passivo quando é rotina) ou reduzir 6 horas de funcionamento por semana.\n\nNúmeros de exemplo, com salário médio de R$ 1.700 e encargos estimados. Faça a conta do seu negócio, grátis. Link na bio.",
+    "hashtags": [
+      "#escala6x1",
+      "#jornada40h",
+      "#varejo",
+      "#lojista",
+      "#comercio",
+      "#pequenonegocio",
+      "#gestaodepessoas",
+      "#escaladetrabalho"
+    ]
+  },
+  {
+    "id": "escala-oficina",
+    "semana": 2,
+    "dia": "Sexta",
+    "type": "reel",
+    "setor": "oficina",
+    "tema": "escuro",
+    "status": "pendente de aprovação",
+    "titulo": "Oficina aberta 10 horas por dia: a escala 5x2 fecha?",
+    "numeros": {
+      "funcionarios": 5,
+      "horasAbertoSemana": 54,
+      "pessoasAoMesmoTempo": 4,
+      "salarioMedio": 2400,
+      "funcionariosAMais": 0.4,
+      "custoContratarMes": 2040,
+      "custoContratarAno": 24480,
+      "custoHoraExtraMes": 1247,
+      "horasReduzir": 4
+    },
+    "escala": {
+      "dias": [
+        "Seg",
+        "Ter",
+        "Qua",
+        "Qui",
+        "Sex",
+        "Sáb",
+        "Dom"
+      ],
+      "funcionarios": [
+        {
+          "nome": "André",
+          "folgas": [
+            0,
+            6
+          ]
+        },
+        {
+          "nome": "Beto",
+          "folgas": [
+            1,
+            6
+          ]
+        },
+        {
+          "nome": "Caio",
+          "folgas": [
+            2,
+            6
+          ]
+        },
+        {
+          "nome": "Davi",
+          "folgas": [
+            3,
+            6
+          ]
+        },
+        {
+          "nome": "Elias",
+          "folgas": [
+            4,
+            6
+          ]
+        }
+      ],
+      "minimo": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        4,
+        0
+      ],
+      "solucao": {
+        "nome": "+1 meio período (manhãs)",
+        "trabalha": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    },
+    "cenas": [
+      {
+        "tipo": "manchete",
+        "duracao": 3,
+        "kicker": "Escala 5x2 · Oficina · 5 funcionários",
+        "titulo": "Oficina aberta 10 horas por dia: a escala 5x2 fecha?",
+        "legenda": "5 mecânicos, 4 na bancada o dia todo, 2 folgas cada. Vamos montar."
+      },
+      {
+        "tipo": "grade",
+        "duracao": 9,
+        "kicker": "Montando a escala",
+        "titulo": "10 horas abertas, 8 por pessoa: para ter 4 o dia todo, são 5 por dia.",
+        "legenda": "De segunda a sexta falta 1. No sábado, de 4 horas, fecha."
+      },
+      {
+        "tipo": "grade-solucao",
+        "duracao": 4,
+        "kicker": "A solução",
+        "titulo": "Um meio período nas manhãs fecha a escala.",
+        "legenda": "Solução: +1 meio período (20 h), cerca de R$ 2.040/mês."
+      },
+      {
+        "tipo": "cta",
+        "duracao": 4,
+        "titulo": "Quantas pessoas a sua escala precisa?",
+        "botao": "Calcule grátis",
+        "rodape": "Escala 5x2 pronta · link na bio",
+        "legenda": "Resultado em 1 minuto, sem cadastro."
+      }
+    ],
+    "cta": "Calcule grátis",
+    "legenda": "Oficina com 5 funcionários, 4 na bancada ao mesmo tempo, aberta 54 horas por semana (segunda a sexta das 8h às 18h, sábado das 8h às 12h).\n\nO detalhe que pega: a oficina abre 10 horas por dia, mas cada pessoa trabalha no máximo 8. Para ter 4 pessoas o dia inteiro, precisa de 5 por dia. Com 2 folgas cada, de segunda a sexta falta 1.\n\nNa conta: 16 horas descobertas por semana. A saída mais barata é um meio período nas manhãs, cerca de R$ 2.040/mês (salário médio de R$ 2.400, encargos estimados), em vez de R$ 1.247/mês em hora extra.\n\nQuer saber quantas pessoas a sua escala precisa? Calcule grátis em 1 minuto. Link na bio.",
+    "hashtags": [
+      "#escala5x2",
+      "#escala6x1",
+      "#jornada40h",
+      "#oficinamecanica",
+      "#autopecas",
+      "#escaladetrabalho",
+      "#pequenonegocio",
+      "#rh"
+    ]
+  },
+  {
+    "id": "setor-salao",
+    "semana": 2,
+    "dia": "Sábado",
+    "type": "carrossel",
+    "setor": "salão",
+    "tema": "papel",
+    "status": "pendente de aprovação",
+    "titulo": "A conta da jornada de 40h para um salão com 4 funcionários",
+    "numeros": {
+      "funcionarios": 4,
+      "horasAbertoSemana": 60,
+      "pessoasAoMesmoTempo": 3,
+      "salarioMedio": 1900,
+      "funcionariosAMais": 0.5,
+      "custoContratarMes": 1615,
+      "custoContratarAno": 19380,
+      "custoHoraExtraMes": 1234,
+      "horasReduzir": 6.7
+    },
+    "slides": [
+      {
+        "layout": "capa",
+        "kicker": "A conta · Salão de beleza",
+        "titulo": "Salão com 4 funcionários, aberto 60 horas por semana. Quanto custa a jornada de 40h?",
+        "corpo": "De segunda a sábado, das 9h às 19h. Sábado é o dia mais cheio. Arraste para ver."
+      },
+      {
+        "layout": "texto",
+        "kicker": "O que muda",
+        "titulo": "3 pessoas atendendo o tempo todo. Com 2 folgas cada e 4 horas a menos por semana.",
+        "corpo": "Vale para quem tem funcionário CLT. Profissional com contrato de parceria formalizado (Lei 13.352/2016) fica fora desta conta.",
+        "bullets": [
+          "60 h abertas por semana",
+          "3 pessoas ao mesmo tempo",
+          "4 funcionários hoje"
+        ]
+      },
+      {
+        "layout": "conta",
+        "kicker": "A conta",
+        "titulo": "Faltam 20 horas por semana.",
+        "linhas": [
+          {
+            "rotulo": "Horas necessárias por semana",
+            "valor": "180 h"
+          },
+          {
+            "rotulo": "Horas disponíveis com 40h",
+            "valor": "160 h"
+          },
+          {
+            "rotulo": "Diferença",
+            "valor": "20 h",
+            "cor": "vermelho"
+          }
+        ],
+        "numero": {
+          "prefixo": "+",
+          "valor": 1,
+          "sufixo": " meio período",
+          "rotulo": "para fechar a escala"
+        },
+        "destaque": {
+          "rotulo": "custo extra",
+          "valor": "R$ 1.615/mês",
+          "sub": "R$ 19.380 por ano"
+        }
+      },
+      {
+        "layout": "saidas",
+        "kicker": "3 saídas",
+        "titulo": "O sábado decide a escala.",
+        "opcoes": [
+          {
+            "titulo": "Contratar",
+            "valor": "R$ 1.615/mês",
+            "nota": "1 meio período (20 h) focado em sexta e sábado",
+            "cor": "verde"
+          },
+          {
+            "titulo": "Pagar hora extra",
+            "valor": "R$ 1.234/mês",
+            "nota": "20 h a mais por semana. Limite de 2 h por pessoa por dia",
+            "cor": "vermelho"
+          },
+          {
+            "titulo": "Reduzir horário",
+            "valor": "6,7 h a menos",
+            "nota": "Por semana, de funcionamento. Ex.: abrir mais tarde na segunda",
+            "cor": "ouro"
+          }
+        ]
+      },
+      {
+        "layout": "texto",
+        "kicker": "O detalhe",
+        "titulo": "Ninguém quer folgar no sábado. A escala precisa de rodízio.",
+        "corpo": "Com 2 folgas por semana, a folga do sábado roda entre a equipe. Simulação com salário médio de R$ 1.900 e encargos estimados. O seu número pode ser outro."
+      },
+      {
+        "layout": "cta",
+        "kicker": "Calculadora grátis",
+        "titulo": "Faça a conta do seu salão em 1 minuto.",
+        "botao": "Calcular grátis",
+        "rodape": "Sem cadastro · link na bio",
+        "corpo": "Informe horário de funcionamento, pessoas por turno e salário médio. O resto a calculadora faz."
+      }
+    ],
+    "cta": "Calcular grátis",
+    "legenda": "Salão com 4 funcionários CLT, 3 pessoas atendendo ao mesmo tempo, aberto 60 horas por semana.\n\nCom a jornada de 40h, faltam 20 horas na escala. Resultado: +1 meio período, R$ 1.615 por mês, R$ 19.380 por ano.\n\nAs 3 saídas: contratar um meio período focado em sexta e sábado (R$ 1.615/mês), hora extra (R$ 1.234/mês, com limite de 2 h por dia) ou reduzir 6,7 horas de funcionamento. E a folga do sábado precisa rodar entre a equipe.\n\nNúmeros de exemplo, com salário médio de R$ 1.900 e encargos estimados. Profissional com contrato de parceria formalizado fica fora desta conta. Faça a conta do seu negócio, grátis. Link na bio.",
+    "hashtags": [
+      "#escala6x1",
+      "#jornada40h",
+      "#salaodebeleza",
+      "#cabeleireiro",
+      "#barbearia",
+      "#pequenonegocio",
+      "#gestaodepessoas",
+      "#escaladetrabalho"
+    ]
+  },
+  {
+    "id": "resultado-clinica",
+    "semana": 2,
+    "dia": "Domingo",
+    "type": "story",
+    "setor": "clínica",
+    "tema": "escuro",
+    "status": "pendente de aprovação",
+    "titulo": "Clínica com 4 funcionários: +1 meio período com 40h",
+    "numeros": {
+      "funcionarios": 4,
+      "horasAbertoSemana": 60,
+      "pessoasAoMesmoTempo": 3,
+      "salarioMedio": 2100,
+      "funcionariosAMais": 0.5,
+      "custoContratarMes": 1785,
+      "custoContratarAno": 21420,
+      "custoHoraExtraMes": 1364,
+      "horasReduzir": 6.7
+    },
+    "cenas": [
+      {
+        "tipo": "texto",
+        "duracao": 4,
+        "kicker": "Resultado da calculadora",
+        "titulo": "Clínica com 4 funcionários, aberta 60 horas por semana.",
+        "corpo": "Recepção e 2 auxiliares o tempo todo. Com a jornada de 40h, a escala não fecha mais com 4."
+      },
+      {
+        "tipo": "numero",
+        "duracao": 4,
+        "kicker": "Com 40 horas",
+        "numero": {
+          "prefixo": "+",
+          "valor": 1,
+          "sufixo": " meio período",
+          "rotulo": "para fechar a escala"
+        },
+        "destaque": {
+          "rotulo": "custo extra",
+          "valor": 1785,
+          "formato": "moeda",
+          "sufixo": "/mês",
+          "sub": "R$ 21.420 por ano"
+        }
+      },
+      {
+        "tipo": "cta",
+        "duracao": 4,
+        "titulo": "E na sua clínica, quanto vai ser?",
+        "botao": "Calcule grátis",
+        "rodape": "Toca no link · 1 minuto · sem cadastro"
+      }
+    ],
+    "cta": "Calcule grátis",
+    "legenda": "Clínica com 4 funcionários, aberta 60 horas por semana: com a jornada de 40h, faltam 20 horas e precisa de +1 meio período. Custo extra de R$ 1.785 por mês (exemplo com salário médio de R$ 2.100). E no seu negócio? Calcule grátis.",
+    "hashtags": [
+      "#escala6x1",
+      "#jornada40h",
+      "#clinica",
+      "#pequenonegocio"
+    ]
   }
 ]
