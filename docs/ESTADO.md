@@ -25,7 +25,7 @@ _Atualizado: 2026-10-18 (America/Fortaleza)_
 
 ## Pedidos abertos
 ### Pedido #5 · Conteúdo → Carlos · 2026-10-18
-Semana 2 do @jornada40h pronta (7 peças renderizadas em `site/posts/semana-2/`, textos em `remotion/data/posts.json` `semana: 2`, legendas em `remotion/out/semana-2/legendas.md`). Copy já com a transição correta (EC 141: 2 folgas e 42h em dez/26, 40h em dez/27; "na prática 40h já em dezembro") e números sempre como exemplo, pelas fórmulas da calculadora (salário × 1,7; hora extra 50%). Pedido: **OK para entrar na FILA** a partir de 23/10 (ou ajustes). Resumo:
+Semana 2 do @jornada40h pronta (7 peças renderizadas em `site/posts/semana-2/`, textos em `remotion/data/posts.json` `semana: 2`, legendas no campo `legenda` + `hashtags` de cada post (`out/` não é versionado; `node remotion/scripts/legendas.mjs --week 2` regenera o legendas.md)). Copy já com a transição correta (EC 141: 2 folgas e 42h em dez/26, 40h em dez/27; "na prática 40h já em dezembro") e números sempre como exemplo, pelas fórmulas da calculadora (salário × 1,7; hora extra 50%). Pedido: **OK para entrar na FILA** a partir de 23/10 (ou ajustes). Resumo:
 1. Seg · Reel · `calendario` — O fim da 6x1 tem data. Anote. (19 s)
 2. Ter · Carrossel · `setor-farmacia` — Farmácia com 7 funcionários, 102 h/semana: faltam 26 h → +1 contrato de 30 h, R$ 2.805/mês
 3. Qua · Story · `hora-extra-limite` — Hora extra tem limite: 2 h por pessoa por dia (e 50% a mais)

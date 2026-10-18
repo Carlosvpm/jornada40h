@@ -15,7 +15,7 @@ Legendas completas em `remotion/out/semana-1/legendas.md` (pasta `out/` não est
 
 ## Semana 2 · pendente de aprovação (Pedido #5 no ESTADO.md)
 
-Redigida e renderizada em 18/10 (`remotion/data/posts.json`, `semana: 2`, `status: "pendente de aprovação"`). Mídias já no site em `https://incandescent-profiterole-dfec92.netlify.app/posts/semana-2/`; legendas em `remotion/out/semana-2/legendas.md`. **Só entra na tabela acima após OK do Carlos.** Datas sugeridas (continuação da fila):
+Redigida e renderizada em 18/10 (`remotion/data/posts.json`, `semana: 2`, `status: "pendente de aprovação"`). Mídias já no site em `https://incandescent-profiterole-dfec92.netlify.app/posts/semana-2/`; legendas no campo `legenda` + `hashtags` de cada post (`out/` não é versionado; `node remotion/scripts/legendas.mjs --week 2` regenera o legendas.md). **Só entra na tabela acima após OK do Carlos.** Datas sugeridas (continuação da fila):
 
 | Data sugerida | Formato | Ação Windsor | Arquivos | Título |
 |---|---|---|---|---|
