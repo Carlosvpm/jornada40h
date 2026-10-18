@@ -78,7 +78,7 @@ function contaDaPagina(c) {
 }
 
 const OFERTA = { precoCheio: 147, precoFundador: 77, ate: "31/10", checkoutUrl: "https://pay.kiwify.com.br/yy3LT4h" };
-const MARCA = { nome: "Jornada 40h", site: "https://incandescent-profiterole-dfec92.netlify.app/", email: "calculadora40h@gmail.com" };
+const MARCA = { nome: "Jornada 40h", site: "https://jornada40h.com.br/", email: "calculadora40h@gmail.com" };
 const DATA = "17/10/2026";
 
 const browser = await chromium.launch();

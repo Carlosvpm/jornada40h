@@ -1,6 +1,6 @@
 # Fila de publicação · Instagram @jornada40h
 
-Conta Windsor: connector `instagram`, account `17841457085842780`. Mídias públicas em `https://incandescent-profiterole-dfec92.netlify.app/posts/semana-N/` (N = semana da linha).
+Conta Windsor: connector `instagram`, account `17841457085842780`. Mídias públicas em `https://jornada40h.com.br/posts/semana-N/` (N = semana da linha).
 Legendas: fonte é `remotion/data/posts.json` — campo `legenda` + `hashtags` (pasta `out/` não está no repo; `node remotion/scripts/legendas.mjs --week N` regenera o `legendas.md`). O agente de conteúdo publica tudo com `data ≤ hoje` e `status: pendente`, um por dia, e troca o status para `publicado (media_id …)`.
 
 | Data | Semana | Formato | Ação Windsor | Arquivos | Legenda (resumo) | Status |

@@ -4,7 +4,7 @@ Micro-SaaS para pequenos negócios se adaptarem ao fim da escala 6x1 (jornada 44
 
 - **Produto gratuito:** calculadora de carga horária (captura de lead)
 - **Produto pago:** "Escala 5x2 Pronta", R$ 77 (Kiwify, pagamento único)
-- **Site:** https://incandescent-profiterole-dfec92.netlify.app/ (deploy automático: push na `main` → Netlify publica `site/`)
+- **Site:** https://jornada40h.com.br/ (Dokploy, app `jornada40h` no servidor kanagawa-app, publica `site/`; a Netlify antiga segue só como reserva)
 
 ## Estrutura
 

@@ -54,7 +54,7 @@ function doPost(e) {
 
 // Link de pagamento usado no e-mail quando a página não enviar um (fallback).
 const CHECKOUT_URL = "https://pay.kiwify.com.br/yy3LT4h";
-const SITE_URL = "https://incandescent-profiterole-dfec92.netlify.app/";
+const SITE_URL = "https://jornada40h.com.br/";
 const EMAIL_CONTATO = "calculadora40h@gmail.com";
 const PRECO_CHEIO = 147;
 const PRECO_OFERTA = 77;
