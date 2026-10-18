@@ -609,7 +609,7 @@
     "type": "reel",
     "setor": "geral",
     "tema": "escuro",
-    "status": "pendente de aprovação",
+    "status": "aprovada",
     "titulo": "O fim da 6x1 tem data. Anote.",
     "numeros": {
       "funcionariosAMais": 0,
@@ -682,7 +682,7 @@
     "type": "carrossel",
     "setor": "farmácia",
     "tema": "escuro",
-    "status": "pendente de aprovação",
+    "status": "aprovada",
     "titulo": "A conta da jornada de 40h para uma farmácia com 7 funcionários",
     "numeros": {
       "funcionarios": 7,
@@ -804,7 +804,7 @@
     "type": "story",
     "setor": "geral",
     "tema": "escuro",
-    "status": "pendente de aprovação",
+    "status": "aprovada",
     "titulo": "Hora extra tem limite: 2 horas por pessoa por dia",
     "numeros": {
       "funcionariosAMais": 0,
@@ -862,7 +862,7 @@
     "type": "carrossel",
     "setor": "loja",
     "tema": "escuro",
-    "status": "pendente de aprovação",
+    "status": "aprovada",
     "titulo": "A conta da jornada de 40h para uma loja com 3 funcionários",
     "numeros": {
       "funcionarios": 3,
@@ -984,7 +984,7 @@
     "type": "reel",
     "setor": "oficina",
     "tema": "escuro",
-    "status": "pendente de aprovação",
+    "status": "aprovada",
     "titulo": "Oficina aberta 10 horas por dia: a escala 5x2 fecha?",
     "numeros": {
       "funcionarios": 5,
@@ -1115,7 +1115,7 @@
     "type": "carrossel",
     "setor": "salão",
     "tema": "papel",
-    "status": "pendente de aprovação",
+    "status": "aprovada",
     "titulo": "A conta da jornada de 40h para um salão com 4 funcionários",
     "numeros": {
       "funcionarios": 4,
@@ -1237,7 +1237,7 @@
     "type": "story",
     "setor": "clínica",
     "tema": "escuro",
-    "status": "pendente de aprovação",
+    "status": "aprovada",
     "titulo": "Clínica com 4 funcionários: +1 meio período com 40h",
     "numeros": {
       "funcionarios": 4,

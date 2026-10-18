@@ -9,7 +9,7 @@ _Atualizado: 2026-10-18 (America/Fortaleza)_
   - `[LEADS] Calculadora 40h - Teste de criativos` (120253290480490421): CBO reduzido de R$ 50 → R$ 25; 5 anúncios (N2, N3, B, C, N2B).
   - `[VENDAS] Escala 5x2 - Checkout (CBO 1-1-3)` (120253303430340421): objetivo Vendas, otimização **InitiateCheckout** (Pixel 111763000796120), CBO R$ 25; conjunto 120253303431430421 "BR 25-60 - Feed FB + Feed/Stories/Reels IG - IC" (Brasil, 25–60, todos os gêneros, posicionamentos manuais: Feed FB; Feed/Stories/Reels IG; sem Advantage+ audience); 3 anúncios V-N2 (120253303455860421), V-C (120253303455850421), V-N3 (120253303455840421), CTA Saiba mais, URLs com `utm_campaign=vendas-checkout`. Estratégia pedida pelo Carlos (CBO 1-1-3). Migrar para otimização Compra quando houver ~5 vendas/semana.
 - Teste A/B de LP no ar: anúncio **N2B - Capa de jornal (LP B)** (id 120253295409460421) publicado 16/10 17:53 no mesmo conjunto, destino `/b/`, `utm_content=n2-capa-jornal-b`, `utm_term=lp-b`. Mesmo criativo do N2 → compara só a página. Campanha agora com 5 anúncios, CBO R$ 50/dia inalterado.
-- Instagram @jornada40h conectado no Windsor; semana 1 renderizada em `site/posts/semana-1/`. Reel `noticia` publicado 16/10 17:05 (media_id 18123326782908294); Carrossel `a-conta` publicado 17/10 09:12 (media_id 18106213565458459); Story `resultado` publicado 18/10 09:16 (media_id 18107798306524764). Fila em `docs/FILA.md`. **Semana 2 redigida e renderizada em 18/10 (`site/posts/semana-2/`), aguardando OK do Carlos (Pedido #5).**
+- Instagram @jornada40h conectado no Windsor; semana 1 renderizada em `site/posts/semana-1/`. Reel `noticia` publicado 16/10 17:05 (media_id 18123326782908294); Carrossel `a-conta` publicado 17/10 09:12 (media_id 18106213565458459); Story `resultado` publicado 18/10 09:16 (media_id 18107798306524764). Fila em `docs/FILA.md`. **Semana 2 aprovada pelo Carlos em 18/10 e na FILA de 23 a 29/10 (`site/posts/semana-2/`).**
 - Repo **público** desde 17/10 11:28 (Netlify free bloqueava deploys de contribuidor não verificado em repo privado). Push na `main` publica.
 
 ## Semana atual · fila de conteúdo
@@ -33,7 +33,7 @@ Semana 2 do @jornada40h pronta (7 peças renderizadas em `site/posts/semana-2/`,
 5. Sex · Reel · `escala-oficina` — Oficina aberta 10 h/dia, 5 mecânicos: a 5x2 fecha? (+1 meio período, R$ 2.040/mês) (20 s)
 6. Sáb · Carrossel · `setor-salao` (tema papel) — Salão com 4 funcionários CLT, 60 h/semana: faltam 20 h → +1 meio período, R$ 1.615/mês
 7. Dom · Story · `resultado-clinica` — Clínica com 4 funcionários: +1 meio período, R$ 1.785/mês
-Status: aberto (aguardando OK do Carlos)
+Status: feito (Carlos: "Pode", 18/10 10:09; semana 2 na FILA de 23 a 29/10, commit a seguir)
 
 ### Pedido #3 · Analista → Dev · 2026-10-17 · prioridade ALTA
 3 dos 4 leads reais viram resultado "+0", "+0,2" ou "+0,5 funcionário" (um viu custo R$ 0). A página/e-mail dizem a eles que o impacto é pequeno → 0 cliques no checkout. Quando `funcionarios_a_mais` < 1, mudar o ângulo do resultado e da oferta para as **horas descobertas** e o **custo de hora extra** (ex.: "8 h/semana descobertas = R$ 637/mês em hora extra; a escala 5x2 resolve sem contratar") e, quando for 0 horas descobertas, mostrar o que muda mesmo assim (folgas, revezamento de sábado, risco trabalhista). Aplicar em index.html, b/index.html e no e-mail do Apps Script (enviarRelatorio). Testar com os 4 cenários reais da planilha.
@@ -61,6 +61,7 @@ Status: feito (Carlos: "vc consegue postar, cuidar dos anúncios e fazer deploy"
 - 16/10: conteúdo IG sem câmera (Remotion); eventual apresentador IA só com rótulo de IA.
 
 ## Histórico
+- 18/10 10:09 · Conteúdo (sessão com Carlos, "Pode"): semana 2 aprovada; `posts.json` semana 2 → `aprovada`; 7 linhas adicionadas à FILA (23–29/10). Pedido #5 fechado.
 - 18/10 09:16 · Conteúdo: publicado Story `resultado` media_id 18107798306524764 (URL da Netlify não verificável pelo sandbox — proxy 403; Instagram aceitou o vídeo). Semana 2 redigida (7 posts em `posts.json`, `semana: 2`) e renderizada com o renderizador de contingência; JPG/MP4 em `site/posts/semana-2/`; teste E2E `tests/lp.e2e.mjs` passou (0 falhas) antes do push. Pedido #5 aberto pedindo OK do Carlos; nada da semana 2 entrou na FILA.
 - 18/10 · Gestor (OK do Carlos): pausados V-N2, V-C e V-N3 na [VENDAS] (texto antigo "44 para 40", V-N2 com R$ 27,54 e 0 InitiateCheckout) para concentrar os R$ 25/dia nos V4-01 e V4-03. V4-03 já ativo; V4-01 em "Preparando". Pausa por decisão humana: não reativar (regra 2).
 - 18/10 · Gestor (sessão com Carlos, "pode subir o 01 e o 03"): publicados via Gerenciador (Chrome) no conjunto 120253303431430421 da [VENDAS]: **V4-03 - É lei (checkout)** (ad 120253308333450421, utm_content=v4-03-e-lei) e **V4-01 - Escala pronta (checkout)** (ad 120253308421660421, utm_content=v4-01-escala-pronta). Duplicados do V-N2 com imagem própria por posicionamento (feed 4:5 + story 9:16), criativo Advantage+, mídia flexível, animação e expansão por IA desligados; sem reaproveitar comentários. CBO inalterado (R$ 25/dia). Decidir por custo por InitiateCheckout com ~R$ 30–40 por criativo.
