@@ -2,6 +2,8 @@
   # Site estático: nada para compilar. Só publicar a pasta site/.
   publish = "site"
   command = ""
+  # Só publica quando site/ muda: commits de docs, criativos ou conteúdo não gastam créditos de deploy.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- site/ netlify.toml"
 
 [[headers]]
   for = "/posts/*"
