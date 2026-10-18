@@ -360,6 +360,7 @@
       <a href="#exemplo">Exemplo</a>
       <a href="#oferta">Como funciona</a>
       <a href="#faq">Dúvidas</a>
+      <a href="fim-da-escala-6x1/">Guia do fim da 6x1</a>
     </div>
     <a class="btn" href="#card" data-scroll="card">Calcular grátis</a>
   </nav>
@@ -371,7 +372,7 @@
     <div class="hero-copy">
       <span class="badge"><svg><use href="#i-scale"/></svg>Fim da 6x1 aprovado por 75 a 1 e promulgado</span>
       <h1 id="h1">Quanto o fim da escala 6x1 vai custar para o <em>seu negócio?</em></h1>
-      <p class="sub">A jornada cai para <b>42 horas</b> em 2 meses e para <b>40 horas</b> um ano depois, com <b>2 folgas</b> por semana. Descubra em 1 minuto quantas pessoas a mais você vai precisar em cada etapa e receba a escala 5x2 pronta.</p>
+      <p class="sub">A partir de <b>dezembro</b>, cada funcionário tem <b>2 folgas</b> por semana e jornada de até <b>42 horas</b>, que cai para <b>40 horas</b> um ano depois. Descubra em 1 minuto quantas pessoas a mais você vai precisar e receba a escala 5x2 pronta.</p>
     </div>
 
     <div class="hero-mock" id="exemplo">
@@ -493,8 +494,8 @@
 
 <div class="stats"><ul>
   <li><b>75 a 1</b>votos no Senado</li>
-  <li><b>42h</b>em 2 meses</li>
-  <li><b>40h</b>em 14 meses</li>
+  <li><b>dez/26</b>2 folgas e 42h</li>
+  <li><b>dez/27</b>40h por semana</li>
   <li><b>48 h</b>para receber a escala</li>
 </ul></div>
 
@@ -595,8 +596,8 @@
   <div class="narrow">
     <h2 class="sec-title">Perguntas frequentes</h2>
     <div style="margin-top:32px">
-      <details><summary>O fim da escala 6x1 já foi aprovado?</summary><p>Sim. A PEC 221/2019 passou pela Câmara em maio, foi aprovada no Senado em outubro, por 75 votos a 1 nos dois turnos, e foi promulgada pelo Congresso.</p></details>
-      <details><summary>Quando a mudança começa a valer?</summary><p>Em duas etapas. Dois meses depois da promulgação, a jornada máxima cai de 44 para 42 horas por semana. Um ano depois, cai para 40 horas. O texto também prevê 2 dias de descanso por semana, de preferência um deles no domingo, sem redução de salário. Confirme com o seu contador as datas e como a regra se aplica à convenção da sua categoria.</p></details>
+      <details><summary>O fim da escala 6x1 já foi aprovado?</summary><p>Sim. A PEC 221/2019 passou pela Câmara em maio, foi aprovada no Senado em 14/10/2026, por 75 votos a 1 nos dois turnos, e virou a Emenda Constitucional 141, publicada em 16/10/2026. <a href="fim-da-escala-6x1/">Leia o guia completo do fim da escala 6x1</a>.</p></details>
+      <details><summary>Quando a mudança começa a valer?</summary><p>A Emenda Constitucional 141 foi publicada em 16/10/2026. Dois meses depois, por volta de 16/12/2026, entram as 2 folgas por semana (de preferência uma no domingo) e o limite de 42 horas. Um ano depois, por volta de 16/12/2027, o limite cai para 40 horas. Na prática, com 2 folgas e até 8 horas por dia, cada pessoa já trabalha no máximo 40 horas a partir de dezembro, a não ser que a convenção coletiva amplie a jornada diária. Não há redução de salário. Confirme as datas com o seu contador. <a href="fim-da-escala-6x1/quando-comeca/">Veja o calendário completo</a>.</p></details>
       <details><summary>Vale para todos os funcionários?</summary><p>Para quase todos. Ficam de fora empregados com curso superior que ganham mais de 2,5 vezes o teto da Previdência, a não ser que o empregador decida aplicar a regra também a eles.</p></details>
       <details><summary>Serve para o meu tipo de negócio?</summary><p>Serve para qualquer negócio que precisa manter pessoas trabalhando em horários fixos: padarias, restaurantes, lojas, mercados, farmácias, salões e similares, com 2 a 50 funcionários.</p></details>
       <details><summary>E se eu abro no domingo ou à noite?</summary><p>A escala é montada com os seus dias e horários reais, incluindo domingos, feriados e turnos noturnos.</p></details>
@@ -612,7 +613,7 @@
 <section class="sec final" style="padding-top:0">
   <div class="container">
     <h2 class="sec-title">Saiba hoje quanto a mudança vai custar</h2>
-    <p class="sec-lead">Leva 1 minuto, é grátis e o resultado aparece na hora.</p>
+    <p class="sec-lead">Leva 1 minuto, é grátis e o resultado aparece na hora. Quer entender a lei antes? Leia o <a href="fim-da-escala-6x1/">guia do fim da escala 6x1</a>.</p>
     <a class="btn" href="#card" data-scroll="card">Calcular meu custo</a>
   </div>
 </section>
@@ -905,6 +906,8 @@ function mostrarPrevia(r) {
 }
 
 function textoEtapa1(e1) {
+  // Com 2 folgas e até 8h por dia, 5 dias somam 40h: a etapa de 42h só rende mais com convenção coletiva (art. 7º da EC 141)
+  if (R && e1.capacidade <= R.capacidade + 0.05) return e1.D <= 0.05 ? "Isso já vale a partir de dezembro, quando entram as 2 folgas por semana." : "Isso já vale a partir de <b>dezembro</b>: com 2 folgas e até 8h por dia, cada pessoa trabalha no máximo 40h, mesmo na etapa de 42h. Mais que isso só com convenção coletiva que amplie a jornada diária.";
   if (e1.D <= 0.05) return "Na primeira etapa, em 2 meses, com 42h, sua equipe ainda cobre o horário. A virada vem com as 40h.";
   if (e1.parcial) return "Na primeira etapa, em 2 meses, com 42h: <b>" + num1(e1.D) + "h por semana</b> descobertas, cerca de " + brl(e1.custoHE) + " por mês em hora extra.";
   return "Na primeira etapa, em 2 meses, com 42h: <b>+" + num1(e1.gap) + (e1.gap < 1.95 ? " funcionário" : " funcionários") + "</b>, cerca de " + brl(e1.custoContratar) + " por mês.";

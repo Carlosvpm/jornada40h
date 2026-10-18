@@ -65,7 +65,7 @@ try {
       const res = await page.locator("#result").innerText();
       ok(c.espera.test(res), "resultado coerente: " + res.split("\n").slice(0, 2).join(" ").slice(0, 90));
       if (pagina === "/") {
-        ok(/42h/.test(await page.locator("#resStage").innerText()), "mostra a etapa de 42h");
+        ok(/42h|dezembro/.test(await page.locator("#resStage").innerText()), "mostra quando a mudança chega (dezembro/42h)");
         ok(await page.locator("#preview").isVisible(), "prévia personalizada visível");
       }
 
@@ -84,6 +84,26 @@ try {
       ok(erros.length === 0, "sem erros de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
       await ctx.close();
     }
+  }
+  // Guia do fim da escala 6x1: carrega, sem rolagem horizontal em 360px, CTA para a calculadora, JSON-LD válido
+  const guias = fs.readdirSync(path.join(ROOT, "fim-da-escala-6x1"), { withFileTypes: true })
+    .filter(d => d.isDirectory()).map(d => "/fim-da-escala-6x1/" + d.name + "/");
+  for (const g of ["/fim-da-escala-6x1/", ...guias]) {
+    console.log(g);
+    const ctx = await browser.newContext({ viewport: { width: 360, height: 780 } });
+    const page = await ctx.newPage();
+    const erros = [];
+    page.on("pageerror", e => erros.push(e.message));
+    await page.route("https://connect.facebook.net/**", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+    const resp = await page.goto(BASE + g);
+    ok(resp.status() === 200, "carrega");
+    const largura = await page.evaluate(() => document.documentElement.scrollWidth);
+    ok(largura <= 360, "sem rolagem horizontal em 360px (" + largura + "px)");
+    ok(await page.locator('a[href$="#card"]').count() > 0, "tem CTA para a calculadora");
+    const ld = await page.$$eval('script[type="application/ld+json"]', s => s.map(x => { try { JSON.parse(x.textContent); return true; } catch (e) { return false; } }));
+    ok(ld.length > 0 && ld.every(Boolean), "JSON-LD válido (" + ld.length + ")");
+    ok(erros.length === 0, "sem erros de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
+    await ctx.close();
   }
 } finally {
   await browser.close();
