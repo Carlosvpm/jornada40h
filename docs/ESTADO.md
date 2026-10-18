@@ -1,6 +1,6 @@
 # Estado do projeto
 
-_Atualizado: 2026-10-17 12:05 (America/Fortaleza)_
+_Atualizado: 2026-10-18 (America/Fortaleza)_
 
 ## Resumo
 - Campanha Meta Ads no ar desde 16/10 ~12:20, CBO R$ 50/dia, 5 anúncios. **Dia 1 (16/10): R$ 31,78 gastos, 2.135 impr., 49 cliques, 39 visitas, 4 leads (CPL R$ 7,95), 0 checkout, 0 vendas.** N2 concentra a entrega (R$ 28,91, 3 leads); N2B aprovou ~18h (R$ 2,39, 3 visitas, 1 lead); N3/B/C quase sem entrega (R$ 0,48). Planilha: 4 pessoas reais (1 duplicada), todas restaurante/lanchonete ou outro, 3–10 funcionários; 1 lead sem UTM (provável bio IG).
@@ -50,6 +50,8 @@ Status: feito (Carlos: "vc consegue postar, cuidar dos anúncios e fazer deploy"
 - 16/10: conteúdo IG sem câmera (Remotion); eventual apresentador IA só com rótulo de IA.
 
 ## Histórico
+- 18/10 · Dev (sessão com Carlos): LP A redesenhada (visual SaaS escuro, prévia personalizada da escala gerada pelo motor `site/js/escala.js`, escala de exemplo no hero e em formato PDF), `variante: "a2"` no lead. Correção legal nas LPs A e B: PEC 221/2019 promulgada, transição em 2 etapas (42h dois meses após a promulgação, 40h um ano depois), 2 folgas (preferencialmente domingo), exceção para curso superior + salário > 2,5x teto INSS. Calculadora mostra a etapa de 42h. Oferta (OK do Carlos): escalas para 42h e 40h + acesso antecipado ao app da transição. /b/ com noindex e canonical para /. Teste E2E em `tests/lp.e2e.mjs` (6 cenários passando).
+- 18/10 · Comentário de Henrique Schmidt no anúncio N2 (FB) corrigindo a transição 44→42→40 respondido com OK do Carlos. Texto dos anúncios ativos ainda diz "44 para 40 horas": trocar nos próximos criativos.
 - 17/10 12:00 · Gestor (sessão com Carlos): campanha [VENDAS] criada e ativada (API + Gerenciador), [LEADS] reduzida para R$ 25/dia. Soma = R$ 50.
 - 17/10 11:35 · Dev: Pedido #3 implementado (resultado/relatório com ângulo horas descobertas e folgas; contratação mínima integral+meio período). Repo tornado público para destravar Netlify.
 - 17/10 09:12 · Conteúdo: publicado Carrossel `a-conta` media_id 18106213565458459 (URLs da Netlify não verificáveis pelo sandbox — proxy 403; Instagram aceitou as 6 imagens). Semana 2 será redigida no domingo 18/10.
