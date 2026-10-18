@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /obrigado.html
 
-Sitemap: https://incandescent-profiterole-dfec92.netlify.app/sitemap.xml
+Sitemap: https://jornada40h.com.br/sitemap.xml
