@@ -15,6 +15,7 @@ Criado em 18/10/2026. Fatos conferidos nessa data (ver Fontes).
 | Média | fim da escala 6x1 padaria / escala 5x2 padaria | `/padaria/` |
 | Média | fim da escala 6x1 restaurante / escala 5x2 restaurante | `/restaurante/` |
 | Média | fim da escala 6x1 comércio / varejo / mercado / farmácia / salão de beleza | `/comercio-varejo/` |
+| Alta | escala 6x1 acabou / e agora / perguntas e respostas; fim da escala 6x1 MEI, PJ, 12x36, empregada doméstica | `/perguntas-e-respostas/` |
 | Apoio | PEC 6x1, PEC 221/2019, Emenda Constitucional 141, jornada 40 horas, jornada 42 horas, escala 5x2, redução da jornada sem redução salarial | pilar + satélites |
 
 ## Mapa das páginas
@@ -28,12 +29,13 @@ Todas em `site/fim-da-escala-6x1/`, CSS compartilhado em `guia.css`. Cada págin
 ├── riscos-hora-extra/                       limite 2h/dia, hora mais cara, habitual, banco de horas, passivo
 ├── padaria/                                 exemplo de cálculo (fictício), escala, descansos, noturno
 ├── restaurante/                             picos, turno dividido, intervalos, exemplo (fictício)
-└── comercio-varejo/                         domingo no comércio (Lei 10.101), loja, mercado, farmácia, salão-parceiro
+├── comercio-varejo/                         domingo no comércio (Lei 10.101), loja, mercado, farmácia, salão-parceiro
+└── perguntas-e-respostas/                   FAQ prático (12 perguntas): reversão, seg–sex, meio período, MEI sozinho, doméstica, PJ, novo salário, 12x36, contrato público, HE, fiscalização
 ```
 
 Links: pilar → todas as satélites; cada satélite → pilar + 3 irmãs + calculadora. A LP (`/index.html`, redesign) já linka `fim-da-escala-6x1/` no menu.
 
-`site/sitemap.xml`: `/` + as 7 páginas do guia. Fora do sitemap: `/b/` (já tem `noindex, follow`), `/obrigado.html` e `/privacidade.html` (já têm `noindex`).
+`site/sitemap.xml`: `/` + as 8 páginas do guia. Fora do sitemap: `/b/` (já tem `noindex, follow`), `/obrigado.html` e `/privacidade.html` (já têm `noindex`).
 `site/robots.txt`: libera tudo, bloqueia `/obrigado.html` (recebe nome/e-mail na query string) e aponta o sitemap.
 
 Geração: as páginas foram geradas por um script Python fora do repo; são HTML estático e podem ser editadas à mão. Ao editar uma FAQ, edite também o JSON-LD `FAQPage` da mesma página.
@@ -57,6 +59,10 @@ Geração: as páginas foram geradas por um script Python fora do repo; são HTM
 | Planalto — Lei 13.352/2016 | https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2016/lei/l13352.htm | Salão-parceiro; vínculo se não houver contrato formalizado |
 | Planalto — Lei 605/1949 | https://www.planalto.gov.br/ccivil_03/leis/l0605.htm | Repouso semanal remunerado |
 | TST — livro de jurisprudência | https://www.tst.jus.br/en/livro-de-jurisprudencia-indice | Súmulas 85, 172, 291, 376 |
+| Planalto — Constituição | https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm | Art. 7º § 1º (domésticos têm XIII e XV), art. 60 § 2º (emenda: 3/5, dois turnos) |
+| Planalto — LC 123/2006 | https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp123.htm | Art. 18-C: MEI com um único empregado |
+| Planalto — LC 150/2015 | https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp150.htm | Art. 2º: doméstico ainda escrito como 44h (Constituição prevalece) |
+| g1 (17/10) — perguntas e respostas | https://g1.globo.com/trabalho-e-carreira/noticia/2026/10/17/escala-6x1-acabou-e-agora-perguntas-respostas.ghtml | Pauta da página `/perguntas-e-respostas/` (texto não copiado; fatos conferidos no Planalto). Ver divergências abaixo |
 | TST — hora extra tema campeão | https://www.tst.jus.br/en/-/hora-extra-%C3%A9-o-tema-campe%C3%A3o-na-justi%C3%A7a-do-trabalho-no-primeiro-semestre-de-2023 | Hora extra entre os temas mais frequentes |
 
 ## Pendências e incertezas
@@ -71,6 +77,16 @@ Geração: as páginas foram geradas por um script Python fora do repo; são HTM
 8. **Súmula 85 × art. 59-B**: conflito pós-Reforma (tema em recurso repetitivo no TST). Página cita os dois e recomenda especialista.
 9. Votação no Senado: 14/10/2026 foi **quarta-feira** (Agência Câmara diz "quinta"; seguimos Agência Senado/Agência Brasil).
 10. Exemplos de cálculo (padaria, restaurante, minimercado, farmácia, salário R$ 2.000/R$ 2.200) são **fictícios** e rotulados como exemplo (regra 7).
+
+## Divergências g1 (17/10/2026) × texto oficial da EC 141
+
+Conferido em 18/10/2026. Nas páginas, seguimos o texto do Planalto.
+
+1. **Exceção de nível superior**: g1 diz remuneração "superior a" 2,5× o teto e que o empregado não fica sujeito "ao limite de 40 horas". Texto oficial (art. 8º): "igual ou superior"; afasta **todas** as regras de duração e controle de jornada, salvo liberalidade do empregador ou previsão em ACT/CCT; mantém o inciso XV e o § 2º; não vale para empregados públicos.
+2. **"Serviços essenciais" / 12x36**: g1 lista hospitais, segurança, transporte etc. como exceção que pode manter 12x36. A EC não cita setores nem a 12x36: só prevê regime compensatório por convenção (art. 7º § 2º, média de 2 folgas no mês) e lei futura sobre regimes diferenciados (§ 3º). A 12x36 segue no art. 59-A da CLT; média ≈ 42h/semana, compatibilidade com 40h (dez/2027) em aberto. Página trata como ponto em aberto.
+3. **Lei complementar MEI/ME/EPP**: g1 diz que o texto "prevê a criação". Texto oficial (art. 5º): lei complementar **poderá** (opcional), condicionada à manutenção de empregos.
+4. **Folgas em "dois períodos de 24 horas"**: g1 afirma; o texto da EC só diz "2 dias" de repouso, um preferencialmente no domingo. Não repetimos a afirmação das 24h.
+5. Datas (16/12/2026 e 16/12/2027), placares (472×22, 461×19, 75×1) e "sem redução salarial" batem com as fontes oficiais.
 
 ## Sugestões
 
