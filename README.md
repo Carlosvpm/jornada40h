@@ -3,7 +3,7 @@
 Micro-SaaS para pequenos negócios se adaptarem ao fim da escala 6x1 (jornada 44h → 40h, 5x2).
 
 - **Produto gratuito:** calculadora de carga horária (captura de lead)
-- **Produto pago:** "Escala 5x2 Pronta", R$ 77 (Kiwify, pagamento único)
+- **Produto pago:** "Escala 5x2 Pronta", R$ 47,90 (de R$ 77; Kiwify `xftQB3Y`, pagamento único). Exemplo em PDF: `site/exemplo/escala-5x2-exemplo.pdf` (`node engine/exemplo-pdf.mjs`)
 - **Site:** https://jornada40h.com.br/ (Dokploy, app `jornada40h` no servidor kanagawa-app, publica `site/`; a Netlify antiga segue só como reserva)
 
 ## Estrutura
@@ -41,7 +41,7 @@ docs/
 
 ```
 Anúncio / post IG → LP (A ou B) → calculadora → lead (Sheets + e-mail relatório)
-   → checkout Kiwify (R$ 77) → webhook → aba Vendas → e-mail com link do briefing
+   → prévia grátis (nome + e-mail) → checkout Kiwify (R$ 47,90) → webhook → aba Vendas → e-mail com link do briefing
    → obrigado.html → aba Pedidos → entrega manual da escala (até automatizar)
 ```
 
