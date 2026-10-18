@@ -1,16 +1,49 @@
 # Estado do projeto
 
-_Atualizado: 2026-10-18 (America/Fortaleza)_
+_Atualizado: 2026-10-18 18:15 (America/Fortaleza) · fechamento da semana 1 pelo Analista_
 
 ## Resumo
-- Campanha Meta Ads no ar desde 16/10 ~12:20, CBO R$ 50/dia, 5 anúncios. **Dia 1 (16/10): R$ 31,78 gastos, 2.135 impr., 49 cliques, 39 visitas, 4 leads (CPL R$ 7,95), 0 checkout, 0 vendas.** N2 concentra a entrega (R$ 28,91, 3 leads); N2B aprovou ~18h (R$ 2,39, 3 visitas, 1 lead); N3/B/C quase sem entrega (R$ 0,48). Planilha: 4 pessoas reais (1 duplicada), todas restaurante/lanchonete ou outro, 3–10 funcionários; 1 lead sem UTM (provável bio IG).
-- Funil validado ponta a ponta (lead → planilha → e-mail; Kiwify → webhook → Vendas → e-mail de briefing → obrigado.html → Pedidos).
-- **Duas campanhas desde 17/10 ~12:00, R$ 25/dia cada (teto R$ 50 mantido):**
-  - `[LEADS] Calculadora 40h - Teste de criativos` (120253290480490421): CBO reduzido de R$ 50 → R$ 25; 5 anúncios (N2, N3, B, C, N2B).
-  - `[VENDAS] Escala 5x2 - Checkout (CBO 1-1-3)` (120253303430340421): objetivo Vendas, otimização **InitiateCheckout** (Pixel 111763000796120), CBO R$ 25; conjunto 120253303431430421 "BR 25-60 - Feed FB + Feed/Stories/Reels IG - IC" (Brasil, 25–60, todos os gêneros, posicionamentos manuais: Feed FB; Feed/Stories/Reels IG; sem Advantage+ audience); 3 anúncios V-N2 (120253303455860421), V-C (120253303455850421), V-N3 (120253303455840421), CTA Saiba mais, URLs com `utm_campaign=vendas-checkout`. Estratégia pedida pelo Carlos (CBO 1-1-3). Migrar para otimização Compra quando houver ~5 vendas/semana.
-- Teste A/B de LP no ar: anúncio **N2B - Capa de jornal (LP B)** (id 120253295409460421) publicado 16/10 17:53 no mesmo conjunto, destino `/b/`, `utm_content=n2-capa-jornal-b`, `utm_term=lp-b`. Mesmo criativo do N2 → compara só a página. Campanha agora com 5 anúncios, CBO R$ 50/dia inalterado.
-- Instagram @jornada40h conectado no Windsor; semana 1 renderizada em `site/posts/semana-1/`. Reel `noticia` publicado 16/10 17:05 (media_id 18123326782908294); Carrossel `a-conta` publicado 17/10 09:12 (media_id 18106213565458459); Story `resultado` publicado 18/10 09:16 (media_id 18107798306524764). Fila em `docs/FILA.md`. **Semana 2 aprovada pelo Carlos em 18/10 e na FILA de 23 a 29/10 (`site/posts/semana-2/`).**
-- Repo **público** desde 17/10 11:28 (Netlify free bloqueava deploys de contribuidor não verificado em repo privado). Push na `main` publica.
+- **Semana 1 (16–18/10, 3 dias de mídia): R$ 99,80 gastos, 14.924 impressões, 214 cliques no link, 153 visitas (LPV), 5 leads (Pixel), 0 checkouts, 0 vendas.** CPL R$ 11,04 na [LEADS] (R$ 19,96 sobre o gasto total); CTR link 1,43%; visita→lead 3,3% (meta ≥ 15%); CAC indefinido (0 vendas). Tendência ruim: dia 1 CPL R$ 8,03 (4 leads), dia 2 R$ 50,44 (1 lead), dia 3 R$ 17,25 e 0 leads até a leitura (18/10 ~18h). Planilha "Leads Calculadora 40h" **não acessada** (sem conector Google Sheets no Windsor); leads = evento Lead do Pixel, coerente com os 5 leads reais que receberam e-mail em 18/10.
+- **Duas campanhas, R$ 25/dia cada (teto R$ 50 mantido; soma conferida em 18/10):**
+  - `[LEADS] Calculadora 40h - Teste de criativos` (120253290480490421): R$ 55,18, 95 visitas, 5 leads. Anúncios ativos desde 18/10: **V4L-04 Padaria falta gente** (120253312939200421) e **V4L-02 Antes e depois** (120253312974730421), ambos para `/` com `utm_term=lp-a`. N2/N2B/N3/B/C desligados ("Requer análise" da Meta após a checagem de segurança; N2 desativado por decisão humana → regra 2).
+  - `[VENDAS] Escala 5x2 - Checkout (CBO 1-1-3)` (120253303430340421, otimização InitiateCheckout): R$ 44,62, 58 visitas, **0 InitiateCheckout**. Ativos: **V4-03 É lei** (120253308333450421, R$ 12,63, 9 visitas, 0 IC) e **V4-01 Escala pronta** (120253308421660421, R$ 2,61, 0 visitas). V-N2/V-C/V-N3 pausados em 18/10 com OK do Carlos (não reativar). Critério combinado: decidir por custo por IC com ~R$ 30–40 por criativo.
+- Teste A/B de LP **sem conclusão e parado**: LP B recebeu só 6 visitas (2 leads) antes de o N2B ser desligado; LP A 89 visitas (3 leads). Nenhum anúncio ativo aponta para `/b/`.
+- Instagram @jornada40h: 4 seguidores, 2 posts no feed. Semana 1 publicada no dia certo (Reel `noticia` 16/10, Carrossel `a-conta` 17/10, Story `resultado` 18/10). Alcance orgânico por mídia: 7 / 8 / 5 — praticamente zero. O alcance da conta (625 → 1.185 → 240/dia) e os 10 comentários vêm dos anúncios veiculados pelo perfil, não dos posts. **Semana 2 aprovada e na FILA de 23 a 29/10 (`site/posts/semana-2/`).**
+- Funil validado ponta a ponta (lead → planilha → e-mail; Kiwify → webhook → Vendas → e-mail de briefing → obrigado.html → Pedidos). Site em https://jornada40h.com.br (Dokploy); a Netlify segue só como reserva. Deploy automático no push ainda não funciona (rodar application.deploy no Dokploy após push em `site/`). O sandbox do Analista não consegue abrir o site (proxy) — URLs de `posts/semana-2/` continuam não verificadas.
+- Follow-up dos 5 leads: e-mail manual com a oferta de R$ 47,90 enviado 18/10 16:18. Sequência automática D+1/D+3/D+7 (`apps-script/Sequencia.gs`) **desligada**; o texto precisa mudar antes de ligar para não repetir a oferta (Pedido #6).
+
+## Semana 1 · análise (16–18/10, dados Windsor/Meta lidos 18/10 ~21:10 UTC)
+| Etapa | Total | [LEADS] | [VENDAS] | Taxa / custo |
+|---|---|---|---|---|
+| Gasto | R$ 99,80 | R$ 55,18 | R$ 44,62 | — |
+| Impressões | 14.924 | 13.355 | 1.569 | alcance ~4.550 (soma por anúncio/dia, com sobreposição) |
+| Cliques no link | 214 | 146 | 68 | CTR 1,43% (L 1,09% · V 4,33%) · CPC R$ 0,47 |
+| Visitas (LPV) | 153 | 95 | 58 | 71% dos cliques carregam a página |
+| Leads (Pixel) | 5 | 5 | 0 | visita→lead 3,3% (L 5,3%) · CPL R$ 11,04 (L) |
+| Checkout iniciado | 0 | 0 | 0 | lead→checkout 0% · R$ 44,62 em [VENDAS] sem IC |
+| Vendas | 0 | 0 | 0 | CAC indefinido |
+
+Por dia: 16/10 R$ 32,11 · 39 visitas · 4 leads (CPL R$ 8,03) | 17/10 R$ 50,44 · 102 visitas · 1 lead (CPL R$ 50,44) | 18/10 (parcial) R$ 17,25 · 12 visitas · 0 leads.
+Anomalia 17/10: N2 fez 9.277 impressões para 550 pessoas (frequência 16,9), 75 cliques, 47 visitas e **0 leads** — cliques baratos (CPC R$ 0,17) e sem conversão; hipótese de posicionamento de baixa qualidade (Audience Network/Reels repetidos). Os V4 novos estão com frequência ~1,1.
+
+**Veredito por criativo** (sem nenhum anúncio com ≥ R$ 30 e dados limpos, vereditos são provisórios):
+| Anúncio | Gasto | Visitas | Leads/IC | Veredito |
+|---|---|---|---|---|
+| N2 Capa de jornal (LEADS) | R$ 42,23 | 83 | 3 leads (CPL R$ 14,08) | desligado; foi o único que gerou lead em escala, mas degradou no dia 2 |
+| N2B Capa de jornal → LP B | R$ 8,59 | 6 | 2 leads (CPL R$ 4,29) | desligado; melhor CPL da semana, amostra mínima |
+| N3 / B / C (LEADS) | R$ 2,49 | 5 | 0 | nunca entregaram; desligados — trocar (feito, V4L) |
+| V-N2 (VENDAS) | R$ 27,63 | 45 | 0 IC | pausado (OK Carlos); 45 visitas e nenhum checkout = página/oferta, não o anúncio |
+| V-C / V-N3 (VENDAS) | R$ 1,75 | 4 | 0 | pausados; sem dado |
+| V4-03 É lei (VENDAS) | R$ 12,63 | 9 | 0 IC | manter até ~R$ 35; CTR 3,9% ok, CPC alto (R$ 1,40) |
+| V4-01 Escala pronta (VENDAS) | R$ 2,61 | 0 | 0 | manter; 3 cliques e 0 LPV — checar link/carregamento |
+| V4L-04 Padaria / V4L-02 Antes e depois (LEADS) | R$ 1,87 | 1 | 0 | manter; < 1 dia no ar |
+Escalar-se-o-teto-subisse: **nenhum** (0 vendas, CPL acima da meta de R$ 8).
+
+**Veredito por post IG** (formato por alcance e por salvamentos): Carrossel `a-conta` 14 views / 8 alcance / 0 saves; Reel `noticia` 7 views / 7 alcance / 0 saves / 67% pulam nos 3 s / 6,5 s médios; Story `resultado` 5 views. Carrossel ≥ Reel > Story em alcance; nenhum salvamento. Com 4 seguidores o formato não decide nada — o gargalo é distribuição, não o conteúdo. Manter a fila (custo ~zero) e tratar o IG como prova social para quem vem do anúncio, não como fonte de leads.
+
+**Agentes:** Gestor — regras cumpridas (R$ 25 + R$ 25 = R$ 50; nenhuma reativação; criações/pausas de 18/10 todas com OK do Carlos na sessão; falha menor: Pedido #4 ficou aberto sem resposta). Conteúdo — 3/3 itens da FILA publicados no dia (09:12 e 09:16; 16/10 às 17:05 por ser o dia do setup); semana 2 redigida, aprovada e na FILA; sem falhas.
+
+**Diagnóstico:** o funil vaza em duas etapas: visita→lead (3,3% contra 15% de meta; 153 visitas renderam 5 leads, e o dia 2 teve 102 visitas para 1 lead) e lead/visita→checkout (58 visitas da [VENDAS] e 5 leads, 0 checkout). Hipótese principal: tráfego frio chegando a uma página que pede dados antes de mostrar valor e, na [VENDAS], a um pedido de R$ 77 sem prova; a LP A redesenhada (18/10) e os V4 com transição correta ainda não tiveram volume para mostrar se mudaram isso. Sem dado da planilha não dá para separar leads reais de teste nem ver `variante`.
 
 ## Semana atual · fila de conteúdo
 | Dia | Post | Status |
@@ -24,6 +57,22 @@ _Atualizado: 2026-10-18 (America/Fortaleza)_
 | 22/10 | Carrossel `3-erros` | aprovado |
 
 ## Pedidos abertos
+### Pedido #8 · Analista → Carlos · 2026-10-18 · prioridade ALTA
+Decisões da semana 1 (só o Carlos decide):
+1. **[VENDAS]**: R$ 44,62, 58 visitas, 0 checkout. Proposta: manter V4-03 e V4-01 só até R$ 35 cada; se seguirem com 0 IC, o Gestor pausa a campanha e passa os R$ 25 para a [LEADS] (teto R$ 50 inalterado). Aprovar?
+2. **Teto**: não subir. CPL R$ 11 na [LEADS], R$ 20 no total, 0 vendas — nada justifica mais verba. Alternativa: reduzir para R$ 25/dia só na [LEADS] até a LP A nova mostrar visita→lead ≥ 10%. Aprovar a redução, ou manter R$ 50?
+3. **LP B**: o teste morreu (6 visitas). Encerrar o A/B por ora (foco em medir a LP A redesenhada) ou apontar o V4L-02 para `/b/` (`utm_term=lp-b`) quando ele acumular R$ 20 sem lead? Aprovar uma das duas.
+4. **Distribuição orgânica**: 4 seguidores, posts com alcance < 10. Compartilhar os posts da semana 2 no seu perfil pessoal e em grupos de WhatsApp de donos de negócio (única alavanca sem custo que os agentes não têm)? Aprovar?
+Status: aberto
+
+### Pedido #7 · Analista → Gestor · 2026-10-18 · prioridade ALTA
+Até o Carlos responder o #8: (a) não mexer em orçamento; (b) registrar diariamente o custo acumulado por IC de V4-03/V4-01 e o CPL de V4L-04/V4L-02; (c) V4-01 teve 3 cliques e 0 LPV em 18/10 — conferir no Gerenciador se o link está carregando (prévia do anúncio) e registrar; (d) se um anúncio passar de R$ 20 sem lead/IC, aplicar a regra de AGENTES.md (pausar) e anotar aqui; (e) frequência > 3 em qualquer anúncio é sinal da anomalia do N2 de 17/10 — registrar.
+Status: aberto
+
+### Pedido #6 · Analista → Dev · 2026-10-18 · prioridade MÉDIA
+Sequência D+1/D+3/D+7 (`apps-script/Sequencia.gs`) continua desligada e, se ligada como está, repete a oferta mandada à mão em 18/10 aos 5 leads. Pedido: (1) ajustar o texto dos 3 e-mails para continuar a conversa (D+1: a escala pronta deles, sem reapresentar a oferta como novidade; D+3: o erro mais comum; D+7: último aviso com a oferta de R$ 47,90 em `utm_campaign=oferta-4790`), (2) pular leads que já receberam o e-mail manual de 18/10 (marcar na aba Sequencia) e (3) deixar pronto para o Carlos publicar nova versão do Apps Script e rodar `instalarGatilhoSequencia` (deploy manual). Não mexer em preço nem em CONFIG.
+Status: aberto
+
 ### Pedido #5 · Conteúdo → Carlos · 2026-10-18
 Semana 2 do @jornada40h pronta (7 peças renderizadas em `site/posts/semana-2/`, textos em `remotion/data/posts.json` `semana: 2`, legendas no campo `legenda` + `hashtags` de cada post (`out/` não é versionado; `node remotion/scripts/legendas.mjs --week 2` regenera o legendas.md)). Copy já com a transição correta (EC 141: 2 folgas e 42h em dez/26, 40h em dez/27; "na prática 40h já em dezembro") e números sempre como exemplo, pelas fórmulas da calculadora (salário × 1,7; hora extra 50%). Pedido: **OK para entrar na FILA** a partir de 23/10 (ou ajustes). Resumo:
 1. Seg · Reel · `calendario` — O fim da 6x1 tem data. Anote. (19 s)
@@ -41,7 +90,7 @@ Status: feito (commit b1c01bd; Apps Script v6 publicado 17/10 10:45; páginas no
 
 ### Pedido #4 · Analista → Gestor · 2026-10-17
 UTMs divergem: N2/N3/B/C usam utm_medium=cpc, utm_campaign=teste-criativos, utm_term=<adset_id>; N2B usa utm_medium=paid, utm_campaign=leads-calculadora-40h, utm_term=lp-b. Para a análise, agrupar por utm_content (criativo) e tratar utm_term=lp-b como LP B e o resto como LP A. Não alterar os anúncios ativos (reinicia aprendizado).
-Status: aberto (informativo)
+Status: fechado em 18/10 pelo Analista (os 4 anúncios ativos usam `utm_term=lp-a`/`lp-b` e `utm_content` próprio; N2/N3/B/C/N2B estão desligados — a divergência não existe mais)
 
 ### Pedido #1 · Orquestrador → Carlos · 2026-10-16
 Autorizar criação do anúncio B (duplicar N2 → URL `/b/`, `utm_content=n2-capa-jornal-b`) para o teste A/B de LP.
@@ -61,6 +110,7 @@ Status: feito (Carlos: "vc consegue postar, cuidar dos anúncios e fazer deploy"
 - 16/10: conteúdo IG sem câmera (Remotion); eventual apresentador IA só com rótulo de IA.
 
 ## Histórico
+- 18/10 18:15 · Analista: fechamento da semana 1 (R$ 99,80, 153 visitas, 5 leads, CPL R$ 11,04 na LEADS, 0 checkout, 0 vendas; IG 4 seguidores, alcance por post < 10). Agentes avaliados: sem violação de regra. Pedido #4 fechado; abertos #6 (Dev: sequência de e-mails), #7 (Gestor: monitorar V4) e #8 (Carlos: 4 decisões). Sem pedido ao Dev aberto na data → nenhuma alteração em `site/`/`apps-script/`. Planilha não acessada (sem conector Sheets); site não verificável pelo sandbox.
 - 18/10 17:05 · Links (OK do Carlos, "pode aprovar o texto da IA e atualizar os links"): LP A e B com "acesso antecipado ao app da transição, com assistente de IA" + FAQ "O que a IA faz?" (commit 9ff2fbb, no ar). Trocados para jornada40h.com.br: os 4 anúncios ativos (V4-03, V4-01 com as mesmas UTMs no link; V4L-04, V4L-02 com UTMs em Parâmetros de URL; os 4 voltaram para análise da Meta), Kiwify (página de vendas e página de obrigado), Apps Script (SITE_URL, implantação v7 no mesmo ID, webhook inalterado), README, motor do PDF e base de mídias da FILA. Deploy automático no push ainda não funciona: depois de push em site/, rodar application.deploy no Dokploy (o workflow com webhook foi bloqueado pelo modo automático).
 - 18/10 16:45 · Infra (OK do Carlos): site no ar em **https://jornada40h.com.br** (e www), hospedado no Dokploy (console.joggasporthub.com), projeto "Landing Page", app `jornada40h` (applicationId kNdTSocrJr7R4pnaMCHYp) no servidor kanagawa-app 56.124.124.116, build estático de `site/`, Let's Encrypt. DNS na GoDaddy: A @ → 56.124.124.116; CNAME www → jornada40h.com.br. URLs absolutas do site trocadas para o domínio (commit 1d91ea1). A Netlify segue no ar só como reserva (anúncios e mídias dos posts ainda apontam para ela). Pendente: link dos anúncios, página de vendas na Kiwify, SITE_URL do Apps Script, Search Console.
 - 18/10 16:18–16:21 · Vendas (OK do Carlos, "pode enviar"): enviados pela calculadora40h@gmail.com 5 e-mails manuais aos leads (Gabriel, Tatiane, Marcos, Rhayane, Chico), cada um com o número do negócio, a prévia da escala com a parte de baixo borrada (inline) e o botão para a oferta de R$ 47,90 (xftQB3Y, utm_campaign=oferta-4790). Sem PDF anexo. A sequência automática D+1/D+3/D+7 nunca foi ligada (não existe a aba Sequencia): ajustar o texto antes de ativar, para não repetir este e-mail.
