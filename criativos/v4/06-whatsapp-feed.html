@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>06 Conversa no WhatsApp (feed)</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  h1 { font-size: 62px; margin-top: 32px; }
+  .phone { margin-top: 32px; background: #0B141A; border: 2px solid var(--line-2); border-radius: 34px; overflow: hidden; box-shadow: 0 50px 110px rgba(0,0,0,.6); flex: 1; display: flex; flex-direction: column; }
+  .wa-bar { display: flex; align-items: center; gap: 16px; background: #1F2C34; padding: 12px 22px; }
+  .wa-av { width: 48px; height: 48px; border-radius: 50%; background: var(--gold); color: #1B1405; font: 800 20px/1 var(--sans); display: grid; place-items: center; }
+  .wa-bar b { font-size: 26px; display: block; }
+  .wa-bar small { font-size: 19px; color: #8696A0; }
+  .chat { padding: 18px 22px; display: flex; flex-direction: column; gap: 10px; flex: 1; background: #0B141A; }
+  .msg { max-width: 78%; padding: 14px 18px 10px; border-radius: 16px; font-size: 22px; line-height: 1.32; position: relative; }
+  .msg time { display: block; text-align: right; font-size: 15px; color: rgba(233,237,239,.55); margin-top: 4px; }
+  .in { background: #202C33; align-self: flex-start; border-top-left-radius: 4px; }
+  .out { background: #005C4B; align-self: flex-end; border-top-right-radius: 4px; }
+  .files { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+  .file { display: flex; align-items: center; gap: 14px; background: rgba(0,0,0,.22); border-radius: 12px; padding: 10px 12px; }
+  .file .ic { width: 40px; height: 48px; flex: none; border-radius: 6px; background: #E5484D; color: #fff; font: 800 14px/1 var(--sans); display: grid; place-items: center; }
+  .file .ic.x { background: #1D9E55; }
+  .file b { font-size: 17px; display: block; }
+  .file small { font-size: 14px; color: rgba(233,237,239,.65); }
+  .prev { border-radius: 12px; overflow: hidden; margin-bottom: 8px; background: var(--surface); padding: 12px; }
+  .prev .b-row { grid-template-columns: 74px repeat(7, 1fr); gap: 4px; }
+  .prev .b-row + .b-row { margin-top: 4px; }
+  .prev .b-cell { min-height: 28px; font-size: 14px; border-radius: 6px; }
+  .prev .b-name b { font-size: 14px; } .prev .b-name small { display: none; }
+  .prev .b-head span { font-size: 12px; }
+  .prev .b-foot { display: none; }
+  .cta { margin-top: 30px; }
+  .day { align-self: center; background: #182229; color: #8696A0; font-size: 17px; font-weight: 600; padding: 6px 14px; border-radius: 8px; text-transform: uppercase; letter-spacing: .04em; }
+</style></head>
+<body><div class="frame">
+  <div class="top">
+    <div class="brand"><span class="mark">40h</span>Escala 5x2 Pronta</div>
+    <span class="badge"><span class="dot"></span>Entrega em 48h</span>
+  </div>
+
+  <h1>Você manda como funciona. <em>A&nbsp;gente devolve a escala.</em></h1>
+
+  <div class="phone">
+    <div class="wa-bar"><span class="wa-av">40h</span><div><b>Escala 5x2 Pronta</b><small>online</small></div></div>
+    <div class="chat">
+      <div class="msg out">Padaria, 4 funcionários. Abro seg a sex 6h–18h e sábado até 14h. Como fica com 2 folgas? 😅<time>seg 09:12</time></div>
+      <div class="msg in">Recebido! Sua escala chega em até 48h 👍<time>seg 09:13</time></div>
+      <div class="day">Quarta-feira</div>
+      <div class="msg in">
+        <div class="prev"><div class="board" data-escala="padaria5x2" data-compact></div></div>
+        <div class="files"><div class="file"><span class="ic">PDF</span><div><b>Escala-Padaria.pdf</b><small>para imprimir</small></div></div>
+        <div class="file"><span class="ic x">XLS</span><div><b>Escala-Padaria.xlsx</b><small>para ajustar</small></div></div></div>
+        Pronto ✅ 5 pessoas, 2 folgas cada, sábado coberto.<time>08:40</time>
+      </div>
+    </div>
+  </div>
+
+  <div class="cta">
+    <div class="price"><strong>R$ 77</strong><span>preço de fundador até 31/10 · pagamento único</span></div>
+    <span class="btn">Quero a minha</span>
+  </div>
+</div>
+<script src="board.js"></script>
+</body></html>

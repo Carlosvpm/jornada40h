@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>02 Antes e depois (feed)</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  h1 { font-size: 74px; margin-top: 36px; }
+  .pair { margin-top: 34px; display: flex; flex-direction: column; gap: 20px; }
+  .lbl { display: flex; align-items: center; gap: 14px; font: 700 26px/1 var(--display); margin-bottom: 12px; }
+  .lbl .pill { font: 800 20px/1 var(--sans); padding: 8px 14px; border-radius: 999px; }
+  .lbl .pill.old { color: var(--muted); background: rgba(255,255,255,.07); }
+  .lbl .pill.new { color: #1B1405; background: var(--gold); }
+  .lbl .note { margin-left: auto; font: 600 21px/1 var(--sans); color: var(--muted); }
+  .window .win-body { padding: 16px 22px 14px; }
+  .b-cell { min-height: 46px; font-size: 20px; }
+  .b-foot .b-cell { min-height: 22px; font-size: 18px; }
+  .b-name b { font-size: 20px; } .b-name small { font-size: 14px; }
+  .before { opacity: .62; filter: saturate(.5); }
+  .arrow { text-align: center; color: var(--gold); font: 800 34px/1 var(--display); margin: -2px 0 -6px; }
+  .cta { margin-top: auto; }
+  .cta .fine { max-width: 470px; }
+</style></head>
+<body><div class="frame">
+  <div class="top">
+    <div class="brand"><span class="mark">40h</span>Escala 5x2 Pronta</div>
+    <span class="badge"><span class="dot"></span>Prazo: dezembro</span>
+  </div>
+
+  <h1>Mesma padaria. <em>Escala nova.</em></h1>
+
+  <div class="pair">
+    <div class="before">
+      <div class="lbl"><span class="pill old">HOJE · 6x1</span>Só domingo de folga<span class="note">44h por semana</span></div>
+      <div class="window"><div class="win-body"><div class="board" data-escala="padaria6x1" data-compact></div></div></div>
+    </div>
+    <div class="arrow">↓</div>
+    <div>
+      <div class="lbl"><span class="pill new">DEPOIS · 5x2</span>2 folgas para cada um<span class="note">até 40h</span></div>
+      <div class="window"><div class="win-body"><div class="board" data-escala="padaria5x2" data-compact></div></div></div>
+    </div>
+  </div>
+
+  <div class="cta">
+    <p class="fine"><b style="color:#fff">A gente monta a sua.</b> Com o seu horário, sua equipe e quantas pessoas você precisa no balcão. PDF + planilha em 48h.</p>
+    <span class="btn">Montar a minha</span>
+  </div>
+</div>
+<script src="board.js"></script>
+</body></html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>04 Padaria com 4 funcionários (feed)</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  .persona { margin-top: 40px; display: inline-flex; align-self: flex-start; align-items: center; gap: 14px; background: var(--surface); border: 2px solid var(--line-2); border-radius: 999px; padding: 10px 22px 10px 12px; font-size: 24px; color: var(--muted); }
+  .persona b { color: #fff; }
+  .persona .ico { width: 44px; height: 44px; border-radius: 50%; background: var(--gold-soft); display: grid; place-items: center; font-size: 24px; }
+  h1 { font-size: 80px; margin-top: 24px; }
+  h1 .red { color: #FF7083; }
+  .window { margin-top: 36px; }
+  .b-cell { min-height: 54px; }
+  .note { margin-top: 14px; font-size: 21px; color: #FF8B99; display: flex; align-items: center; gap: 10px; }
+  .fix { margin-top: 30px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .fix div { background: var(--field); border: 2px solid var(--line); border-radius: 18px; padding: 16px 18px; font-size: 20px; color: var(--muted); line-height: 1.3; }
+  .fix b { display: block; color: #fff; font: 700 26px/1.15 var(--display); margin-bottom: 6px; }
+  .cta { margin-top: auto; }
+</style></head>
+<body><div class="frame">
+  <div class="top">
+    <div class="brand"><span class="mark">40h</span>Escala 5x2 Pronta</div>
+    <span class="badge red"><span class="dot"></span>Fim da 6x1</span>
+  </div>
+
+  <div class="persona"><span class="ico">🥖</span><span><b>Padaria</b> · 4 funcionários · seg a sáb</span></div>
+  <h1>Com 2 folgas cada, <span class="red">falta gente todo dia.</span></h1>
+
+  <div class="window">
+    <div class="win-bar"><span class="win-dots"><i></i><i></i><i></i></span><span class="win-title">Tentativa de 5x2 com a mesma equipe</span><span class="win-tag bad">3 de 4 no balcão</span></div>
+    <div class="win-body">
+      <div class="board" data-escala="padariaBuraco" data-min="4"></div>
+      <p class="note">● Você precisava de 4 pessoas por dia. Sobram 3.</p>
+    </div>
+  </div>
+
+  <div class="fix">
+    <div><b>Contratar?</b>Quantas pessoas e em qual turno</div>
+    <div><b>Hora extra?</b>Quanto custa e qual o limite</div>
+    <div><b>Mudar horário?</b>Onde dá para encurtar</div>
+  </div>
+
+  <div class="cta">
+    <p class="fine" style="max-width:460px"><b style="color:#fff">A gente faz a conta e entrega a escala pronta.</b> PDF + planilha em 48h. R$ 77, pagamento único.</p>
+    <span class="btn">Resolver a minha</span>
+  </div>
+</div>
+<script src="board.js"></script>
+</body></html>
