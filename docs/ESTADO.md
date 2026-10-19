@@ -1,6 +1,6 @@
 # Estado do projeto
 
-_Atualizado: 2026-10-18 18:15 (America/Fortaleza) · fechamento da semana 1 pelo Analista_
+_Atualizado: 2026-10-19 09:25 (America/Fortaleza) · Conteúdo: carrossel `setor-restaurante` publicado_
 
 ## Resumo
 - **Semana 1 (16–18/10, 3 dias de mídia): R$ 99,80 gastos, 14.924 impressões, 214 cliques no link, 153 visitas (LPV), 5 leads (Pixel), 0 checkouts, 0 vendas.** CPL R$ 11,04 na [LEADS] (R$ 19,96 sobre o gasto total); CTR link 1,43%; visita→lead 3,3% (meta ≥ 15%); CAC indefinido (0 vendas). Tendência ruim: dia 1 CPL R$ 8,03 (4 leads), dia 2 R$ 50,44 (1 lead), dia 3 R$ 17,25 e 0 leads até a leitura (18/10 ~18h). Planilha "Leads Calculadora 40h" **não acessada** (sem conector Google Sheets no Windsor); leads = evento Lead do Pixel, coerente com os 5 leads reais que receberam e-mail em 18/10.
@@ -51,7 +51,7 @@ Escalar-se-o-teto-subisse: **nenhum** (0 vendas, CPL acima da meta de R$ 8).
 | 16/10 | Reel `noticia` | publicado |
 | 17/10 | Carrossel `a-conta` | publicado |
 | 18/10 | Story `resultado` | publicado |
-| 19/10 | Carrossel `setor-restaurante` | aprovado |
+| 19/10 | Carrossel `setor-restaurante` | publicado |
 | 20/10 | Story `enquete` | aprovado |
 | 21/10 | Reel `escala-se-montando` | aprovado |
 | 22/10 | Carrossel `3-erros` | aprovado |
@@ -110,6 +110,7 @@ Status: feito (Carlos: "vc consegue postar, cuidar dos anúncios e fazer deploy"
 - 16/10: conteúdo IG sem câmera (Remotion); eventual apresentador IA só com rótulo de IA.
 
 ## Histórico
+- 19/10 09:25 · Conteúdo: publicado Carrossel `setor-restaurante` media_id 18099114455635575 (6 slides em jornada40h.com.br/posts/semana-1/, legenda de `posts.json`). URLs não verificáveis pelo sandbox (proxy); Instagram aceitou as 6 imagens — confirma que `posts/semana-1/` responde no domínio. Sem pedido aberto para Conteúdo; 10 itens pendentes na FILA (próximo: Story `enquete` 20/10). Semana 3 fica para domingo 25/10.
 - 18/10 18:15 · Analista: fechamento da semana 1 (R$ 99,80, 153 visitas, 5 leads, CPL R$ 11,04 na LEADS, 0 checkout, 0 vendas; IG 4 seguidores, alcance por post < 10). Agentes avaliados: sem violação de regra. Pedido #4 fechado; abertos #6 (Dev: sequência de e-mails), #7 (Gestor: monitorar V4) e #8 (Carlos: 4 decisões). Sem pedido ao Dev aberto na data → nenhuma alteração em `site/`/`apps-script/`. Planilha não acessada (sem conector Sheets); site não verificável pelo sandbox.
 - 18/10 22:20 · Anúncios (autonomia; Carlos liberou a regra do Windsor): [LEADS] R$ 25 → R$ 45/dia ([VENDAS] pausada; soma R$ 45 ≤ teto). Criados pela API (Windsor create_ad, imagem pública em jornada40h.com.br/ads/) 5 anúncios novos no conjunto 120253290480480421, todos levando à LP a4 com utm_term=lp-a4 e copy sem "grátis", preço R$ 47,90: V4L-03 É lei (120253316635640421), V4L-01 Escala pronta (120253316636270421), V5L-02 UOL quando vale (120253316636600421), V5L-01 UOL hora extra (120253316636940421), V5L-03 Quem já é 5x2 (120253316637260421). Imagens re-renderizadas com R$ 47,90. Total: 7 anúncios ativos na [LEADS]. Às 22h, V4L-04 tinha R$ 15,97, 504 impressões, CTR do link 2,78%, 11 visitas, 1 lead.
 - 18/10 22:00 · LP A4 no ar (commit 8cafd2f, deploy manual): topo vende o produto (escala 5x2 pronta, 42h e 40h, R$ 47,90 de R$ 77), "Como funciona", calculadora abaixo (#card). Resultado pela metade: diagnóstico + hora extra visíveis; contratar, reduzir horário, opção mais barata e escala borrados (sem números no DOM). CTA principal direto ao checkout xftQB3Y; cadastro por e-mail virou secundário. Sem "grátis" na página. E-mail imediato (Apps Script v10) só com o diagnóstico curto + oferta; D1 da sequência sem o PDF completo. Anúncios V4L-04 e V4L-02: texto sem "grátis", com o produto e o preço (Windsor update_ad_creative; voltam para análise).
