@@ -85,9 +85,9 @@ function enviarRelatorio(lead) {
     : gap >= 0.95
       ? "Com 2 folgas por pessoa, faltam cerca de <b>" + n1(D) + " horas por semana</b> na sua escala, algo como <b>+" + n1(gap) + " funcionário</b>."
       : "Com 2 folgas por pessoa, faltam cerca de <b>" + n1(D) + " horas por semana</b> na sua escala.";
-  const assunto = esc(primeiro) + ", o diagnóstico do seu " + (lead.tipo ? String(lead.tipo).toLowerCase() : "negócio") + " para o fim da escala 6x1";
+  const assunto = primeiro + ", o diagnóstico do seu negócio para o fim da escala 6x1";
   const corpo =
-    "<p>Oi, " + esc(primeiro) + "! Aqui é o Carlos, da Jornada 40h. Este é o diagnóstico do seu " + tipo + ":</p>" +
+    "<p>Oi, " + esc(primeiro) + "! Aqui é o Carlos, da Jornada 40h. Este é o diagnóstico do seu negócio" + (lead.tipo ? " (" + tipo.toLowerCase() + ")" : "") + ":</p>" +
     "<p style=\"font-size:17px\">" + diag + "</p>" +
     "<p>A emenda já foi publicada (EC 141): por volta de 16 de dezembro, cada funcionário passa a ter 2 folgas por semana e a jornada cai para 42h; em dezembro de 2027, para 40h, sem reduzir salário.</p>" +
     "<p><b>No relatório completo + escala pronta você recebe:</b></p>" +
