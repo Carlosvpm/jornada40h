@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fim da escala 6x1: quanto vai custar para o seu negócio?</title>
-<meta name="description" content="O fim da escala 6x1 foi promulgado: a jornada cai para 42h em 2 meses e para 40h um ano depois. Calcule em 1 minuto quantos funcionários a mais o seu negócio vai precisar e receba sua escala 5x2 pronta.">
+<meta name="description" content="O fim da escala 6x1 foi promulgado: a jornada cai para 42h em 2 meses e para 40h um ano depois. Receba a escala 5x2 pronta da sua equipe, pessoa por pessoa, para as 42h e as 40h, com relatório de custos. Faça o diagnóstico do seu negócio em 1 minuto.">
 <meta property="og:title" content="Fim da escala 6x1: quanto vai custar para o seu negócio?">
 <link rel="canonical" href="https://jornada40h.com.br/">
-<meta property="og:description" content="Calcule grátis em 1 minuto e receba sua escala 5x2 pronta em até 48 horas.">
+<meta property="og:description" content="Faça o diagnóstico do seu negócio em 1 minuto e receba sua escala 5x2 pronta em até 48 horas.">
 <meta name="theme-color" content="#080B11">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -83,11 +83,24 @@
 
   /* Hero */
   .hero { padding: 40px 0 64px; }
-  .hero-grid { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "copy" "card" "mock"; }
+  .hero-grid { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "copy" "mock"; }
   @media (min-width: 1000px) {
-    .hero { padding: 64px 0 96px; }
-    .hero-grid { grid-template-columns: minmax(0, 1fr) 470px; grid-template-areas: "copy card" "mock card"; grid-template-rows: auto 1fr; gap: 40px 56px; align-items: start; }
+    .hero { padding: 64px 0 72px; }
+    .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 540px); grid-template-areas: "copy mock"; gap: 40px 56px; align-items: start; }
+    .hero-mock { margin-top: 56px; }
   }
+  .hero-price { justify-content: flex-start; margin: 22px 0 14px; }
+  .hero-price strong { font-size: 46px; }
+  .hero-price span:last-child { line-height: 1.35; }
+  .hero-cta { max-width: 460px; }
+  .hero-pdf { justify-content: flex-start; text-align: left; }
+  .gets-title { font-family: var(--display); font-size: 19px; letter-spacing: -0.01em; margin: 26px 0 0; }
+  .hero-gets { margin: 6px 0 0; max-width: 34em; }
+  .how { padding: 8px 0 48px; }
+  .how .sec-title { margin-bottom: 24px; }
+  .how-steps { margin-bottom: 0; }
+  .calc-sec { padding: 0 0 72px; }
+  .calc-sec .card { max-width: 560px; margin: 0 auto; }
   .hero-copy { grid-area: copy; }
   .hero-mock { grid-area: mock; }
   .hero .card { grid-area: card; }
@@ -220,7 +233,7 @@
   .stage b { color: var(--gold); }
   .facts { color: var(--muted); font-size: 13.5px; margin: 10px 0 0; }
   .divider { height: 1px; background: var(--line-2); margin: 22px 0; }
-  .gate h3, .report h3, .offer h3, .preview h3 { font-family: var(--display); font-size: 21px; line-height: 1.2; letter-spacing: -0.015em; margin: 0 0 6px; text-align: center; }
+  .gate h3, .locked h3, .preview h3 { font-family: var(--display); font-size: 21px; line-height: 1.2; letter-spacing: -0.015em; margin: 0 0 6px; text-align: center; }
   .gate p.lead { text-align: center; font-size: 14.5px; color: var(--muted); margin: 0 0 16px; }
   .consent { display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: start; font-size: 12.5px; color: var(--muted); margin: 2px 0 14px; }
   .consent input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--gold); }
@@ -248,8 +261,19 @@
   .offer-lead b { color: var(--gold); white-space: nowrap; }
   .offer .compare { margin-bottom: 14px; }
   .offer .bridge { font-size: 14px; color: var(--muted); margin: 14px 0 0; }
-  .previa-cta { margin: 0; }
-  .previa-cta p { text-align: center; font-size: 14px; color: var(--muted); margin: 0 0 12px; }
+  .locked { margin-top: 22px; }
+  .lockwrap { margin-top: 0; }
+  .scen.lk p { filter: blur(4px); opacity: .55; user-select: none; }
+  .lk-val { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 700; font-size: 16px; white-space: nowrap; }
+  .lk-val svg { width: 14px; height: 14px; color: var(--gold); flex: none; }
+  .lk-val i { font-style: normal; filter: blur(3.5px); user-select: none; }
+  .lk-note { text-align: center; margin: 12px 0 0; }
+  .lk-note span { display: inline-flex; align-items: center; gap: 7px; background: var(--gold-soft); color: var(--gold); border: 1px solid rgba(230,184,74,.35); border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .lk-note svg { width: 14px; height: 14px; flex: none; }
+  .scen.best { border-color: rgba(230,184,74,.4); }
+  .unlock { margin-top: 22px; }
+  .unlock .btn small { margin-top: 4px; }
+  .thanks { text-align: center; font-size: 15px; color: var(--off); background: var(--off-soft); border-radius: 12px; padding: 12px 14px; margin: 18px 0 0; }
   .pdf-link { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 14px auto 0; font-size: 14.5px; font-weight: 600; color: var(--gold); text-decoration: underline; text-underline-offset: 3px; text-align: center; }
   .pdf-link svg { width: 17px; height: 17px; flex: none; }
   .trust { display: grid; grid-template-columns: 64px 1fr; gap: 16px; align-items: start; max-width: 720px; margin: 0 auto 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px; }
@@ -380,17 +404,27 @@
       <a href="#faq">Dúvidas</a>
       <a href="fim-da-escala-6x1/">Guia do fim da 6x1</a>
     </div>
-    <a class="btn" href="#card" data-scroll="card">Calcular grátis</a>
+    <a class="btn" href="#card" data-scroll="card">Fazer o diagnóstico</a>
   </nav>
 </div></div>
 
-<!-- HERO -->
+<!-- HERO: o produto -->
 <header class="hero">
   <div class="container hero-grid">
     <div class="hero-copy">
-      <span class="badge"><svg><use href="#i-scale"/></svg>Fim da 6x1 aprovado por 75 a 1 e promulgado</span>
-      <h1 id="h1">Quanto o fim da escala 6x1 vai custar para o <em>seu negócio?</em></h1>
-      <p class="sub">A partir de <b>dezembro</b>, cada funcionário tem <b>2 folgas</b> por semana e jornada de até <b>42 horas</b>, que cai para <b>40 horas</b> um ano depois. Descubra em 1 minuto quantas pessoas a mais você vai precisar e receba a escala 5x2 pronta.</p>
+      <span class="badge"><svg><use href="#i-scale"/></svg>Fim da 6x1 promulgado: EC 141/2026</span>
+      <h1 id="h1">Sua escala 5x2 pronta para o <em>fim da escala 6x1</em></h1>
+      <p class="sub">A escala completa da sua equipe, <b>pessoa por pessoa</b>, nas versões de <b>42h (dezembro)</b> e <b>40h (2027)</b>. Em PDF e planilha, em até 48 horas.</p>
+      <div class="price hero-price"><span class="de">de <s class="precoCheio"></s></span><strong class="precoFundador"></strong><span>pagamento único<br>garantia de 7 dias</span></div>
+      <a class="btn hero-cta" href="#card" data-scroll="card">Fazer o diagnóstico do meu negócio<small>1 minuto, sem cadastro</small></a>
+      <a class="pdf-link hero-pdf" href="exemplo/escala-5x2-exemplo.pdf" target="_blank" rel="noopener"><svg><use href="#i-doc"/></svg>Ver um exemplo de escala pronta (PDF)</a>
+      <h2 class="gets-title">O que você recebe</h2>
+      <ul class="gets hero-gets">
+        <li><svg><use href="#i-check"/></svg><div><b>A escala completa, pessoa por pessoa</b><span>Versão 42h (a partir de ~16/12/2026) e versão 40h (~16/12/2027), com 2 folgas por semana para cada um</span></div></li>
+        <li><svg><use href="#i-check"/></svg><div><b>Relatório de custos</b><span>Contratar × hora extra × reduzir horário, e qual sai mais barato para você</span></div></li>
+        <li><svg><use href="#i-check"/></svg><div><b>PDF para imprimir e planilha para ajustar</b><span>Entregue em até 48 horas</span></div></li>
+        <li><svg><use href="#i-check"/></svg><div><b>Acesso antecipado ao app da transição, com IA</b><span>Sem custo extra para quem compra agora</span></div></li>
+      </ul>
     </div>
 
     <div class="hero-mock" id="exemplo">
@@ -404,12 +438,29 @@
       <p class="mock-caption">Exemplo gerado pelo nosso motor de escala para uma padaria fictícia. A sua usa os dias, horários e equipe do seu negócio.</p>
     </div>
 
+  </div>
+</header>
+
+<!-- COMO FUNCIONA -->
+<section class="how" id="como-funciona">
+  <div class="container">
+    <h2 class="sec-title">Como funciona</h2>
+    <div class="steps how-steps">
+      <div class="stepcard"><div class="n">1</div><b>Faça o diagnóstico</b><span>3 perguntas sobre horários e equipe. O diagnóstico aparece na hora.</span></div>
+      <div class="stepcard"><div class="n">2</div><b>Veja a prévia</b><span>A primeira linha da escala do seu negócio, montada com os seus números.</span></div>
+      <div class="stepcard"><div class="n">3</div><b>Receba sua escala em 48h</b><span>Depois do pagamento, você responde um formulário de 5 minutos e recebe as escalas de 42h e 40h com o relatório de custos.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- CALCULADORA -->
+<section class="calc-sec" id="calculadora">
+  <div class="container">
     <div class="card" id="card">
-      <!-- Etapa 1: calculadora -->
       <form id="calc" novalidate>
         <div class="card-head">
-          <h2>Calcule seu custo grátis</h2>
-          <p>3 perguntas e o resultado aparece na hora</p>
+          <h2>Diagnóstico do seu negócio</h2>
+          <p>3 perguntas e o diagnóstico aparece na hora</p>
           <div class="progress" aria-hidden="true"><span class="on" id="p1"></span><span id="p2"></span><span id="p3"></span></div>
         </div>
         <fieldset class="step">
@@ -452,69 +503,62 @@
               <div class="money"><input type="number" id="salario" inputmode="decimal" min="0" step="50" placeholder="1.800"></div></label>
           </div>
         </fieldset>
-        <button class="btn" type="submit">Ver meu resultado<small>Grátis e sem cadastro</small></button>
+        <button class="btn" type="submit">Ver meu diagnóstico<small>Sem cadastro, aparece na hora</small></button>
         <p class="error" id="calcError" role="alert"></p>
       </form>
 
-      <!-- Etapa 2: resultado + convite para a prévia grátis -->
+      <!-- Etapa 2: metade do diagnóstico aberta (manchete + hora extra); o resto bloqueado -->
       <section class="result" id="result" hidden aria-live="polite">
-        <p class="label" id="resTitle">Quando a jornada chegar a 40 horas, você vai precisar de</p>
+        <p class="label" id="resTitle"></p>
         <div class="big" id="resBig"></div>
-        <p class="cost-line" id="resCost"></p>
+        <p class="cost-line" id="resCost" hidden></p>
         <p class="stage" id="resStage"></p>
-        <p class="facts" id="resFacts"></p>
         <div class="divider"></div>
       </section>
 
-      <div class="previa-cta" id="previaCta" hidden>
-        <p>Com esses números, já montamos a prévia da escala 5x2 do seu negócio.</p>
-        <button class="btn" type="button" id="previaBtn">Ver a prévia da minha escala (grátis)<small>Só nome e e-mail, leva 10 segundos</small></button>
-      </div>
-
-      <form class="gate" id="gate" hidden novalidate>
-        <h3>Para onde enviamos a sua prévia?</h3>
-        <p class="lead">A prévia aparece aqui na hora. Enviamos uma cópia por e-mail, com a comparação entre contratar, pagar hora extra e reduzir o horário.</p>
-        <label class="field"><span>Seu nome</span><input type="text" id="nome" autocomplete="given-name" placeholder="Como podemos te chamar?"></label>
-        <label class="field"><span>E-mail</span><input type="email" id="email" autocomplete="email" placeholder="voce@email.com"></label>
-        <label class="field"><span>WhatsApp (opcional)</span><input type="tel" id="whats" autocomplete="tel" inputmode="tel" placeholder="(98) 99999-9999"></label>
-        <label class="consent"><input type="checkbox" id="consent" checked><span>Aceito receber a prévia e mensagens sobre a adaptação à jornada de 40 horas por e-mail (e por WhatsApp, se eu informar). Posso cancelar quando quiser.</span></label>
-        <button class="btn" type="submit" id="gateBtn">Ver minha prévia grátis<small>A prévia aparece na hora</small></button>
-        <p class="secure"><svg><use href="#i-lock"/></svg>Seus dados estão seguros e nunca são vendidos</p>
-        <p class="error" id="gateError" role="alert"></p>
-      </form>
-
-      <!-- Etapa 3: prévia personalizada (herói) + oferta + relatório -->
       <section class="preview" id="preview" hidden>
         <h3>A prévia da sua escala 5x2</h3>
         <p class="pv-sub" id="pvSub"></p>
         <div id="pvBoard"></div>
-        <p class="pv-warn" id="pvWarn" hidden></p>
-        <div class="divider"></div>
       </section>
 
-      <section class="offer" id="offer" hidden>
-        <p class="offer-lead" id="offerLead">Esta é a prévia da escala do seu negócio. A escala completa, pessoa por pessoa, nas versões de 42h e 40h, fica liberada por <b class="precoFundador"></b>.</p>
-        <div class="price"><span class="de">de <s class="precoCheio"></s></span><strong class="precoFundador"></strong><span>pagamento único</span></div>
-        <p class="compare">PDF e planilha em até 48 horas, garantia de 7 dias e acesso antecipado ao app da transição com IA. Preço de lançamento até <b>31/10</b>.</p>
-        <a class="btn checkout" href="#" rel="noopener">Liberar minha escala completa por <span class="precoFundador"></span><small>Pix ou cartão · garantia de 7 dias</small></a>
-        <a class="wa whatsapp" href="#" target="_blank" rel="noopener" hidden><svg><use href="#i-wa"/></svg>Tirar uma dúvida no WhatsApp</a>
-        <p class="bridge" id="bridge"></p>
-        <a class="pdf-link" href="exemplo/escala-5x2-exemplo.pdf" target="_blank" rel="noopener"><svg><use href="#i-doc"/></svg>Ver um exemplo de escala pronta (PDF)</a>
-        <button class="linkbtn" type="button" data-scroll="oferta">Ver tudo o que está incluído</button>
-      </section>
-
-      <section class="report" id="report" hidden>
-        <div class="divider"></div>
+      <section class="locked" id="locked" hidden>
         <h3>As 3 saídas para o seu negócio</h3>
-        <div class="scen"><div class="scen-head"><h4>Contratar</h4><span class="scen-val" id="r1v"></span></div><p id="r1t"></p></div>
-        <div class="scen"><div class="scen-head"><h4>Pagar hora extra</h4><span class="scen-val" id="r2v"></span></div><p id="r2t"></p><span class="warn" id="r2w" hidden></span></div>
-        <div class="scen"><div class="scen-head"><h4>Reduzir o horário</h4><span class="scen-val" id="r3v"></span></div><p id="r3t"></p></div>
+        <div class="scen open"><div class="scen-head"><h4>Pagar hora extra</h4><span class="scen-val" id="heVal"></span></div><p id="heTxt"></p><span class="warn" id="heWarn" hidden></span></div>
+        <div class="lockwrap">
+          <div class="scen lk"><div class="scen-head"><h4>Contratar</h4><span class="lk-val"><svg><use href="#i-lock"/></svg><i aria-hidden="true">R$ ••••/mês</i></span></div><p aria-hidden="true">•••••• •••• ••••• •• ••••••• ••••</p></div>
+          <div class="scen lk"><div class="scen-head"><h4>Reduzir o horário</h4><span class="lk-val"><svg><use href="#i-lock"/></svg><i aria-hidden="true">−•• h/sem</i></span></div><p aria-hidden="true">••••• •• •••••• •••• ••••••</p></div>
+          <div class="scen lk best"><div class="scen-head"><h4>A opção mais barata para você</h4><span class="lk-val"><svg><use href="#i-lock"/></svg><i aria-hidden="true">••••••</i></span></div></div>
+          <p class="lk-note"><span><svg><use href="#i-lock"/></svg>Liberado no relatório completo + escala pronta</span></p>
+        </div>
       </section>
+
+      <section class="unlock" id="unlock" hidden>
+        <div class="price"><span class="de">de <s class="precoCheio"></s></span><strong class="precoFundador"></strong><span>pagamento único</span></div>
+        <a class="btn checkout" id="unlockBtn" href="#" rel="noopener">Liberar meu resultado completo + escala pronta — <span class="precoFundador"></span><small>Pix ou cartão · garantia de 7 dias</small></a>
+        <p class="compare">Escalas de 42h e 40h em PDF e planilha em até 48h, relatório de custos e acesso antecipado ao app com IA.</p>
+        <a class="wa whatsapp" href="#" target="_blank" rel="noopener" hidden><svg><use href="#i-wa"/></svg>Tirar uma dúvida no WhatsApp</a>
+        <a class="pdf-link" href="exemplo/escala-5x2-exemplo.pdf" target="_blank" rel="noopener"><svg><use href="#i-doc"/></svg>Ver um exemplo de escala pronta (PDF)</a>
+      </section>
+
+      <form class="gate" id="gate" hidden novalidate>
+        <div class="divider"></div>
+        <h3>Não vai comprar agora?</h3>
+        <p class="lead">Receba a prévia da sua escala por e-mail.</p>
+        <label class="field"><span>Seu nome</span><input type="text" id="nome" autocomplete="given-name" placeholder="Como podemos te chamar?"></label>
+        <label class="field"><span>E-mail</span><input type="email" id="email" autocomplete="email" placeholder="voce@email.com"></label>
+        <label class="field"><span>WhatsApp (opcional)</span><input type="tel" id="whats" autocomplete="tel" inputmode="tel" placeholder="(98) 99999-9999"></label>
+        <label class="consent"><input type="checkbox" id="consent" checked><span>Aceito receber a prévia e mensagens sobre a adaptação à jornada de 40 horas por e-mail (e por WhatsApp, se eu informar). Posso cancelar quando quiser.</span></label>
+        <button class="btn ghost" type="submit" id="gateBtn">Receber a prévia por e-mail</button>
+        <p class="secure"><svg><use href="#i-lock"/></svg>Seus dados estão seguros e nunca são vendidos</p>
+        <p class="error" id="gateError" role="alert"></p>
+      </form>
+      <p class="thanks" id="thanks" hidden role="status"></p>
 
       <button class="linkbtn" type="button" id="redo" hidden>Refazer o cálculo</button>
     </div>
   </div>
-</header>
+</section>
 
 <div class="stats"><ul>
   <li><b>75 a 1</b>votos no Senado</li>
@@ -590,6 +634,7 @@
           <li><svg><use href="#i-check"/></svg><div><b>Escala para as duas etapas</b><span>Uma para as 42 horas, que chegam em 2 meses, e outra para as 40 horas</span></div></li>
           <li><svg><use href="#i-check"/></svg><div><b>Escala completa, pessoa por pessoa</b><span>Dia por dia, com folgas em rodízio</span></div></li>
           <li><svg><use href="#i-check"/></svg><div><b>Fim de semana e horários de pico cobertos</b><span>Montada com o movimento real, não só com o horário de abertura</span></div></li>
+          <li><svg><use href="#i-check"/></svg><div><b>Relatório de custos</b><span>Contratar × hora extra × reduzir horário, e qual sai mais barato para você</span></div></li>
           <li><svg><use href="#i-check"/></svg><div><b>Número exato de contratações</b><span>Para você não contratar ninguém a mais do que precisa</span></div></li>
           <li><svg><use href="#i-check"/></svg><div><b>Dentro das regras da jornada nova</b><span>Até 8 horas por dia, 42 por semana na primeira etapa e 40 depois, com 2 folgas</span></div></li>
           <li><svg><use href="#i-check"/></svg><div><b>PDF para imprimir e planilha para ajustar</b><span>Entregue em até 48 horas</span></div></li>
@@ -641,7 +686,7 @@
       <details><summary>O que é o app da transição?</summary><p>É a ferramenta que estamos lançando para você ajustar a escala sozinho quando a equipe, o horário ou a etapa da lei mudar, com alerta quando alguma regra é quebrada. Quem compra agora recebe acesso antecipado, incluído na compra.</p></details>
       <details><summary>O que a IA faz?</summary><p>O app da transição vem com um assistente de IA treinado nas regras da Emenda 141 (fim da escala 6x1). Você pergunta, por exemplo, "posso dar a folga na segunda e no domingo?" ou "quanto custa cobrir o sábado com hora extra?", e ele responde com base na sua escala e nos seus números. Ele também ajuda a refazer a escala quando alguém sai, entra ou muda de horário. O app está em construção: quem compra agora recebe o acesso antecipado assim que ele abrir, sem custo extra. Para decisões jurídicas, confirme sempre com o seu contador.</p></details>
       <details><summary>Quanto custa?</summary><p>R$ 47,90, pagamento único, por Pix ou cartão (de R$ 77, preço de lançamento até 31/10). Inclui as escalas de 42h e de 40h em PDF e planilha, o acesso antecipado ao app da transição e a garantia de 7 dias.</p></details>
-      <details><summary>Posso ver um exemplo antes de comprar?</summary><p>Sim. Depois da calculadora você vê grátis a prévia da escala do seu negócio, e aqui está um <a href="exemplo/escala-5x2-exemplo.pdf" target="_blank" rel="noopener">exemplo de escala pronta em PDF</a>, com nomes fictícios.</p></details>
+      <details><summary>Posso ver um exemplo antes de comprar?</summary><p>Sim. Depois do diagnóstico você vê o resultado principal, o custo da hora extra e a primeira linha da escala do seu negócio, e aqui está um <a href="exemplo/escala-5x2-exemplo.pdf" target="_blank" rel="noopener">exemplo de escala pronta em PDF</a>, com nomes fictícios.</p></details>
       <details><summary>Preciso pagar mensalidade?</summary><p>Não. É pagamento único de R$ 47,90.</p></details>
     </div>
   </div>
@@ -650,20 +695,20 @@
 <!-- CTA FINAL -->
 <section class="sec final" style="padding-top:0">
   <div class="container">
-    <h2 class="sec-title">Saiba hoje quanto a mudança vai custar</h2>
-    <p class="sec-lead">Leva 1 minuto, é grátis e o resultado aparece na hora. Quer entender a lei antes? Leia o <a href="fim-da-escala-6x1/">guia do fim da escala 6x1</a>.</p>
-    <a class="btn" href="#card" data-scroll="card">Calcular meu custo</a>
+    <h2 class="sec-title">Comece pelo diagnóstico</h2>
+    <p class="sec-lead">Leva 1 minuto e o diagnóstico aparece na hora. O relatório de custos e a escala completa vêm na versão pronta. Quer entender a lei antes? Leia o <a href="fim-da-escala-6x1/">guia do fim da escala 6x1</a>.</p>
+    <a class="btn" href="#card" data-scroll="card">Fazer o diagnóstico do meu negócio</a>
   </div>
 </section>
 
 <footer>
   <div class="container">
     <p>Os resultados são estimativas baseadas em médias e nos dados informados. Não substituem a orientação do seu contador ou de um advogado trabalhista.</p>
-    <p>Seus dados são usados apenas para enviar o relatório e falar com você sobre a adaptação à jornada de 40 horas. Nunca são vendidos. <a href="#" id="privacyLink">Política de privacidade</a>.</p>
+    <p>Seus dados são usados apenas para enviar a prévia e falar com você sobre a adaptação à jornada de 40 horas. Nunca são vendidos. <a href="#" id="privacyLink">Política de privacidade</a>.</p>
   </div>
 </footer>
 
-<div class="sticky" id="sticky"><a class="btn" id="stickyBtn" href="#card">Calcular meu custo</a></div>
+<div class="sticky" id="sticky"><a class="btn" id="stickyBtn" href="#card">Fazer o diagnóstico do meu negócio</a></div>
 
 <script src="js/escala.js"></script>
 <script>
@@ -691,7 +736,7 @@ const CONFIG = {
   semanasPorMes: 4.33,
   limiteHoraExtraDia: 2
 };
-const VARIANTE = "a3"; // LP A com prévia grátis antes da oferta de R$ 47,90 (18/10)
+const VARIANTE = "a4"; // LP A: produto no topo, resultado só como prévia (resto bloqueado), checkout direto de R$ 47,90
 
 /* Simulações exibidas na seção de casos (calculadas com a mesma conta) */
 const SIMULACOES = [
@@ -802,13 +847,16 @@ function renderEscala(esc, opts) {
   const MAX = 10;
   const cell = c => '<span class="b-cell k-' + c.k + '">' + LETRA[c.k] + (c.txt ? "<small>" + c.txt + "</small>" : "") + "</span>";
   const row = r => '<div class="b-row' + (r.nova ? " new" : "") + '"><span class="b-name"><b>' + r.nome + "</b><small>" + (r.nova ? "contratação" : num1(r.horas) + "h/semana") + "</small></span>" + r.cells.map(cell).join("") + "</div>";
+  const PADRAO = ["i", "i", "f", "i", "i", "i", "f"];
+  const falsa = (r, i) => '<div class="b-row"><span class="b-name"><b>••••••</b><small>••h/semana</small></span>' + r.cells.map((c, j) => '<span class="b-cell k-' + PADRAO[(i * 3 + j) % 7] + '">•</span>').join("") + "</div>";
+  const realRow = row;
   const shown = esc.rows.slice(0, MAX);
   const from = opts.blurFrom === undefined ? shown.length : Math.min(opts.blurFrom, shown.length);
   let html = '<div class="board"><div class="b-row b-head"><span></span>' + ORDEM.map(d => "<span>" + DIAS_CURTOS[d] + "</span>").join("") + "</div>";
-  html += shown.slice(0, from).map(row).join("");
-  if (from < shown.length) html += '<div class="b-blurwrap" aria-hidden="true">' + shown.slice(from).map(row).join("") + '<div class="b-lock"><span><svg><use href="#i-lock"/></svg>' + opts.lockText + "</span></div></div>";
+  html += shown.slice(0, from).map(realRow).join("");
+  if (from < shown.length) html += '<div class="b-blurwrap" aria-hidden="true">' + shown.slice(from).map((r, i) => opts.locked ? falsa(r, i) : realRow(r)).join("") + '<div class="b-lock"><span><svg><use href="#i-lock"/></svg>' + opts.lockText + "</span></div></div>";
   if (esc.rows.length > MAX) html += '<p class="b-more">e mais ' + (esc.rows.length - MAX) + " pessoas na escala completa</p>";
-  html += '<div class="b-row b-foot"><span class="b-name"><small>No dia</small></span>' + esc.noDia.map(n => '<span class="b-cell">' + (n === null ? "–" : n) + "</span>").join("") + "</div></div>";
+  html += '<div class="b-row b-foot"><span class="b-name"><small>No dia</small></span>' + esc.noDia.map(n => '<span class="b-cell">' + (n === null ? "–" : opts.locked ? "•" : n) + "</span>").join("") + "</div></div>";
   const tem = k => esc.rows.some(r => r.cells.some(c => c.k === k));
   const leg = [["m", "M", "Abertura"], ["c", "Me", "Meio"], ["t", "T", "Fechamento"], ["i", "U", "Turno único"], ["f", "F", "Folga"], ["r", "R", "Reserva"]].filter(l => tem(l[0]));
   html += '<div class="legend">' + leg.map(l => '<span><i class="k-' + l[0] + '">' + l[1] + "</i>" + l[2] + "</span>").join("") + "</div>";
@@ -828,8 +876,8 @@ const utm = {};
 ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].forEach(k => { if (params.get(k)) utm[k] = params.get(k); });
 const setor = SETORES[(params.get("setor") || "").toLowerCase()];
 if (setor) {
-  $("h1").innerHTML = "Quanto o fim da escala 6x1 vai custar para <em>" + setor.alvo + "?</em>";
-  document.title = "Fim da escala 6x1: quanto vai custar para " + setor.alvo + "?";
+  $("h1").innerHTML = "A escala 5x2 pronta para <em>" + setor.alvo + "</em> no fim da escala 6x1";
+  document.title = "Escala 5x2 pronta para " + setor.alvo + " no fim da escala 6x1";
   const r = document.querySelector('input[name=tipo][value="' + setor.tipo + '"]');
   if (r) r.checked = true;
 }
@@ -866,7 +914,7 @@ if (CONFIG.whatsappUrl) document.querySelectorAll(".whatsapp").forEach(a => {
   a.addEventListener("click", () => track("CliqueWhatsApp", {}, true));
 });
 
-let R = null, lastEmail = "", lastNome = "", fase = "inicio", temPrevia = false;
+let R = null, lastEmail = "", lastNome = "", fase = "inicio";
 
 function goCheckout(e) {
   track("InitiateCheckout", { value: CONFIG.precoFundador, currency: "BRL" });
@@ -927,30 +975,24 @@ function calcular() {
   return Object.assign(conta(horasSemana, P, F, S, horasDias), { tipo, dias: dias.length, horarios, etapa1: conta(horasSemana, P, F, S, horasDias, CONFIG.jornadaEtapa1) });
 }
 
-function mostrar(ids) { ["calc", "result", "previaCta", "preview", "gate", "report", "offer", "redo"].forEach(id => $(id).hidden = !ids.includes(id)); }
+function mostrar(ids) { ["calc", "result", "preview", "locked", "unlock", "gate", "thanks", "redo"].forEach(id => $(id).hidden = !ids.includes(id)); }
 
-/* Prévia personalizada: primeiras linhas visíveis, o resto desfocado */
+/* Prévia: só a primeira linha é real; as outras viram marcadores (não há dado real no DOM) */
 function mostrarPrevia(r) {
   const F = Math.min(r.F, 40);
   const esc = montarEscala({ tipo: r.tipo, horarios: r.horarios, P: r.P, nomes: Array.from({ length: F }, (_, i) => "Pessoa " + (i + 1)), novas: r.contratar, S: r.S });
   if (!esc) return false;
   const total = esc.rows.length;
   $("pvSub").textContent = r.tipo + " com " + total + (total > 1 ? " pessoas" : " pessoa") + ", 2 folgas por semana para cada uma";
-  $("pvBoard").innerHTML = renderEscala(esc, { blurFrom: total <= 3 ? 1 : 2, lockText: "Liberada na escala completa, pessoa por pessoa" });
-  const aviso = r.contratar > 0
-    ? "Sem " + (r.contratar > 1 ? "as " + r.contratar + " contratações" : "a nova contratação") + ", ficam " + num1(r.D) + "h por semana sem ninguém para cobrir."
-    : esc.descobertas > 0.05 ? "Mesmo com a equipe atual, a escala ainda deixa " + num1(esc.descobertas) + "h por semana descobertas. A versão pronta mostra onde reforçar." : "";
-  $("pvWarn").hidden = !aviso;
-  $("pvWarn").textContent = aviso;
+  $("pvBoard").innerHTML = renderEscala(esc, { blurFrom: 1, locked: true, lockText: "Liberado no relatório completo + escala pronta" });
   return true;
 }
 
+/* Quando muda: sem valores em dinheiro (ficam no relatório completo) */
 function textoEtapa1(e1) {
   // Com 2 folgas e até 8h por dia, 5 dias somam 40h: a etapa de 42h só rende mais com convenção coletiva (art. 7º da EC 141)
-  if (R && e1.capacidade <= R.capacidade + 0.05) return e1.D <= 0.05 ? "Isso já vale a partir de dezembro, quando entram as 2 folgas por semana." : "Isso já vale a partir de <b>dezembro</b>: com 2 folgas e até 8h por dia, cada pessoa trabalha no máximo 40h, mesmo na etapa de 42h. Mais que isso só com convenção coletiva que amplie a jornada diária.";
-  if (e1.D <= 0.05) return "Na primeira etapa, em 2 meses, com 42h, sua equipe ainda cobre o horário. A virada vem com as 40h.";
-  if (e1.parcial) return "Na primeira etapa, em 2 meses, com 42h: <b>" + num1(e1.D) + "h por semana</b> descobertas, cerca de " + brl(e1.custoHE) + " por mês em hora extra.";
-  return "Na primeira etapa, em 2 meses, com 42h: <b>+" + num1(e1.gap) + (e1.gap < 1.95 ? " funcionário" : " funcionários") + "</b>, cerca de " + brl(e1.custoContratar) + " por mês.";
+  if (R && e1.capacidade <= R.capacidade + 0.05) return "Isso já vale a partir de <b>dezembro</b>: com 2 folgas e até 8h por dia, cada pessoa trabalha no máximo 40h, mesmo na etapa de 42h.";
+  return "A primeira etapa, com 2 folgas e até 42h, começa em <b>dezembro</b>. As 40h chegam em dezembro de 2027.";
 }
 
 $("calc").addEventListener("submit", e => {
@@ -960,40 +1002,41 @@ $("calc").addEventListener("submit", e => {
   if (r.erro) return;
   R = r;
   track("CalculouResultado", { tipo: r.tipo }, true);
+  $("resCost").hidden = true;
   if (r.D <= 0.05) {
-    $("resTitle").textContent = "Sua equipe cobre o horário mesmo com 40 horas, mas a escala muda";
-    $("resBig").innerHTML = "+" + r.F + '<span class="unit">' + (r.F === 1 ? "folga por semana" : "folgas por semana") + "</span>";
+    $("resTitle").textContent = "Sua equipe dá conta das 40 horas, mas a escala muda";
+    $("resBig").innerHTML = "+" + r.F + '<span class="unit">' + (r.F === 1 ? "folga por semana para encaixar" : "folgas por semana para encaixar") + "</span>";
     $("resBig").classList.add("ok");
-    $("resCost").innerHTML = "Você <strong>não precisa contratar</strong>. Mas cada pessoa ganha uma folga a mais, e são <strong>" + r.F + (r.F === 1 ? " folga nova" : " folgas novas") + " por semana</strong> para encaixar sem furar o " + (r.dias >= 7 ? "fim de semana" : "sábado") + ".";
+    $("resCost").hidden = false;
+    $("resCost").textContent = "Sem furar o " + (r.dias >= 7 ? "fim de semana" : "sábado") + ".";
   } else if (r.parcial) {
     $("resTitle").textContent = "Quando a jornada chegar a 40 horas, faltam na sua escala";
-    $("resBig").innerHTML = num1(r.D) + '<span class="unit">horas por semana sem ninguém</span>';
+    $("resBig").innerHTML = "~" + num1(r.D) + 'h<span class="unit">por semana sem ninguém</span>';
     $("resBig").classList.remove("ok");
-    $("resCost").innerHTML = "Cobrir isso com hora extra custa cerca de <strong>" + brl(r.custoHE) + " por mês</strong> (" + brl(r.custoHE * 12) + " por ano). Um " + (r.fracao <= 0.5 ? "meio período" : "contrato parcial") + " sai por " + brl(r.custoParcial) + "/mês.";
   } else {
     $("resTitle").textContent = "Quando a jornada chegar a 40 horas, você vai precisar de";
     $("resBig").innerHTML = "+" + num1(r.gap) + '<span class="unit">' + (r.gap < 1.95 ? "funcionário" : "funcionários") + "</span>";
     $("resBig").classList.remove("ok");
-    $("resCost").innerHTML = "Contratando " + r.contratarTexto + ", são cerca de <strong>" + brl(r.custoContratar) + " a mais por mês</strong>, ou " + brl(r.custoContratar * 12) + " por ano.";
   }
   $("resStage").innerHTML = textoEtapa1(r.etapa1);
-  $("resFacts").textContent = "Aberto " + num1(r.horasSemana) + "h por semana, com " + r.P + (r.P > 1 ? " pessoas" : " pessoa") + " ao mesmo tempo: " + num1(r.C) + "h de trabalho. Com 44h isso pedia " + num1(r.precisaAtual) + " funcionários; com 42h, " + num1(r.etapa1.precisaNovo) + "; com 40h, " + num1(r.precisaNovo) + (r.capacidade < CONFIG.jornadaNova - 0.05 ? " (com 2 folgas e dias de menos de 8h, cada pessoa só cobre " + num1(r.capacidade) + "h por semana)" : "") + ".";
-  temPrevia = mostrarPrevia(r);
+  // Metade aberta: a saída "hora extra" com o valor real; contratar, reduzir e a mais barata ficam bloqueadas
+  if (r.D <= 0.05) {
+    $("heVal").textContent = brl(0) + "/mês";
+    $("heTxt").textContent = "Sem horas descobertas, não há hora extra obrigatória. O desafio é encaixar as folgas.";
+    $("heWarn").hidden = true;
+  } else {
+    $("heVal").textContent = brl(r.custoHE) + "/mês";
+    $("heTxt").textContent = "Cobrir as " + num1(r.D) + "h semanais com a equipe atual, com adicional de " + Math.round(CONFIG.adicionalHoraExtra * 100) + "%. Todo mês.";
+    const acima = r.heDia > CONFIG.limiteHoraExtraDia;
+    $("heWarn").hidden = !acima;
+    $("heWarn").textContent = acima ? (r.F > 0 ? "Cerca de " + num1(r.heDia) + "h extras por pessoa por dia, acima do limite de " + CONFIG.limiteHoraExtraDia + "h." : "Sem funcionários atuais, hora extra não resolve.") : "";
+  }
+  const comPrevia = mostrarPrevia(r);
   $("gateError").textContent = "";
-  mostrar(["result", "previaCta", "redo"]);
+  mostrar(["result"].concat(comPrevia ? ["preview"] : [], ["locked", "unlock"], lastEmail ? ["thanks"] : ["gate"], ["redo"]));
   fase = "resultado"; updateSticky();
   smooth($("card"));
 });
-
-/* Convite da prévia grátis: abre o cadastro (nome + e-mail) */
-function abrirCadastro() {
-  if (!R) { smooth($("card")); return; }
-  mostrar(["result", "gate", "redo"]);
-  fase = "cadastro"; updateSticky();
-  smooth($("gate"));
-  setTimeout(() => { try { $("nome").focus({ preventScroll: true }); } catch (e) {} }, 350);
-}
-$("previaBtn").addEventListener("click", abrirCadastro);
 
 $("redo").addEventListener("click", () => { mostrar(["calc"]); fase = "inicio"; updateSticky(); smooth($("card")); });
 
@@ -1005,7 +1048,7 @@ $("whats").addEventListener("input", e => {
   else e.target.value = d;
 });
 
-/* ---------- cadastro e relatório ---------- */
+/* ---------- cadastro opcional: prévia por e-mail ---------- */
 $("gate").addEventListener("submit", async e => {
   e.preventDefault();
   const nome = $("nome").value.trim(), whats = $("whats").value.replace(/\D/g, ""), email = $("email").value.trim();
@@ -1013,11 +1056,11 @@ $("gate").addEventListener("submit", async e => {
   if (!nome) erro = "Informe seu nome.";
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) erro = "Informe um e-mail válido.";
   else if (whats && whats.length < 10) erro = "Confira o WhatsApp com DDD (ou deixe em branco).";
-  else if (!$("consent").checked) erro = "Marque a autorização para receber o relatório.";
+  else if (!$("consent").checked) erro = "Marque a autorização para receber a prévia.";
   $("gateError").textContent = erro;
   if (erro || !R) return;
   const btn = $("gateBtn");
-  btn.disabled = true; btn.firstChild.textContent = "Gerando sua prévia…";
+  btn.disabled = true; btn.textContent = "Enviando…";
   lastEmail = email; lastNome = nome;
   const lead = {
     nome, whatsapp: whats, email,
@@ -1032,51 +1075,10 @@ $("gate").addEventListener("submit", async e => {
     try { await fetch(CONFIG.webhookUrl, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(lead) }); } catch (err) {}
   } else { console.warn("CONFIG.webhookUrl vazio: lead não foi salvo.", lead); }
   track("Lead", { content_name: "calculadora-40h", content_category: R.tipo });
-  btn.disabled = false; btn.firstChild.textContent = "Ver minha prévia grátis";
-  mostrarRelatorio();
+  btn.disabled = false; btn.textContent = "Receber a prévia por e-mail";
+  $("thanks").textContent = "Enviamos a prévia para " + email + ". Quando quiser, a escala completa está no botão acima.";
+  $("gate").hidden = true; $("thanks").hidden = false;
 });
-
-function mostrarRelatorio() {
-  const r = R, primeiro = lastNome.split(" ")[0];
-  if (r.D <= 0.05) {
-    $("r1v").textContent = brl(0); $("r1t").textContent = "Sua equipe atual já cobre as horas. Não precisa contratar.";
-    $("r2v").textContent = brl(0); $("r2t").textContent = "Sem horas descobertas, não há hora extra obrigatória.";
-    $("r3v").textContent = "+" + r.F + " folga" + (r.F === 1 ? "" : "s") + "/sem"; $("r3t").textContent = "Cada pessoa ganha 1 folga a mais por semana. São " + r.F + " dias de folga novos para distribuir sem deixar o " + (r.dias >= 7 ? "fim de semana" : "sábado") + " descoberto.";
-    $("r2w").hidden = true;
-    $("bridge").innerHTML = primeiro + ", você não precisa contratar, mas precisa de uma escala nova: <b>" + r.F + " folga" + (r.F === 1 ? "" : "s") + " a mais por semana</b> e " + r.P + (r.P > 1 ? " pessoas" : " pessoa") + " em cada turno. Montada no improviso, sobra gente na segunda e falta no sábado. A escala completa resolve isso.";
-  } else if (r.parcial) {
-    $("r1v").textContent = brl(r.custoParcial) + "/mês";
-    $("r1t").textContent = "Contratar 1 pessoa em " + (r.fracao <= 0.5 ? "meio período (20h)" : r.fracao <= 0.75 ? "contrato parcial (30h)" : "tempo integral") + " para cobrir as " + num1(r.D) + "h por semana que ficam sem ninguém. Inclui estimativa de encargos.";
-    $("r2v").textContent = brl(r.custoHE) + "/mês";
-    $("r2t").textContent = "Cobrir as " + num1(r.D) + "h semanais com a equipe atual, com adicional de " + Math.round(CONFIG.adicionalHoraExtra * 100) + "%. Todo mês, para sempre.";
-    if (r.heDia > CONFIG.limiteHoraExtraDia) {
-      $("r2w").hidden = false;
-      $("r2w").textContent = "Cerca de " + num1(r.heDia) + "h extras por pessoa por dia, acima do limite de " + CONFIG.limiteHoraExtraDia + "h. Não é sustentável.";
-    } else { $("r2w").hidden = true; }
-    $("r3v").textContent = "−" + num1(r.cortarHoras) + " h/sem";
-    $("r3t").textContent = "Fechar " + num1(r.cortarHoras) + "h a menos por semana. Sem custo extra, mas você perde as vendas desses horários.";
-    $("bridge").innerHTML = primeiro + ", são só <b>" + num1(r.D) + " horas por semana</b> descobertas. Isso quase sempre se resolve com <b>revezamento de folgas e um reforço de fim de semana</b>, sem contratar ninguém em tempo integral. A escala completa, montada no movimento real do seu negócio, mostra exatamente como.";
-  } else {
-    $("r1v").textContent = brl(r.custoContratar) + "/mês";
-    $("r1t").textContent = "Contratar " + r.contratarTexto + " para cobrir " + num1(r.D) + "h por semana que ficam sem ninguém. Inclui estimativa de encargos.";
-    $("r2v").textContent = brl(r.custoHE) + "/mês";
-    $("r2t").textContent = "Cobrir as " + num1(r.D) + "h semanais com a equipe atual, com adicional de " + Math.round(CONFIG.adicionalHoraExtra * 100) + "%.";
-    if (r.heDia > CONFIG.limiteHoraExtraDia) {
-      $("r2w").hidden = false;
-      $("r2w").textContent = r.F > 0 ? "Cerca de " + num1(r.heDia) + "h extras por pessoa por dia, acima do limite de " + CONFIG.limiteHoraExtraDia + "h. Não é sustentável." : "Sem funcionários atuais, hora extra não resolve.";
-    } else { $("r2w").hidden = true; }
-    $("r3v").textContent = "−" + num1(r.cortarHoras) + " h/sem";
-    $("r3t").textContent = "Fechar " + num1(r.cortarHoras) + "h a menos por semana. Sem custo extra, mas você perde as vendas desses horários.";
-    const menor = Math.min(r.custoContratar, r.heDia > CONFIG.limiteHoraExtraDia ? Infinity : r.custoHE);
-    $("bridge").innerHTML = primeiro + ", a saída mais barata ainda custa <b>" + brl(menor) + " por mês</b>. Uma escala montada com o movimento real do seu negócio pode reduzir esse número.";
-  }
-  $("offerLead").innerHTML = (temPrevia
-    ? "Esta é a prévia da escala do seu negócio. A escala completa, pessoa por pessoa, nas versões de 42h e 40h, fica liberada por "
-    : "A escala completa do seu negócio, pessoa por pessoa, nas versões de 42h e 40h, fica liberada por ") + "<b>" + preco(CONFIG.precoFundador) + "</b>.";
-  mostrar(temPrevia ? ["preview", "offer", "report", "redo"] : ["offer", "report", "redo"]);
-  fase = "oferta"; updateSticky();
-  smooth($("card"));
-}
 
 /* ---------- barra fixa no celular ---------- */
 const visible = new Set();
@@ -1089,9 +1091,8 @@ const io = new IntersectionObserver(entries => {
 function updateSticky() {
   const btn = $("stickyBtn");
   let show = !visible.has("card");
-  if (fase === "inicio") { btn.textContent = "Calcular meu custo"; btn.dataset.target = "card"; }
-  else if (fase === "resultado" || fase === "cadastro") { btn.textContent = "Ver a prévia da minha escala (grátis)"; btn.dataset.target = "card"; }
-  else { show = show && !visible.has("offerMain"); btn.textContent = "Liberar minha escala por " + preco(CONFIG.precoFundador); btn.dataset.target = "card"; }
+  if (fase === "inicio") { btn.textContent = "Fazer o diagnóstico do meu negócio"; btn.dataset.target = "card"; }
+  else { show = show && !visible.has("offerMain"); btn.textContent = "Liberar resultado completo · " + preco(CONFIG.precoFundador); btn.dataset.target = "unlock"; }
   $("sticky").classList.toggle("show", show);
 }
 $("stickyBtn").addEventListener("click", e => { e.preventDefault(); smooth($(e.currentTarget.dataset.target)); });
