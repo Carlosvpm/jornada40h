@@ -85,11 +85,10 @@ function processarSequencia() {
 
 function enviarD1_(lead) {
   const primeiro = primeiroNome_(lead.nome);
-  const pdf = gerarPdfRelatorio_(lead);
   const D = Number(lead.horas_descobertas_semana) || 0;
   const gap = Number(lead.funcionarios_a_mais) || 0;
   const F = Number(lead.funcionarios) || 0;
-  const assunto = primeiro + ", a prévia da sua escala 5x2 (e uma oferta de R$ " + precoTxt_(PRECO_OFERTA) + ")";
+  const assunto = primeiro + ", sua escala 5x2 pronta por R$ " + precoTxt_(PRECO_OFERTA) + " (oferta de lançamento)";
   const situacao = D <= 0.05
     ? "Pelos números que você passou, a sua equipe dá conta das horas. O desafio é encaixar <b>" + (F * 2) + " folgas por semana</b> sem deixar o " + (Number(lead.dias_abertos) >= 7 ? "fim de semana" : "sábado") + " descoberto."
     : gap < 0.95
@@ -99,11 +98,11 @@ function enviarD1_(lead) {
     "<p>Oi, " + esc_(primeiro) + "! Aqui é o Carlos, da Jornada 40h. Você fez a conta do fim da escala 6x1 para o seu " + esc_(lead.tipo || "negócio") + ".</p>" +
     "<p>A emenda já foi publicada (EC 141): por volta de 16 de dezembro, cada funcionário passa a ter 2 folgas por semana e a jornada cai para 42h. Em dezembro de 2027, para 40h, sem reduzir salário.</p>" +
     "<p>" + situacao + "</p>" +
-    "<p>No PDF anexo está a prévia de como ficaria a escala 5x2 de uma equipe do tamanho da sua (nomes fictícios). A sua vem com os nomes, horários e regras do seu negócio, nas versões de 42h e 40h, pronta para imprimir em até 48h.</p>" +
+    "<p>A sua escala vem com os nomes, horários e regras do seu negócio, nas versões de 42h e 40h, pronta para imprimir em até 48h, junto com o relatório completo: quanto custa cada saída (contratar, hora extra ou reduzir horário) e qual é a mais barata. Veja um exemplo: <a href=\"" + SITE_URL + "exemplo/escala-5x2-exemplo.pdf\">escala pronta (PDF)</a>.</p>" +
     "<p><b>Oferta para quem fez a conta:</b> de <s>R$ " + precoTxt_(PRECO_CHEIO) + "</s> por <b>R$ " + precoTxt_(PRECO_OFERTA) + "</b>, pagamento único, com garantia de 7 dias.</p>" +
     botao_(checkoutDe_(lead), "Quero minha escala por R$ " + precoTxt_(PRECO_OFERTA)) +
     "<p style=\"font-size:13px;color:#5B6478\">Ficou com dúvida? É só responder este e-mail.</p>";
-  enviarEmailSequencia_(lead, assunto, "A prévia da sua escala 5x2", corpo, pdf ? [pdf] : []);
+  enviarEmailSequencia_(lead, assunto, "A prévia da sua escala 5x2", corpo, []);
 }
 
 function enviarD3_(lead) {
