@@ -271,6 +271,8 @@
   .lk-note span { display: inline-flex; align-items: center; gap: 7px; background: var(--gold-soft); color: var(--gold); border: 1px solid rgba(230,184,74,.35); border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 600; line-height: 1.3; }
   .lk-note svg { width: 14px; height: 14px; flex: none; }
   .scen.best { border-color: rgba(230,184,74,.4); }
+  .lk-alt { text-align: center; margin: 10px 0 0; font-size: 14px; }
+  .lk-alt a { color: var(--gold); font-weight: 600; }
   .unlock { margin-top: 22px; }
   .unlock .btn small { margin-top: 4px; }
   .thanks { text-align: center; font-size: 15px; color: var(--off); background: var(--off-soft); border-radius: 12px; padding: 12px 14px; margin: 18px 0 0; }
@@ -528,8 +530,9 @@
         <div class="lockwrap">
           <div class="scen lk"><div class="scen-head"><h4>Contratar</h4><span class="lk-val"><svg><use href="#i-lock"/></svg><i aria-hidden="true">R$ ••••/mês</i></span></div><p aria-hidden="true">•••••• •••• ••••• •• ••••••• ••••</p></div>
           <div class="scen lk"><div class="scen-head"><h4>Reduzir o horário</h4><span class="lk-val"><svg><use href="#i-lock"/></svg><i aria-hidden="true">−•• h/sem</i></span></div><p aria-hidden="true">••••• •• •••••• •••• ••••••</p></div>
-          <div class="scen lk best"><div class="scen-head"><h4>A opção mais barata para você</h4><span class="lk-val"><svg><use href="#i-lock"/></svg><i aria-hidden="true">••••••</i></span></div></div>
+          <div id="bestSlot"><div class="scen lk best"><div class="scen-head"><h4>A opção mais barata para você</h4><span class="lk-val"><svg><use href="#i-lock"/></svg><i aria-hidden="true">••••••</i></span></div></div></div>
           <p class="lk-note"><span><svg><use href="#i-lock"/></svg>Liberado no relatório completo + escala pronta</span></p>
+          <p class="lk-alt" id="lkAlt"><a href="#gate" data-scroll="gate">Ou descubra qual sai mais barata deixando seu e-mail ↓</a></p>
         </div>
       </section>
 
@@ -544,12 +547,12 @@
       <form class="gate" id="gate" hidden novalidate>
         <div class="divider"></div>
         <h3>Não vai comprar agora?</h3>
-        <p class="lead">Receba a prévia da sua escala por e-mail.</p>
+        <p class="lead">Deixe seu e-mail e veja agora qual das 3 saídas sai mais barata para o seu negócio. O diagnóstico também chega no seu e-mail.</p>
         <label class="field"><span>Seu nome</span><input type="text" id="nome" autocomplete="given-name" placeholder="Como podemos te chamar?"></label>
         <label class="field"><span>E-mail</span><input type="email" id="email" autocomplete="email" placeholder="voce@email.com"></label>
         <label class="field"><span>WhatsApp (opcional)</span><input type="tel" id="whats" autocomplete="tel" inputmode="tel" placeholder="(98) 99999-9999"></label>
-        <label class="consent"><input type="checkbox" id="consent" checked><span>Aceito receber a prévia e mensagens sobre a adaptação à jornada de 40 horas por e-mail (e por WhatsApp, se eu informar). Posso cancelar quando quiser.</span></label>
-        <button class="btn ghost" type="submit" id="gateBtn">Receber a prévia por e-mail</button>
+        <label class="consent"><input type="checkbox" id="consent" checked><span>Aceito receber o diagnóstico e mensagens sobre a adaptação à jornada de 40 horas por e-mail (e por WhatsApp, se eu informar). Posso cancelar quando quiser.</span></label>
+        <button class="btn ghost" type="submit" id="gateBtn">Ver a opção mais barata</button>
         <p class="secure"><svg><use href="#i-lock"/></svg>Seus dados estão seguros e nunca são vendidos</p>
         <p class="error" id="gateError" role="alert"></p>
       </form>
@@ -736,7 +739,7 @@ const CONFIG = {
   semanasPorMes: 4.33,
   limiteHoraExtraDia: 2
 };
-const VARIANTE = "a4"; // LP A: produto no topo, resultado só como prévia (resto bloqueado), checkout direto de R$ 47,90
+const VARIANTE = "a5"; // LP A: como a a4 (checkout direto de R$ 47,90), e o cadastro libera na hora a opção mais barata
 
 /* Simulações exibidas na seção de casos (calculadas com a mesma conta) */
 const SIMULACOES = [
@@ -975,6 +978,21 @@ function calcular() {
   return Object.assign(conta(horasSemana, P, F, S, horasDias), { tipo, dias: dias.length, horarios, etapa1: conta(horasSemana, P, F, S, horasDias, CONFIG.jornadaEtapa1) });
 }
 
+/* Isca do cadastro: qual das saídas sai mais barata (só aparece depois do e-mail) */
+function maisBarata(r) {
+  if (r.D <= 0.05) return { titulo: "Reorganizar as folgas", valor: brl(0) + "/mês", txt: "Sua equipe cobre as horas. Não precisa contratar nem pagar hora extra: o trabalho é montar o rodízio de 2 folgas por pessoa." };
+  if (r.contratar === 0) return { titulo: "Ajustar os turnos", valor: brl(0) + "/mês", txt: "Faltam só ~" + num1(r.D) + "h por semana: dá para absorver redistribuindo os turnos, sem contratar." };
+  const heOk = r.F > 0 && r.heDia <= CONFIG.limiteHoraExtraDia;
+  if (heOk && r.custoHE <= r.custoContratar) return { titulo: "Pagar hora extra", valor: brl(r.custoHE) + "/mês", txt: "Sai mais barato do que contratar (" + brl(r.custoContratar) + "/mês) e fica dentro do limite de " + CONFIG.limiteHoraExtraDia + "h extras por pessoa por dia." };
+  return { titulo: "Contratar " + r.contratarTexto, valor: brl(r.custoContratar) + "/mês", txt: heOk ? "Sai mais barato do que cobrir com hora extra (" + brl(r.custoHE) + "/mês)." : "Hora extra não resolve: passaria do limite de " + CONFIG.limiteHoraExtraDia + "h por pessoa por dia. Contratar é o caminho mais barato dentro da lei." };
+}
+function revelarMaisBarata(r) {
+  const m = maisBarata(r);
+  $("bestSlot").innerHTML = '<div class="scen open best"><div class="scen-head"><h4>A mais barata para você: ' + m.titulo + '</h4><span class="scen-val">' + m.valor + "</span></div><p>" + m.txt + "</p></div>";
+  $("lkAlt").hidden = true;
+}
+const BEST_LOCKED = $("bestSlot").innerHTML;
+
 function mostrar(ids) { ["calc", "result", "preview", "locked", "unlock", "gate", "thanks", "redo"].forEach(id => $(id).hidden = !ids.includes(id)); }
 
 /* Prévia: só a primeira linha é real; as outras viram marcadores (não há dado real no DOM) */
@@ -1031,6 +1049,8 @@ $("calc").addEventListener("submit", e => {
     $("heWarn").hidden = !acima;
     $("heWarn").textContent = acima ? (r.F > 0 ? "Cerca de " + num1(r.heDia) + "h extras por pessoa por dia, acima do limite de " + CONFIG.limiteHoraExtraDia + "h." : "Sem funcionários atuais, hora extra não resolve.") : "";
   }
+  $("bestSlot").innerHTML = BEST_LOCKED; $("lkAlt").hidden = !!lastEmail;
+  if (lastEmail) revelarMaisBarata(r);
   const comPrevia = mostrarPrevia(r);
   $("gateError").textContent = "";
   mostrar(["result"].concat(comPrevia ? ["preview"] : [], ["locked", "unlock"], lastEmail ? ["thanks"] : ["gate"], ["redo"]));
@@ -1062,6 +1082,7 @@ $("gate").addEventListener("submit", async e => {
   const btn = $("gateBtn");
   btn.disabled = true; btn.textContent = "Enviando…";
   lastEmail = email; lastNome = nome;
+  revelarMaisBarata(R);
   const lead = {
     nome, whatsapp: whats, email,
     tipo: R.tipo, dias_abertos: R.dias, horas_abertas_semana: +R.horasSemana.toFixed(1),
@@ -1075,10 +1096,22 @@ $("gate").addEventListener("submit", async e => {
     try { await fetch(CONFIG.webhookUrl, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(lead) }); } catch (err) {}
   } else { console.warn("CONFIG.webhookUrl vazio: lead não foi salvo.", lead); }
   track("Lead", { content_name: "calculadora-40h", content_category: R.tipo });
-  btn.disabled = false; btn.textContent = "Receber a prévia por e-mail";
-  $("thanks").textContent = "Enviamos a prévia para " + email + ". Quando quiser, a escala completa está no botão acima.";
+  btn.disabled = false; btn.textContent = "Ver a opção mais barata";
+  $("thanks").textContent = "Pronto! A opção mais barata apareceu acima e o diagnóstico foi para " + email + ". A escala completa, pessoa por pessoa, está no botão de compra.";
   $("gate").hidden = true; $("thanks").hidden = false;
 });
+
+/* ---------- até onde a pessoa chega na página (eventos do Pixel, uma vez cada) ---------- */
+const vistos = new Set();
+const once = (ev, data) => { if (vistos.has(ev)) return; vistos.add(ev); track(ev, Object.assign({ variante: VARIANTE }, data || {}), true); };
+const ioSec = new IntersectionObserver(entries => entries.forEach(en => { if (en.isIntersecting) once({ card: "ViuCalculadora", oferta: "ViuOferta", faq: "ViuFAQ" }[en.target.id]); }), { threshold: 0.01 });
+["card", "oferta", "faq"].forEach(id => $(id) && ioSec.observe($(id)));
+addEventListener("scroll", () => {
+  const pct = (scrollY + innerHeight) / document.documentElement.scrollHeight;
+  if (pct >= 0.5) once("Rolou50");
+  if (pct >= 0.9) once("Rolou90");
+}, { passive: true });
+setTimeout(() => once("Ficou30s"), 30000);
 
 /* ---------- barra fixa no celular ---------- */
 const visible = new Set();

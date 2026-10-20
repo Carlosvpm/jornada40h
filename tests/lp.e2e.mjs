@@ -93,6 +93,7 @@ try {
         ok(await cta.isVisible() && /Liberar meu resultado completo \+ escala pronta/.test(await cta.innerText()) && /R\$\s47,90/.test(await cta.innerText()), "CTA principal: liberar resultado completo + escala pronta, R$ 47,90");
         const ctaBox = await cta.boundingBox(), gateBox = await page.locator("#gate").boundingBox();
         ok(ctaBox && gateBox && ctaBox.y < gateBox.y, "cadastro opcional abaixo do CTA");
+        ok(!/A mais barata para você:/.test(await page.locator("#bestSlot").innerText()) && await page.locator("#lkAlt").isVisible(), "antes do cadastro a mais barata segue bloqueada, com convite para o e-mail");
         ok(/Não vai comprar agora\?/.test(await page.locator("#gate").innerText()) && /WhatsApp \(opcional\)/.test(await page.locator("#gate").innerText()), "cadastro secundário com WhatsApp opcional");
         ok(!(await page.content()).includes("yy3LT4h"), "página não usa o checkout antigo");
         const pdf = await page.request.get(BASE + "/" + await page.locator("#unlock .pdf-link").getAttribute("href"));
@@ -112,8 +113,10 @@ try {
         ok(!!lead && (c.semWhats ? lead.whatsapp === "" : lead.whatsapp === "98999999999"), "campo whatsapp " + (c.semWhats ? "vazio (opcional)" : "enviado"));
         ok(!!lead && lead.checkout_url && lead.checkout_url.includes("xftQB3Y"), "lead leva o checkout novo");
         if (pagina === "/") {
-          ok(lead.variante === "a4", "variante a4");
-          ok(/Enviamos a prévia para teste@exemplo.com/.test(await page.locator("#thanks").innerText()), "agradecimento com o e-mail");
+          ok(lead.variante === "a5", "variante a5");
+          ok(/diagnóstico foi para teste@exemplo.com/.test(await page.locator("#thanks").innerText()), "agradecimento com o e-mail");
+          const best = await page.locator("#bestSlot").innerText();
+          ok(/A mais barata para você:/.test(best) && /R\$\s?\d/.test(best) && await page.locator("#lkAlt").isHidden(), "cadastro libera a opção mais barata com valor (" + best.split("\n")[0] + ")");
           ok(await page.locator("#unlockBtn").isVisible(), "CTA continua visível depois do cadastro");
         } else {
           ok(await page.locator("#report").isVisible(), "relatório das 3 saídas visível");
