@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Minha escala 5x2 · Jornada 40h</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0B0D12">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-money" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
+    <symbol id="i-sheet" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M2 7h20v3a2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-2-2z"/></symbol>
+  </defs>
+</svg>
+
+<div class="shell">
+  <aside class="side" id="side">
+    <div class="side-logo">
+      <span class="mark">40h</span><span>Jornada 40h</span>
+      <button class="side-close" id="sideClose" type="button" aria-label="Fechar menu"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="side-neg">
+      <span class="side-neg-ic"><svg class="ic"><use href="#i-store"/></svg></span>
+      <div><b id="sbNegocio">Meu negócio</b><small id="sbTipo"></small></div>
+    </div>
+    <nav class="side-nav">
+      <p class="grp">Escala</p>
+      <button type="button" class="nav-i" data-v="42"><svg class="ic"><use href="#i-cal"/></svg>Escala 42 h<small>dez/2026</small></button>
+      <button type="button" class="nav-i" data-v="40"><svg class="ic"><use href="#i-cal"/></svg>Escala 40 h<small>dez/2027</small></button>
+      <p class="grp">Análise</p>
+      <a class="nav-i" href="#sec-custos"><svg class="ic"><use href="#i-money"/></svg>Custos</a>
+      <a class="nav-i" href="#sec-alertas"><svg class="ic"><use href="#i-alert"/></svg>Alertas<span class="badge" id="sbAlertas" hidden></span></a>
+      <p class="grp">Configuração</p>
+      <a class="nav-i" href="#cfg" id="navCfg"><svg class="ic"><use href="#i-sliders"/></svg>Negócio e equipe</a>
+      <p class="grp">Exportar</p>
+      <button type="button" class="nav-i" id="btnPdf2"><svg class="ic"><use href="#i-file"/></svg>Baixar PDF</button>
+      <button type="button" class="nav-i" id="btnXlsx2"><svg class="ic"><use href="#i-sheet"/></svg>Baixar planilha</button>
+      <button type="button" class="nav-i" id="btnLink"><svg class="ic"><use href="#i-link"/></svg>Copiar meu link</button>
+    </nav>
+    <div class="side-foot">Jornada 40h · escala 5x2<br><span id="tSalvo">salvo neste aparelho</span></div>
+  </aside>
+  <div class="backdrop" id="backdrop"></div>
+
+  <div class="main">
+    <header class="top">
+      <button class="menu-btn" id="menuBtn" type="button" aria-label="Abrir menu"><svg class="ic"><use href="#i-menu"/></svg></button>
+      <div class="top-hi">
+        <b id="tSaud">Olá</b>
+        <small id="tData"></small>
+      </div>
+      <div class="acts">
+        <button class="b ghost" id="btnXlsx" type="button"><svg class="ic"><use href="#i-sheet"/></svg><span>Planilha</span></button>
+        <button class="b" id="btnPdf" type="button"><svg class="ic"><use href="#i-file"/></svg><span>PDF</span></button>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="print-head">
+        <div><b>Jornada 40h</b> · Escala 5x2</div>
+        <div id="phInfo"></div>
+      </div>
+
+      <section class="page-h">
+        <div>
+          <h1 id="tNegocio">Minha escala</h1>
+          <p class="muted" id="tSub">Escala 5x2 da sua equipe, pronta para a nova jornada.</p>
+        </div>
+        <div class="filters">
+          <div class="seg" role="tablist" aria-label="Versão da jornada">
+            <button role="tab" data-v="42" type="button">42 h</button>
+            <button role="tab" data-v="40" type="button">40 h</button>
+          </div>
+          <div class="seg" aria-label="Semana do rodízio">
+            <button data-s="A" type="button">Semana A</button>
+            <button data-s="B" type="button">Semana B</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="kpis" id="kpis"></section>
+
+      <section class="card">
+        <div class="card-h">
+          <div>
+            <h2>Escala da semana <span id="tSemana"></span></h2>
+            <p class="muted sm">Clique em qualquer dia para trocar o turno ou a folga. Tudo é recalculado na hora.</p>
+          </div>
+          <div class="legend"><span class="lg turno">turno</span><span class="lg folga">folga</span><span class="lg livre">reserva</span><span class="lg falta">falta gente</span></div>
+        </div>
+        <div class="grid-scroll"><table class="grid" id="grid"></table></div>
+        <p class="note" id="gradeNota"></p>
+      </section>
+
+      <div class="cols">
+        <section class="card" id="sec-custos">
+          <div class="card-h"><div><h2>Quanto custa cobrir as horas que faltam</h2><p class="muted sm">Ajuste os valores e veja a saída mais barata.</p></div></div>
+          <div class="custo-in">
+            <label>Salário médio <span class="pre">R$</span><input id="cSal" type="number" min="0" step="10" inputmode="decimal"></label>
+            <label>Custo total do funcionário <span class="pre">×</span><input id="cEnc" type="number" min="1" step="0.05" inputmode="decimal"><small>salário × encargos, férias, 13º, FGTS</small></label>
+            <label>Adicional de hora extra <input id="cHe" type="number" min="50" step="5" inputmode="numeric"><span class="pos">%</span></label>
+          </div>
+          <div id="opcoes" class="opcoes"></div>
+          <p class="note">Valores mensais estimados (4,33 semanas por mês). Exemplo de cálculo, não substitui o seu contador.</p>
+        </section>
+
+        <section class="card" id="sec-alertas">
+          <div class="card-h"><div><h2>Alertas</h2><p class="muted sm">Jornada, folgas, descanso e cobertura.</p></div></div>
+          <ul id="alertas" class="alertas"></ul>
+        </section>
+      </div>
+
+      <details class="card cfg" id="cfg">
+        <summary><div><h2>Dados do negócio, horário e equipe</h2><p class="muted sm">Mude aqui e monte a escala de novo.</p></div><span class="b ghost sm">Editar</span></summary>
+        <div class="cfg-in">
+          <div class="row2">
+            <label>Nome do negócio<input id="fNome" type="text" maxlength="80"></label>
+            <label>Tipo<input id="fTipo" type="text" maxlength="60" placeholder="Padaria, restaurante, loja…"></label>
+          </div>
+
+          <h3>Horário de funcionamento</h3>
+          <div class="grid-scroll"><table class="tbl" id="tblHorario"></table></div>
+
+          <h3>Equipe</h3>
+          <div class="grid-scroll"><table class="tbl" id="tblEquipe"></table></div>
+          <button class="b ghost sm" id="btnAddPessoa" type="button">+ Adicionar pessoa</button>
+
+          <div class="regen">
+            <button class="b" id="btnRegen" type="button">Montar a escala de novo com estes dados</button>
+            <span class="muted" id="regenAviso">Refaz as escalas de 42 h e 40 h. As mudanças feitas à mão na grade se perdem.</span>
+          </div>
+        </div>
+      </details>
+
+      <p class="foot muted">Escala montada pela Jornada 40h com base nas informações do seu negócio. Regras usadas: 2 folgas por semana, jornada diária de até 8 h (40 h) ou 8 h 24 (42 h), 11 h de descanso entre um dia e outro, intervalo de refeição fora da jornada. Confira acordos e a convenção coletiva do seu sindicato. Dúvidas: calculadora40h@gmail.com</p>
+    </main>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" id="dlgForm" novalidate>
+    <h3 id="dlgTitulo"></h3>
+    <div class="dlg-tipos">
+      <label><input type="radio" name="tipo" value="turno"> Trabalha</label>
+      <label><input type="radio" name="tipo" value="folga"> Folga</label>
+      <label><input type="radio" name="tipo" value="livre"> Reserva</label>
+    </div>
+    <div id="dlgTurno">
+      <div class="dlg-presets" id="dlgPresets"></div>
+      <div class="row2">
+        <label>Entra<input type="time" id="dlgIni" step="60"></label>
+        <label>Sai<input type="time" id="dlgFim" step="60"></label>
+      </div>
+      <p class="muted sm" id="dlgDur"></p>
+    </div>
+    <div class="dlg-acts">
+      <button class="b ghost" value="cancel" type="submit">Cancelar</button>
+      <button class="b" value="ok" type="submit" id="dlgOk">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="../js/escala.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -13,6 +13,7 @@ site/              → o que a Netlify publica (raiz do site)
   index.html       → LP variante A (calculadora + oferta)
   b/index.html     → LP variante B ("estilo startup"), utm_term=lp-b
   obrigado.html    → briefing pós-compra (recebe ?name&email&phone&order_id)
+  app/             → dashboard da escala (entregável pago): grade editável 42h/40h, custos, alertas CLT, PDF e planilha; dados só no aparelho e no link #d=…
   privacidade.html → política LGPD
   js/escala.js     → cópia de engine/escala.js usada pela prévia da LP A (atualize junto)
   posts/semana-N/  → JPG/MP4 públicos usados pela API do Instagram (Windsor)
@@ -47,7 +48,7 @@ Anúncio / post IG → LP (A ou B) → calculadora → lead (Sheets + e-mail rel
 
 ## Testes
 
-`node tests/lp.e2e.mjs` (precisa de `playwright-core`; aponte com `PW=/caminho/playwright-core`). Roda calculadora → lead → checkout em `/` e `/b/` com webhook e Kiwify interceptados.
+`node tests/lp.e2e.mjs` (precisa de `playwright-core`; aponte com `PW=/caminho/playwright-core`). Roda calculadora → lead → checkout em `/` e `/b/` com webhook e Kiwify interceptados. `node tests/app.e2e.mjs` testa o dashboard `/app/`.
 
 ## Convenções
 
