@@ -405,10 +405,14 @@
         custoContr = sal * (hContrato / R.jornadaSemanal) * enc;
         txtContr = "1 pessoa em contrato parcial de " + hContrato + " h por semana (salário proporcional × " + String(enc).replace(".", ",") + " de encargos), cobrindo os horários descobertos.";
       } else {
-        var n = Math.ceil(D / R.jornadaSemanal);
-        hContrato = n * R.jornadaSemanal;
-        custoContr = n * sal * enc;
-        txtContr = n + (n === 1 ? " pessoa" : " pessoas") + " em tempo integral (" + R.rotulo + "), com salário de " + brl(sal) + " × " + String(enc).replace(".", ",") + " de encargos.";
+        // Tempo integral para o grosso; o que sobra vira contrato parcial (até 30 h) ou mais 1 integral.
+        var n = Math.floor(D / R.jornadaSemanal), resto = D - n * R.jornadaSemanal;
+        var hParcial = resto > 0.01 && resto <= 30 ? Math.min(30, Math.ceil(resto / 2) * 2) : 0;
+        if (resto > 30) n++;
+        custoContr = n * sal * enc + (hParcial ? sal * (hParcial / R.jornadaSemanal) * enc : 0);
+        txtContr = n + (n === 1 ? " pessoa" : " pessoas") + " em tempo integral (" + R.rotulo + ")" +
+          (hParcial ? " e 1 em contrato parcial de " + hParcial + " h" : "") +
+          ", com salário de " + brl(sal) + (hParcial ? " (proporcional no parcial)" : "") + " × " + String(enc).replace(".", ",") + " de encargos.";
       }
       ops.push({ id: "contratar", titulo: "Contratar", custo: custoContr + extraGrade * SEM_POR_MES * valorHora * (1 + adic), viavel: true, txt: txtContr, acao: "Colocar 1 pessoa nova na escala" });
 
