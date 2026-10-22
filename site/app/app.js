@@ -99,6 +99,8 @@
     s.v = 1;
     s.negocio = s.negocio || { nome: "", tipo: "" };
     s.custos = s.custos || { salario: 1800, encargos: 1.7, he: 50 };
+    // "1.621" lido como número vira 1,621: salário abaixo de R$ 100 é o ponto de milhar perdido.
+    if (Number(s.custos.salario) > 0 && Number(s.custos.salario) < 100) s.custos.salario = Math.round(Number(s.custos.salario) * 1000);
     s.versao = VERSOES[s.versao] ? s.versao : "42";
     s.semana = s.semana === "B" ? "B" : "A";
     s.equipe = (s.equipe || []).map(function (p) {

@@ -196,6 +196,14 @@ function compraAprovada_(ss, pedido, email) {
   });
 }
 
+/** "1.621", "R$ 1.621,50", "1621" → número. Ponto sem vírgula com 3 casas depois é milhar (Number("1.621") daria 1,621). */
+function dinheiro_(v) {
+  let t = String(v == null ? "" : v).replace(/[^\d.,]/g, "");
+  if (t.indexOf(",") >= 0) t = t.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
+  return Number(t) || 0;
+}
+
 /** Converte o briefing de obrigado.html no estado do dashboard (mesmo formato de site/app/app.js). */
 function estadoDoBriefing_(p) {
   const funcionamento = {};
@@ -213,7 +221,7 @@ function estadoDoBriefing_(p) {
     negocio: { nome: String(p.negocio || "").slice(0, 80), tipo: String(p.tipo || "").slice(0, 60) },
     funcionamento: funcionamento,
     equipe: equipe.length ? equipe : [{ id: "p0", nome: "Pessoa 1", funcao: "" }],
-    custos: { salario: Number(p.salario_medio) > 0 ? Number(p.salario_medio) : 1800, encargos: 1.7, he: 50 },
+    custos: { salario: dinheiro_(p.salario_medio) >= 100 ? dinheiro_(p.salario_medio) : 1800, encargos: 1.7, he: 50 },
     versao: "42", semana: "A"
   };
 }
