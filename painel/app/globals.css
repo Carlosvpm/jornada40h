@@ -1,0 +1,33 @@
+:root {
+  --bg: #F8F8F7; --card: #fff; --line: #ECEAE6; --line-2: #DEDBD5; --text: #0B0B0C; --muted: #6B7280; --faint: #9CA3AF;
+  --side: #0B0D12; --gold: #E6B84A; --red: #D92D20; --red-soft: #FEECEB;
+  --sans: "Geist", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.5 var(--sans); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.auth { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+.auth-side { background: var(--side); color: #fff; padding: 48px; display: flex; flex-direction: column; justify-content: space-between; }
+.auth-side h2 { font-size: 30px; line-height: 1.2; letter-spacing: -.02em; margin: 0 0 12px; max-width: 420px; }
+.auth-side p { color: rgba(255,255,255,.6); max-width: 420px; margin: 0; font-size: 15px; }
+.auth-side small { color: rgba(255,255,255,.35); font-size: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+.mark { width: 32px; height: 32px; border-radius: 9px; background: var(--gold); color: #1B1405; font: 700 12px/1 var(--sans); display: grid; place-items: center; }
+.auth-main { display: grid; place-items: center; padding: 32px 16px; }
+.auth-card { width: 100%; max-width: 380px; }
+.auth-card h1 { font-size: 24px; letter-spacing: -.02em; margin: 0 0 6px; }
+.auth-card .sub { color: var(--muted); margin: 0 0 24px; }
+.auth-card .mobile-brand { display: none; margin-bottom: 28px; }
+label { display: block; font-size: 12.5px; color: var(--muted); font-weight: 500; margin-bottom: 14px; }
+input { display: block; width: 100%; margin-top: 6px; background: #fff; color: var(--text); border: 1px solid var(--line-2); border-radius: 9px; padding: 10px 12px; font: 500 14px var(--sans); box-shadow: 0 1px 2px rgba(16,24,40,.05); }
+input:focus { outline: 2px solid var(--gold); border-color: transparent; }
+input[readonly] { background: #F4F4F2; color: var(--muted); }
+.btn { width: 100%; cursor: pointer; border: 0; border-radius: 9px; font: 600 14px var(--sans); padding: 11px 14px; color: #1B1405; background: var(--gold); margin-top: 6px; }
+.btn:disabled { opacity: .6; cursor: wait; }
+.erro { background: var(--red-soft); color: var(--red); border-radius: 9px; padding: 10px 12px; font-size: 13px; margin-bottom: 14px; }
+.ajuda { color: var(--faint); font-size: 12.5px; margin-top: 18px; }
+.ajuda a { color: var(--muted); }
+@media (max-width: 860px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth-side { display: none; }
+  .auth-card .mobile-brand { display: flex; }
+}

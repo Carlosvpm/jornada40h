@@ -16,6 +16,8 @@
   var INTERJORNADA_MIN = 11 * 60;
   var LS_KEY = "j40h:escala:v1";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+  // Modo conta (/painel): o estado vem do banco e é salvo nele. Sem isso, fica no aparelho e no link.
+  var PAINEL = window.J40H_PAINEL || null;
 
   var $ = function (s) { return document.querySelector(s); };
   var state = null;
@@ -84,9 +86,25 @@
     return s;
   }
 
+  var salvarTimer = null;
   function salvar() {
+    if (PAINEL) {
+      $("#tSalvo").textContent = "salvando…";
+      clearTimeout(salvarTimer);
+      salvarTimer = setTimeout(salvarNaConta, 600);
+      return;
+    }
     try { localStorage.setItem(LS_KEY, JSON.stringify({ hash: hashOrigem, state: state })); $("#tSalvo").textContent = "salvo neste aparelho"; }
     catch (e) { $("#tSalvo").textContent = "não foi possível salvar neste aparelho: use Copiar link"; }
+  }
+
+  function salvarNaConta() {
+    fetch(PAINEL.api, { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ estado: state }) })
+      .then(function (r) {
+        if (r.status === 401) { location.href = PAINEL.login; return; }
+        $("#tSalvo").textContent = r.ok ? "salvo na sua conta" : "erro ao salvar: tente de novo";
+      })
+      .catch(function () { $("#tSalvo").textContent = "sem conexão: alterações não salvas"; });
   }
 
   function carregar() {
@@ -756,6 +774,13 @@
     $("#backdrop").addEventListener("click", fecharMenu);
     document.querySelectorAll(".side-nav a, .side-nav [data-v]").forEach(function (a) { a.addEventListener("click", fecharMenu); });
     $("#navCfg").addEventListener("click", function () { $("#cfg").open = true; });
+    if (PAINEL) {
+      $("#btnLink").innerHTML = '<svg class="ic"><use href="#i-x"/></svg>Sair (' + esc(PAINEL.usuario.email) + ")";
+      $("#btnLink").addEventListener("click", function () {
+        fetch(PAINEL.sair, { method: "POST", credentials: "same-origin" }).finally(function () { location.href = PAINEL.login; });
+      });
+      return;
+    }
     $("#btnLink").addEventListener("click", function () {
       var url = linkPessoal();
       if (navigator.clipboard) navigator.clipboard.writeText(url).then(function () { toast("Link copiado. Guarde: ele abre a sua escala em qualquer aparelho."); }, function () { toast("Copie o endereço da barra do navegador."); });
@@ -769,14 +794,28 @@
 
   /* ------------------------------------------------------------------ */
 
-  state = carregar();
-  var novo = !state;
-  if (novo) state = estadoExemplo();
-  ligar();
-  renderCfg();
-  render();
-  salvar();
-  if (novo) { $("#cfg").open = true; toast("Exemplo carregado. Troque pelos dados do seu negócio no fim da página."); }
+  function iniciar(s, novo) {
+    state = s;
+    ligar();
+    renderCfg();
+    render();
+    if (novo || !PAINEL) salvar();
+    else $("#tSalvo").textContent = "salvo na sua conta";
+    if (novo) { $("#cfg").open = true; toast("Exemplo carregado. Troque pelos dados do seu negócio no fim da página."); }
+  }
+
+  if (PAINEL) {
+    fetch(PAINEL.api, { credentials: "same-origin" })
+      .then(function (r) {
+        if (r.status === 401) { location.href = PAINEL.login; throw new Error("sessão"); }
+        return r.json();
+      })
+      .then(function (d) { iniciar(d.estado ? normalizar(d.estado) : estadoExemplo(), !d.estado); })
+      .catch(function (e) { if (e.message !== "sessão") toast("Não foi possível abrir sua escala. Recarregue a página."); });
+  } else {
+    state = carregar();
+    iniciar(state || estadoExemplo(), !state);
+  }
 
   // Usado pelo teste automatizado.
   window.__j40h = { get state() { return state; }, calcular: calcular, custos: custos, linkPessoal: linkPessoal };

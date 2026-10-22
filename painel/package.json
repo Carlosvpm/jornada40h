@@ -1,0 +1,26 @@
+{
+  "name": "jornada40h-painel",
+  "version": "0.1.0",
+  "private": true,
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "sync-escala": "node scripts/sync-escala.mjs",
+    "dev": "npm run sync-escala && next dev -p 3040",
+    "build": "npm run sync-escala && next build",
+    "start": "next start -p 3040",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.0.3",
+    "next": "16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}
