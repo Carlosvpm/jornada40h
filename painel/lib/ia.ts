@@ -51,12 +51,13 @@ const SCHEMA = {
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["id", "nome", "funcao", "salario", "folgaFixa", "naoPode"],
+            required: ["id", "nome", "funcao", "salario", "horas", "folgaFixa", "naoPode"],
             properties: {
               id: { type: "string", description: "id atual; vazio para pessoa nova" },
               nome: { type: "string" },
               funcao: { type: "string" },
-              salario: { type: "number", description: "0 = usa o salário médio" },
+              salario: { type: "number", description: "0 = usa o salário médio (proporcional às horas no meio período)" },
+              horas: { type: "number", description: "carga semanal de quem é meio período (ex.: 16); 0 = tempo integral" },
               folgaFixa: { type: "string", enum: ["", ...DIAS] },
               naoPode: { type: "array", items: dia },
             },
@@ -101,6 +102,7 @@ Como decidir:
 - Mudança de equipe, folga fixa, dias que a pessoa não pode, horário de funcionamento ou número de pessoas por dia: atualize os dados e use remontar: true para o motor redistribuir turnos e folgas.
 - Troca pontual de turno ou folga de alguém num dia: use celulas e remontar: false, para não desfazer o que o dono já ajustou à mão.
 - Pessoa nova vai com id vazio. Para tirar alguém, deixe a pessoa fora da lista.
+- Meio período: preencha horas com a carga semanal (ex.: 16) e use remontar: true. O painel encaixa essa pessoa sozinho nos horários que ainda faltam gente, até essa carga, e o custo dela sai proporcional às horas. Para limitar os dias, use naoPode. Quem é tempo integral vai com horas 0.
 - Se o pedido piora a escala (abre buraco de cobertura, aumenta custo, cria ponto fora da lei), faça o que foi pedido mesmo assim, explique o problema em avisos e diga no resumo qual alternativa resolveria. Se receber o resultado de uma proposta anterior com problemas, proponha uma alternativa que mantenha a intenção do dono e resolva os problemas.
 - Não invente gente, salário ou horário que o dono não pediu. Para cobrir buraco, prefira primeiro redistribuir quem já existe; sugerir contratação só quando não houver outro jeito, e diga o custo.
 - Escreva para o dono do negócio, sem jargão técnico, em frases curtas.
@@ -116,8 +118,8 @@ ${BASE_LEGAL}`;
 export type PedidoIA = { pedido: string; contexto: unknown; anterior?: unknown; modelo?: Modelo };
 export type Uso = { modelo: Modelo; entrada: number; saida: number; cacheLido: number; cacheGravado: number };
 
-function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; folgaFixa: string; naoPode: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
-  const equipe = (ctx.equipe || []).map((p, i) => ({ ...p, salario: p.salario || 0, naoPode: i === 0 ? Array.from(new Set([...(p.naoPode || []), "sab"])) : p.naoPode || [] }));
+function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; folgaFixa: string; naoPode: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
+  const equipe = (ctx.equipe || []).map((p, i) => ({ ...p, salario: p.salario || 0, horas: p.horas || 0, naoPode: i === 0 ? Array.from(new Set([...(p.naoPode || []), "sab"])) : p.naoPode || [] }));
   return {
     entendeu: true,
     resumo: `Coloquei ${equipe[0]?.nome || "a primeira pessoa"} sem trabalhar no sábado e montei a escala de novo.`,

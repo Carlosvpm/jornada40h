@@ -105,6 +105,18 @@ try {
     ok(/Pagar hora extra[\s\S]*não resolve/.test(ops), "hora extra não resolve buraco de 5 h seguidas");
     ok(/meio período de \d+ h/.test(ops) && /turnos em dias específicos/.test(ops), "contratar sugere integral + meio período e explica por quê");
     ok(/33 turnos por semana/.test(await p5.textContent("#explicaTxt")) && /7 pessoas/.test(await p5.textContent("#explicaTxt")), "conta: 33 turnos pedem 7 pessoas");
+    ok(/Economia de R\$ [\d.]+\/mês/.test(ops) && /economiza R\$/.test(await p5.textContent("#kpis")), "mostra a economia frente a contratar só em tempo integral");
+
+    console.log("5c. aplicar a saída mais barata com 1 clique");
+    const folha0 = await p5.evaluate(() => window.__j40h.metricas(window.__j40h.state).folha);
+    await p5.click('[data-acao="contratar"]');
+    const r = await p5.evaluate(() => { const J = window.__j40h, s = J.state, m = J.metricas(s); return { falta: m.falta, erros: m.erros, folha: m.folha, parc: s.equipe.filter(p => p.horas).length, plano: s.plano, A: J.calcular(s, "42", "A").falta, B: J.calcular(s, "42", "B").falta }; });
+    ok(r.falta <= 0.01 && r.A <= 0.01 && r.B <= 0.01 && !r.erros, "42 h nas semanas A e B cobertas, sem ponto fora da lei (falta " + r.A + "/" + r.B + ")");
+    ok(r.parc === 1 && Math.abs(r.folha - folha0 - 4601) < 2, "1 meio período com salário proporcional: folha sobe R$ " + Math.round(r.folha - folha0));
+    ok(/Saída aplicada/.test(await p5.textContent("#iaDica")) && r.plano && r.plano.economia > 0, "aviso com antes e depois e economia guardada no plano");
+    ok(/Economia com o plano do painel/.test(await p5.textContent("#opcoes")), "card de economia depois de aplicar");
+    await p5.click('#iaDica [data-dica="desfazer"]');
+    ok(await p5.evaluate(() => window.__j40h.state.equipe.length) === 5, "Desfazer volta para a equipe de 5");
     await p5.close();
   }
 
@@ -113,7 +125,7 @@ try {
   const acao = page.locator('[data-acao="contratar"]');
   if (await acao.count()) {
     await acao.click();
-    ok(await page.locator("#grid tbody tr").count() === n0 + 1, "pessoa nova entra na grade");
+    ok(await page.locator("#grid tbody tr").count() > n0, "pessoas novas entram na grade");
   } else ok(true, "sem horas descobertas: nada a simular");
 
   console.log("7. planilha");

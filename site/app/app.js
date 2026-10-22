@@ -103,7 +103,8 @@
     s.semana = s.semana === "B" ? "B" : "A";
     s.equipe = (s.equipe || []).map(function (p) {
       var np = Array.isArray(p.naoPode) ? p.naoPode.filter(function (d) { return DIAS.indexOf(d) >= 0; }) : [];
-      return { id: p.id || uid(), nome: p.nome || "", funcao: p.funcao || "", salario: p.salario || null, folgaFixa: p.folgaFixa || "", naoPode: np };
+      var hs = Number(p.horas) > 0 ? Math.min(60, Math.round(Number(p.horas))) : null;
+      return { id: p.id || uid(), nome: p.nome || "", funcao: p.funcao || "", salario: p.salario || null, horas: hs, folgaFixa: p.folgaFixa || "", naoPode: np };
     });
     s.pendente = !!s.pendente;
     if (!s.escalas || !s.escalas["42"] || !s.escalas["40"]) gerarTudo(s);
@@ -159,9 +160,14 @@
   /* Geração (motor) e cálculo                                          */
   /* ------------------------------------------------------------------ */
 
-  function entradaMotor(s, v, sem) {
+  // Meio período: carga semanal (horas) menor que a jornada da versão. O motor monta os turnos de quem
+  // é tempo integral; quem é meio período entra depois, nos horários que ainda faltam gente.
+  function parcial(p, v) { var h = Number(p.horas) || 0; return h > 0 && h < VERSOES[v].jornadaSemanal - 1e-9; }
+  function limiteSemana(p, v) { return parcial(p, v) ? Number(p.horas) : VERSOES[v].jornadaSemanal; }
+
+  function entradaMotor(s, v, sem, lista) {
     var vistos = {};
-    var funcionarios = s.equipe.map(function (p, i) {
+    var funcionarios = (lista || s.equipe).map(function (p, i) {
       var nome = (p.nome || "Pessoa " + (i + 1)).trim();
       while (vistos[nome]) nome = nome + " ·";
       vistos[nome] = true;
@@ -181,9 +187,10 @@
   }
 
   function gerar(s, v, sem) {
-    var saida = gerarEscala(entradaMotor(s, v, sem));
+    var integrais = s.equipe.filter(function (p) { return !parcial(p, v); });
+    var saida = integrais.length ? gerarEscala(entradaMotor(s, v, sem, integrais)) : { grade: [] };
     var g = {};
-    s.equipe.forEach(function (p, i) {
+    integrais.forEach(function (p, i) {
       var linha = saida.grade[i];
       g[p.id] = {};
       DIAS.forEach(function (d) {
@@ -191,8 +198,71 @@
         g[p.id][d] = c.tipo === "turno" ? { tipo: "turno", inicio: c.inicio, fim: c.fim, rotulo: c.rotulo } : { tipo: c.tipo };
       });
     });
-    repararDescanso(g, s.equipe.map(function (p) { return p.id; }));
+    repararDescanso(g, integrais.map(function (p) { return p.id; }));
+    encaixarParciais(s, v, g);
     return g;
+  }
+
+  // Início e fim de um turno em minutos, no mesmo eixo do dia (turno que vira a noite passa de 1440).
+  function faixaTurno(c, abre) {
+    var i = min(c.inicio), e = min(c.fim);
+    if (i < abre - 120) { i += 1440; e += 1440; }
+    if (e <= i) e += 1440;
+    return [i, e];
+  }
+
+  // Coloca quem é meio período nos horários com menos gente que o pedido: a cada passo, o turno (até a
+  // jornada diária e o que resta da carga semanal) que cobre mais meia-horas em falta, respeitando
+  // folga fixa, dias que a pessoa não pode, 2 folgas e 11 h de descanso entre um dia e outro.
+  function encaixarParciais(s, v, g) {
+    var R = VERSOES[v], maxDia = Math.round(R.jornadaDiariaMax * 60);
+    var parciais = s.equipe.filter(function (p) { return parcial(p, v); });
+    if (!parciais.length) return;
+    var falta = {};
+    DIAS.forEach(function (d) {
+      var f = s.funcionamento[d]; if (!f) return;
+      var a = min(f.abre), b = min(f.fecha); if (b <= a) b += 1440;
+      var need = Math.max(1, Number(f.pessoas) || 1), bl = [];
+      var turnos = Object.keys(g).map(function (id) { return g[id][d]; }).filter(function (c) { return c && c.tipo === "turno"; }).map(function (c) { return faixaTurno(c, a); });
+      for (var t = a; t < b; t += 30) {
+        var n = 0; turnos.forEach(function (x) { if (x[0] <= t && t < x[1]) n++; });
+        bl.push({ t: t, f: Math.max(0, need - n) });
+      }
+      falta[d] = { a: a, b: b, bl: bl };
+    });
+    parciais.forEach(function (p) {
+      var resta = Math.round(Math.min(Number(p.horas), R.jornadaSemanal) * 60), usados = {}, nUsados = 0;
+      g[p.id] = {};
+      var cabe = function (d, ini, fim) {
+        var i = DIAS.indexOf(d), ant = usados[DIAS[i - 1]], prox = usados[DIAS[i + 1]];
+        return (!ant || ini + 1440 - ant[1] >= INTERJORNADA_MIN) && (!prox || prox[0] + 1440 - fim >= INTERJORNADA_MIN);
+      };
+      while (resta >= 120 && nUsados < 5) {
+        var melhor = null, lim = Math.min(maxDia, resta);
+        DIAS.forEach(function (d) {
+          var F = falta[d];
+          if (!F || usados[d] || p.folgaFixa === d || (p.naoPode || []).indexOf(d) >= 0) return;
+          for (var i = 0; i < F.bl.length; i++) {
+            if (!F.bl[i].f) continue;
+            var ganho = 0;
+            for (var j = i; j < F.bl.length && (j - i + 1) * 30 <= lim; j++) {
+              if (!F.bl[j].f) continue;
+              ganho += F.bl[j].f;
+              var ini = F.bl[i].t, fim = F.bl[j].t + 30;
+              if (fim - ini < 120) { fim = Math.min(F.b, ini + 120); ini = Math.max(F.a, fim - 120); }
+              if (fim - ini > lim || !cabe(d, ini, fim)) continue;
+              if (!melhor || ganho > melhor.ganho || (ganho === melhor.ganho && fim - ini < melhor.fim - melhor.ini)) melhor = { d: d, ini: ini, fim: fim, ganho: ganho };
+            }
+          }
+        });
+        if (!melhor) break;
+        usados[melhor.d] = [melhor.ini, melhor.fim]; nUsados++;
+        resta -= melhor.fim - melhor.ini;
+        g[p.id][melhor.d] = { tipo: "turno", inicio: hhmm(melhor.ini), fim: hhmm(melhor.fim), rotulo: "Meio período" };
+        falta[melhor.d].bl.forEach(function (x) { if (x.t >= melhor.ini && x.t < melhor.fim && x.f) x.f--; });
+      }
+      DIAS.forEach(function (d) { if (!g[p.id][d]) g[p.id][d] = { tipo: "folga" }; });
+    });
   }
 
   // Descanso entre o fim de um turno e o início do turno do dia seguinte (minutos).
@@ -384,9 +454,10 @@
           }
         }
       });
-      if (h > R.jornadaSemanal + 1e-9) res.erros.push(nome + " soma " + horas(h) + " na semana, " + horas(h - R.jornadaSemanal) + " acima da jornada de " + R.rotulo + " (vira hora extra)" + lei("jornada") + ".");
+      var lim = limiteSemana(p, v);
+      if (h > lim + 1e-9) res.erros.push(nome + " soma " + horas(h) + " na semana, " + horas(h - lim) + " acima " + (lim < R.jornadaSemanal ? "das " + horas(lim) + " do contrato de meio período" : "da jornada de " + R.rotulo) + " (vira hora extra)" + lei("jornada") + ".");
       if (folgas < 2) res.erros.push(nome + " tem " + (folgas === 1 ? "só 1 folga" : "nenhuma folga") + " na semana. Na escala 5x2 são 2; a lei exige pelo menos 1 descanso de 24 h" + lei("dsr") + ".");
-      res.pessoas.push({ id: p.id, nome: nome, horas: h, folgas: folgas, erros: erros, extra: Math.max(0, h - R.jornadaSemanal) });
+      res.pessoas.push({ id: p.id, nome: nome, horas: h, folgas: folgas, erros: erros, extra: Math.max(0, h - lim), limite: lim });
     });
     return res;
   }
@@ -422,12 +493,20 @@
     return (simCache[k] = { falta: c.falta, dias: DIAS.filter(function (d) { return c.dias[d].aberto && c.dias[d].falta; }), calc: c });
   }
 
+  // Custo mensal de uma pessoa: salário dela (ou a média) × encargos; meio período sem salário
+  // informado paga a média proporcional às horas.
+  function custoPessoa(p, s, v) {
+    var enc = Number(s.custos.encargos) || 1;
+    if (Number(p.salario) > 0) return Number(p.salario) * enc;
+    return (Number(s.custos.salario) || 0) * enc * (parcial(p, v) ? Number(p.horas) / VERSOES[v].jornadaSemanal : 1);
+  }
+
   // Saídas para cobrir as horas descobertas, com custo mensal.
   function custos(s, v, calc) {
     var R = VERSOES[v], C = s.custos;
     var sal = Number(C.salario) || 0, enc = Number(C.encargos) || 1, adic = (Number(C.he) || 50) / 100;
     var valorHora = sal / (R.jornadaSemanal * 5);
-    var folha = s.equipe.reduce(function (t, p) { return t + (Number(p.salario) || sal) * enc; }, 0);
+    var folha = s.equipe.reduce(function (t, p) { return t + custoPessoa(p, s, v); }, 0);
     var extraGrade = calc.pessoas.reduce(function (t, p) { return t + p.extra; }, 0);
     var D = calc.falta;
     var ops = [];
@@ -475,12 +554,16 @@
         txtContr = (esc0.n ? esc0.n + (esc0.n === 1 ? " pessoa" : " pessoas") + " em tempo integral (" + R.rotulo + ")" + (esc0.h ? " e " : "") : "") +
           (esc0.h ? (esc0.n ? "1 em" : "1 pessoa em") + " meio período de " + esc0.h + " h por semana, nos horários que faltam (" + diasTxt(esc0.dias) + ")" : "") +
           ", com salário de " + brl(sal) + (esc0.h ? " (proporcional no meio período)" : "") + " × " + String(enc).replace(".", ",") + " de encargos.";
-        if (esc0.h && sims[esc0.n + 1]) txtContr += " Mais 1 pessoa em tempo integral no lugar do meio período sairia mais caro e ainda deixaria " + (sims[esc0.n + 1].falta > 0.01 ? horas(sims[esc0.n + 1].falta) + " sem cobertura" : "horas sobrando") + ": o que falta são turnos em dias específicos, não horas na semana.";
+        if (esc0.h && sims[esc0.n + 1] && sims[esc0.n + 1].falta > 0.01) txtContr += " Mais 1 pessoa em tempo integral no lugar do meio período sairia mais caro e ainda deixaria " + horas(sims[esc0.n + 1].falta) + " sem cobertura: o que falta são turnos em dias específicos, não horas na semana.";
       } else {
         custoContr = nInt * sal * enc;
         txtContr = nInt + " pessoas em tempo integral ainda deixam " + horas(sims[nInt].falta) + " sem cobertura. Vale rever o horário de funcionamento ou o número de pessoas por dia.";
       }
-      ops.push({ id: "contratar", titulo: "Contratar", custo: custoContr + extraGrade * SEM_POR_MES * valorHora * (1 + adic), viavel: !!esc0, txt: txtContr, acao: "Colocar 1 pessoa nova na escala" });
+      // Economia: o mesmo resultado só com gente em tempo integral (o que costuma ser feito) custaria mais.
+      var kSo = -1; sims.forEach(function (sm, k) { if (kSo < 0 && k > 0 && sm.falta <= 0.01) kSo = k; });
+      var economia = esc0 && kSo > 0 && kSo * sal * enc - esc0.custo > 1 ? { valor: Math.round(kSo * sal * enc - esc0.custo), n: kSo, base: Math.round(kSo * sal * enc) } : null;
+      ops.push({ id: "contratar", titulo: "Contratar", custo: custoContr + extraGrade * SEM_POR_MES * valorHora * (1 + adic), viavel: !!esc0, txt: txtContr,
+        plano: esc0 ? { n: esc0.n, h: esc0.h, dias: esc0.dias || [] } : null, economia: economia, acao: esc0 ? "Aplicar na escala" : "" });
 
       var piores = DIAS.filter(function (d) { return calc.dias[d].aberto && calc.dias[d].falta; });
       ops.push({
@@ -522,7 +605,9 @@
     $("#kpis").innerHTML =
       kpi(cus.D > 0.01 ? "red" : "green", "i-clock", "Horas sem cobertura", horas(cus.D), "por semana, na versão de " + R.rotulo) +
       kpi("blue", "i-users", "Equipe", state.equipe.length + (state.equipe.length === 1 ? " pessoa" : " pessoas"), "folha de ~" + brl(cus.folha) + "/mês") +
-      kpi("gold", "i-money", "Saída mais barata", best ? brl(best.custo) + "/mês" : cus.D > 0.01 ? "—" : "R$ 0", best ? best.titulo.toLowerCase() : cus.D > 0.01 ? "sem saída dentro da lei só com hora extra" : "horário todo coberto") +
+      kpi("gold", "i-money", "Saída mais barata", best ? brl(best.custo) + "/mês" : cus.D > 0.01 ? "—" : "R$ 0",
+        best ? best.titulo.toLowerCase() + (best.economia ? " · economiza " + brl(best.economia.valor) + "/mês" : "") : cus.D > 0.01 ? "sem saída dentro da lei só com hora extra" :
+        state.plano && state.plano.economia ? "tudo coberto · economia de " + brl(state.plano.economia) + "/mês" : "horário todo coberto") +
       kpi(calc.erros.length ? "red" : "green", "i-shield", "Pontos fora da lei", String(calc.erros.length), calc.erros.length ? "veja os alertas" : "jornada, folgas e descanso ok");
 
     renderGrade(calc);
@@ -641,8 +726,9 @@
   function renderEquipe(calc) {
     var R = VERSOES[state.versao];
     var h = state.equipe.map(function (p, i) {
-      var pc = calc.pessoas[i], over = pc.horas > R.jornadaSemanal + 1e-9;
+      var pc = calc.pessoas[i], over = pc.horas > pc.limite + 1e-9;
       var tags = [];
+      if (parcial(p, state.versao)) tags.push("meio período " + p.horas + " h");
       if (p.folgaFixa) tags.push("folga " + NOME_DIA_CURTO[p.folgaFixa].toLowerCase());
       if (p.naoPode && p.naoPode.length) tags.push("não pode " + p.naoPode.map(function (d) { return NOME_DIA_CURTO[d].toLowerCase(); }).join(", "));
       return '<button type="button" class="pp-chip c' + (i % 8) + '" data-pessoa="' + p.id + '" title="Editar ' + esc(p.nome) + '"><span class="ini">' + esc(iniciais(pc.nome)) + "</span><span><b>" + esc(pc.nome) + '</b><small><span class="' + (over ? "over" : "") + '">' + horas(pc.horas) + "</span>" + (p.funcao ? " · " + esc(p.funcao) : "") + (tags.length ? " · " + esc(tags.join(" · ")) : "") + "</small></span></button>";
@@ -681,9 +767,10 @@
     var pede = 0;
     DIAS.forEach(function (d) { var f = state.funcionamento[d]; if (f) pede += dur({ inicio: f.abre, fim: f.fecha }) * Math.max(1, Number(f.pessoas) || 1); });
     var trab = calc.pessoas.reduce(function (t, p) { return t + p.horas; }, 0);
-    var capac = state.equipe.length * R.jornadaSemanal;
+    var capac = calc.pessoas.reduce(function (t, p) { return t + p.limite; }, 0);
+    var nParc = state.equipe.filter(function (p) { return parcial(p, state.versao); }).length, nInt = state.equipe.length - nParc;
     var conta = "<p><b>A conta das horas.</b> O seu horário pede <b>" + horas(pede) + "</b> de trabalho por semana (horas abertas × pessoas ao mesmo tempo). " +
-      "A equipe tem até <b>" + horas(capac) + "</b> (" + state.equipe.length + " × " + R.rotulo + ") e está escalada para <b>" + horas(trab) + "</b>. ";
+      "A equipe tem até <b>" + horas(capac) + "</b> (" + nInt + " × " + R.rotulo + (nParc ? " + " + (nParc === 1 ? "1 meio período" : nParc + " meios períodos") : "") + ") e está escalada para <b>" + horas(trab) + "</b>. ";
     if (calc.falta > 0.01) {
       conta += (calc.sobra > 0.01 ? horas(calc.sobra) + " dessas horas caem em horários que já têm gente suficiente (quando os turnos se cruzam) e não cobrem outro horário. " : "") +
         "Por isso ficam <b>" + horas(calc.falta) + " sem cobertura</b>" + (pede > capac ? ", e só a diferença entre o que o horário pede e o que a equipe tem já dá " + horas(pede - capac) + "." : ".") +
@@ -692,8 +779,9 @@
     var ct = contaTurnos(state, state.versao);
     conta += "<p><b>A conta dos turnos.</b> Mais importante que as horas é o número de turnos: o seu horário pede <b>" + ct.total + " turnos por semana</b> (" +
       DIAS.filter(function (d) { return ct.porDia[d]; }).map(function (d) { return NOME_DIA_CURTO[d].toLowerCase() + " " + ct.porDia[d]; }).join(", ") +
-      "), e cada pessoa faz no máximo 5, por causa das 2 folgas. Para cobrir tudo são necessárias <b>" + ct.pessoas + " pessoas</b>; hoje a equipe tem " + state.equipe.length + "." +
-      (ct.pessoas > state.equipe.length ? " Faltam os turnos de " + (ct.pessoas - state.equipe.length) + (ct.pessoas - state.equipe.length === 1 ? " pessoa" : " pessoas") + ", mesmo que a soma das horas pareça dar. O card de custos mostra a saída mais barata, que pode ser um meio período só nos dias que faltam." : "") + "</p>";
+      "), e cada pessoa faz no máximo 5, por causa das 2 folgas. Para cobrir tudo só com tempo integral são necessárias <b>" + ct.pessoas + " pessoas</b>; hoje a equipe tem " + nInt + (nParc ? " em tempo integral e " + nParc + " em meio período" : "") + "." +
+      (calc.falta <= 0.01 && ct.pessoas > nInt ? " O meio período cobre os turnos que faltavam." : "") +
+      (calc.falta > 0.01 && ct.pessoas > state.equipe.length ? " Faltam os turnos de " + (ct.pessoas - state.equipe.length) + (ct.pessoas - state.equipe.length === 1 ? " pessoa" : " pessoas") + ", mesmo que a soma das horas pareça dar. O card de custos mostra a saída mais barata, que pode ser um meio período só nos dias que faltam." : "") + "</p>";
     $("#explicaTxt").innerHTML = "<ul>" + li.join("") + "</ul>" + conta +
       "<p><b>Folgas.</b> Cada pessoa tem 2 folgas por semana e pelo menos 11 h de descanso entre um dia e outro. Quem folga no fim de semana alterna entre as semanas A e B, para ninguém trabalhar todo sábado e domingo.</p>" + baseLegal();
   }
@@ -729,12 +817,17 @@
     $("#cSal").value = state.custos.salario;
     $("#cEnc").value = state.custos.encargos;
     $("#cHe").value = state.custos.he;
-    var h = '<div class="op base"><b>Folha atual da equipe</b><span class="v">' + brl(cus.folha) + '/mês</span><p>' + state.equipe.length + " pessoas × salário × " + String(state.custos.encargos).replace(".", ",") + " de encargos.</p></div>";
+    var nParc = state.equipe.filter(function (p) { return parcial(p, state.versao); }).length;
+    var h = '<div class="op base"><b>Folha atual da equipe</b><span class="v">' + brl(cus.folha) + '/mês</span><p>' + state.equipe.length + " pessoas × salário × " + String(state.custos.encargos).replace(".", ",") + " de encargos" +
+      (nParc ? " (" + (nParc === 1 ? "1 em meio período" : nParc + " em meio período") + ", com salário proporcional às horas)" : "") + ".</p></div>";
+    var pl = state.plano;
     if (!cus.ops.length) h += '<div class="op best"><b>Nenhum custo extra<span class="tag">tudo coberto</span></b><span class="v">R$ 0</span><p>A equipe atual cobre todo o horário nesta versão.' + (cus.extraGrade ? " Atenção: há " + horas(cus.extraGrade) + " de hora extra na grade." : "") + "</p></div>";
+    if (pl && pl.economia) h += '<div class="op economia"><b>Economia com o plano do painel<span class="tag">' + esc(pl.data) + '</span></b><span class="v">' + brl(pl.economia) + "/mês</span><p>" + esc(pl.txt) + " Cobrir o mesmo horário só com gente em tempo integral pediria " + pl.baseN + (pl.baseN === 1 ? " pessoa" : " pessoas") + " (" + brl(pl.base) + "/mês). São " + brl(pl.economia * 12) + " por ano.</p></div>";
     cus.ops.forEach(function (o) {
       h += '<div class="op' + (o.best ? " best" : "") + (o.viavel ? "" : " inv") + '"><b>' + esc(o.titulo) +
         (o.best ? '<span class="tag">mais barata</span>' : "") + (!o.viavel ? '<span class="tag">não resolve</span>' : "") +
         '</b><span class="v">' + (o.semFolha && !o.custo ? "R$ 0" : brl(o.custo)) + "/mês</span><p>" + esc(o.txt) + "</p>" +
+        (o.economia ? '<p class="eco">Economia de <b>' + brl(o.economia.valor) + "/mês</b> (" + brl(o.economia.valor * 12) + "/ano) em relação a contratar só em tempo integral: " + o.economia.n + (o.economia.n === 1 ? " pessoa" : " pessoas") + ", " + brl(o.economia.base) + "/mês, para cobrir o mesmo horário.</p>" : "") +
         (o.acao ? '<button type="button" class="b ghost sm acao" data-acao="' + o.id + '">' + esc(o.acao) + "</button>" : "") + "</div>";
     });
     $("#opcoes").innerHTML = h;
@@ -811,11 +904,12 @@
     });
     $("#tblHorario").innerHTML = h + "</tbody>";
 
-    var e = "<thead><tr><th>Nome</th><th>Função</th><th>Salário (opcional)</th><th>Folga fixa</th><th>Não pode trabalhar</th><th></th></tr></thead><tbody>";
+    var e = "<thead><tr><th>Nome</th><th>Função</th><th>Salário (opcional)</th><th>Horas/semana</th><th>Folga fixa</th><th>Não pode trabalhar</th><th></th></tr></thead><tbody>";
     state.equipe.forEach(function (p) {
       e += '<tr data-id="' + p.id + '"><td><input type="text" maxlength="40" data-e="nome" value="' + esc(p.nome) + '"></td>' +
         '<td><input type="text" maxlength="40" data-e="funcao" value="' + esc(p.funcao) + '"></td>' +
         '<td><input type="number" min="0" step="10" data-e="salario" placeholder="média" value="' + (p.salario || "") + '"></td>' +
+        '<td><input type="number" min="0" max="60" step="1" data-e="horas" placeholder="integral" value="' + (p.horas || "") + '"></td>' +
         '<td><select data-e="folgaFixa"><option value="">rodízio</option>' + DIAS.map(function (d) { return '<option value="' + d + '"' + (p.folgaFixa === d ? " selected" : "") + ">" + NOME_DIA[d] + "</option>"; }).join("") + "</select></td>" +
         '<td>' + chipsDias(p.naoPode, "np") + "</td>" +
         '<td><button type="button" class="x" data-del="' + p.id + '" title="Remover">×</button></td></tr>';
@@ -977,9 +1071,7 @@
     });
     $("#opcoes").addEventListener("click", function (e) {
       var b = e.target.closest("[data-acao]"); if (!b) return;
-      state.equipe.push({ id: uid(), nome: "Nova contratação", funcao: "a contratar", salario: null, folgaFixa: "", naoPode: [] });
-      gerarTudo(state); salvar(); renderCfg(); render();
-      toast("Pessoa nova colocada na escala. Veja como fica a cobertura.");
+      aplicarPlano();
     });
 
     $("#fNome").addEventListener("change", function () { state.negocio.nome = $("#fNome").value.trim(); salvar(); render(); });
@@ -1003,8 +1095,8 @@
         marcarPendente(); salvar(); render(); return;
       }
       var k = e.target.dataset.e;
-      p[k] = k === "salario" ? (Number(e.target.value) || null) : e.target.value.trim();
-      if (k === "folgaFixa") marcarPendente();
+      p[k] = k === "salario" ? (Number(e.target.value) || null) : k === "horas" ? (Number(e.target.value) > 0 ? Math.min(60, Math.round(Number(e.target.value))) : null) : e.target.value.trim();
+      if (k === "folgaFixa" || k === "horas") marcarPendente();
       salvar(); render();
     });
     $("#tblEquipe").addEventListener("click", function (e) {
@@ -1123,6 +1215,7 @@
     $("#pNome").value = p ? p.nome : "Pessoa " + (state.equipe.length + 1);
     $("#pFuncao").value = p ? p.funcao : "";
     $("#pSal").value = p && p.salario ? p.salario : "";
+    $("#pHoras").value = p && p.horas ? p.horas : "";
     $("#pFixa").innerHTML = '<option value="">rodízio</option>' + DIAS.map(function (d) { return '<option value="' + d + '"' + (p && p.folgaFixa === d ? " selected" : "") + ">" + NOME_DIA[d] + "</option>"; }).join("");
     $("#pNaoPode").innerHTML = chipsDias(p ? p.naoPode : [], "pnp").replace(/^<div class="dias-chk">|<\/div>$/g, "");
     $("#pRemover").hidden = !p;
@@ -1145,6 +1238,8 @@
     p.nome = nome;
     p.funcao = $("#pFuncao").value.trim();
     p.salario = Number($("#pSal").value) || null;
+    var hs = Number($("#pHoras").value) > 0 ? Math.min(60, Math.round(Number($("#pHoras").value))) : null;
+    if (hs !== (p.horas || null)) { p.horas = hs; marcarPendente(); }
     p.folgaFixa = fixa;
     p.naoPode = naoPode;
     salvar(); renderCfg(); render();
@@ -1179,6 +1274,31 @@
   /* ------------------------------------------------------------------ */
   /* Métricas, desfazer e Ajuste com IA                                 */
   /* ------------------------------------------------------------------ */
+
+  // Um clique: coloca na escala a saída mais barata de contratar (tempo integral + meio período nos
+  // horários que faltam), remonta e mostra o antes e depois em horas e em reais, com Desfazer.
+  function aplicarPlano() {
+    var antes = metricas(state);
+    var op = antes.cus.ops.filter(function (o) { return o.id === "contratar"; })[0];
+    if (!op || !op.plano) return;
+    var snap = JSON.stringify(state), P = op.plano, R = VERSOES[state.versao], novos = [];
+    for (var i = 0; i < P.n; i++) novos.push("Contratação " + (i + 1));
+    novos.forEach(function (nome) { state.equipe.push({ id: uid(), nome: nome, funcao: "a contratar", salario: null, horas: null, folgaFixa: "", naoPode: [] }); });
+    if (P.h) state.equipe.push({ id: uid(), nome: "Meio período", funcao: "a contratar", salario: null, horas: P.h, folgaFixa: "", naoPode: [] });
+    gerarTudo(state); state.pendente = false;
+    var depois = metricas(state);
+    var txt = (P.n ? P.n + (P.n === 1 ? " pessoa" : " pessoas") + " em tempo integral" + (P.h ? " e " : "") : "") + (P.h ? "1 em meio período de " + P.h + " h por semana" : "") +
+      ", na versão de " + R.rotulo + ": folha de " + brl(antes.folha) + " para " + brl(depois.folha) + " por mês.";
+    state.plano = op.economia ? { data: new Date().toLocaleDateString("pt-BR"), versao: state.versao, txt: txt, economia: Math.round(op.economia.valor), base: Math.round(op.economia.base), baseN: op.economia.n } : null;
+    salvar(); renderCfg(); render();
+    desfazerSnap = snap;
+    dica("<b>Saída aplicada.</b> Horas sem cobertura: " + horas(antes.falta) + " → <b>" + horas(depois.falta) + "</b> por semana. Folha: " + brl(antes.folha) + " → <b>" + brl(depois.folha) + "/mês</b> (+" + brl(depois.folha - antes.folha) + ")." +
+      (op.economia ? " Economia de <b>" + brl(op.economia.valor) + "/mês</b> em relação a contratar só em tempo integral." : "") +
+      (depois.falta > 0.01 ? " Ainda faltam " + horas(depois.falta) + ": veja os alertas." : "") +
+      " Troque os nomes quando contratar.",
+      '<button type="button" class="b ghost sm" data-dica="desfazer">Desfazer</button>');
+    try { $("#iaDica").scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
+  }
 
   function metricas(s) {
     var c = calcular(s, s.versao, s.semana), k = custos(s, s.versao, c);
@@ -1227,7 +1347,7 @@
       regras: { jornadaSemanal: R.jornadaSemanal, jornadaDiariaMax: R.jornadaDiariaMax },
       negocio: state.negocio,
       funcionamento: DIAS.reduce(function (o, d) { var f = state.funcionamento[d]; o[d] = f ? { aberto: true, abre: f.abre, fecha: f.fecha, pessoas: Number(f.pessoas) || 1 } : { aberto: false, abre: "", fecha: "", pessoas: 0 }; return o; }, {}),
-      equipe: state.equipe.map(function (p) { return { id: p.id, nome: p.nome, funcao: p.funcao, salario: p.salario || 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [] }; }),
+      equipe: state.equipe.map(function (p) { return { id: p.id, nome: p.nome, funcao: p.funcao, salario: p.salario || 0, horas: parcial(p, state.versao) ? Number(p.horas) : 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [] }; }),
       custos: state.custos,
       grade: state.equipe.map(function (p, i) {
         return { pessoaId: p.id, nome: p.nome, horasSemana: c.pessoas[i].horas, dias: DIAS.reduce(function (o, d) {
@@ -1263,7 +1383,8 @@
         if (antigo) usados[antigo.id] = 1;
         return {
           id: antigo ? antigo.id : uid(), nome: String(p.nome || "").trim().slice(0, 40) || "Pessoa", funcao: String(p.funcao || "").trim().slice(0, 40),
-          salario: Number(p.salario) > 0 ? Number(p.salario) : null, folgaFixa: DIAS.indexOf(p.folgaFixa) >= 0 ? p.folgaFixa : "",
+          salario: Number(p.salario) > 0 ? Number(p.salario) : null, horas: Number(p.horas) > 0 ? Math.min(60, Math.round(Number(p.horas))) : null,
+          folgaFixa: DIAS.indexOf(p.folgaFixa) >= 0 ? p.folgaFixa : "",
           naoPode: (p.naoPode || []).filter(function (d) { return DIAS.indexOf(d) >= 0; })
         };
       });

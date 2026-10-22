@@ -521,3 +521,9 @@ dialog h3 { margin: 0 0 14px; text-transform: none; letter-spacing: -.01em; colo
   .alertas li::before { top: 5px; left: 8px; }
   .cell, .pc, .pc .dot, .pp-chip .ini, .grid thead th, .grid tfoot td, .grid.por-turno td, .bars, .bars i, .lg, .op, .kpi, .kpi::before, .alertas li, .alertas li::before { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Economia (saída do painel × contratar só tempo integral) */
+.op .eco { margin-top: 8px; color: var(--text); }
+.op .eco b { color: var(--green); }
+.op.economia { border-color: var(--green); }
+.op.economia .v { color: var(--green); }
