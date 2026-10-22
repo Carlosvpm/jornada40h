@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { getDb, liberarAcesso } from "@/lib/db";
 import { ipDe, normalizaEmail } from "@/lib/auth";
 import { limitar } from "@/lib/limite";
+import { enviarAcesso } from "@/lib/email";
 
 function autorizado(req: Request): boolean {
   const chave = process.env.ADMIN_KEY || "";
@@ -24,7 +25,7 @@ export async function GET(req: Request) {
 }
 
 // Libera o acesso de um cliente (cria a conta) e grava a escala inicial, se vier.
-// Corpo: { email, nome?, estado?, substituir? }. O cliente entra em /painel/login com o e-mail e recebe um código.
+// Corpo: { email, nome?, estado?, substituir?, enviarEmail?, notas? }. O cliente entra em /painel/login com o e-mail e recebe um código.
 export async function POST(req: Request) {
   if (!autorizado(req)) return negar(req);
   const corpo = await req.json().catch(() => ({}));
@@ -40,6 +41,13 @@ export async function POST(req: Request) {
       db.prepare("INSERT INTO escalas (usuario_id, estado, atualizado_em) VALUES (?, ?, datetime('now')) ON CONFLICT(usuario_id) DO UPDATE SET estado = excluded.estado, atualizado_em = excluded.atualizado_em").run(id, estado);
     }
   })();
+  // enviarEmail: true manda o e-mail de "acesso liberado" (link, como entrar e as notas do caso).
+  let enviado = false;
+  if (corpo.enviarEmail === true) {
+    const notas = Array.isArray(corpo.notas) ? corpo.notas.filter((n: unknown) => typeof n === "string").map((n: string) => n.slice(0, 300)).slice(0, 8) : [];
+    try { await enviarAcesso(email, nome, notas); enviado = true; }
+    catch (e) { return NextResponse.json({ erro: "Conta liberada, mas o e-mail falhou: " + (e as Error).message }, { status: 502 }); }
+  }
   const base = process.env.PUBLIC_URL || new URL(req.url).origin;
-  return NextResponse.json({ link: `${base}/painel/login`, email });
+  return NextResponse.json({ link: `${base}/painel/login`, email, enviado });
 }
