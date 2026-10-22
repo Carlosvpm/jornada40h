@@ -397,6 +397,31 @@
     return fx.map(function (f) { return (f.def === 1 ? "falta 1" : "faltam " + f.def) + " das " + falada(f.ini) + " às " + falada(f.fim); }).join(", ");
   }
 
+  // Quantos turnos o horário pede na semana (pessoas ao mesmo tempo × turnos do dia) e quantas
+  // pessoas isso exige: cada uma faz no máximo 5 turnos (2 folgas). É isso que limita, não as horas.
+  function contaTurnos(s, v) {
+    var R = VERSOES[v], dias = montarDias(s.funcionamento, { jornadaDiariaMax: R.jornadaDiariaMax }), total = 0, porDia = {};
+    DIAS.forEach(function (d) {
+      var f = s.funcionamento[d]; if (!f) return;
+      var n = Math.max(1, (dias[d] && dias[d].turnos || []).length) * Math.max(1, Number(f.pessoas) || 1);
+      porDia[d] = n; total += n;
+    });
+    return { total: total, porDia: porDia, pessoas: Math.ceil(total / 5) };
+  }
+
+  // Monta a escala de novo com n pessoas a mais e mede o que ainda falta (memória por dados de entrada).
+  var simCache = {};
+  function simularContratacao(s, v, sem, n) {
+    var k = JSON.stringify([s.funcionamento, s.equipe, v, sem, n]);
+    if (simCache[k]) return simCache[k];
+    var s2 = { negocio: s.negocio, funcionamento: s.funcionamento, custos: s.custos, equipe: s.equipe.slice(), escalas: {} };
+    for (var i = 0; i < n; i++) s2.equipe.push({ id: "sim" + i, nome: "", funcao: "", naoPode: [] });
+    s2.escalas[v] = {};
+    SEMANAS.forEach(function (w) { s2.escalas[v][w] = gerar(s2, v, w); });
+    var c = calcular(s2, v, sem);
+    return (simCache[k] = { falta: c.falta, dias: DIAS.filter(function (d) { return c.dias[d].aberto && c.dias[d].falta; }), calc: c });
+  }
+
   // Saídas para cobrir as horas descobertas, com custo mensal.
   function custos(s, v, calc) {
     var R = VERSOES[v], C = s.custos;
@@ -410,36 +435,52 @@
     if (D > 0.01) {
       // Hora extra: limite legal de 2 h por pessoa por dia
       var maxDia = 0, inviavel = [];
+      var longo = false;
       DIAS.forEach(function (d) {
         var dia = calc.dias[d]; if (!dia.aberto || !dia.falta) return;
         var cap = 2 * (calc.trabalhandoNoDia[d] || 0);
-        if (dia.falta > cap + 1e-9) inviavel.push(NOME_DIA[d].toLowerCase());
+        // Hora extra estica um turno que já existe: até 2 h depois do fim ou antes do início.
+        var seguido = dia.faixas.some(function (fx) {
+          var ponta = fx.ini <= dia.abre || fx.fim >= dia.fecha;
+          return (fx.fim - fx.ini) / 60 > (ponta ? 2 : 4) + 1e-9;
+        });
+        if (seguido) longo = true;
+        if (dia.falta > cap + 1e-9 || seguido) inviavel.push(NOME_DIA[d].toLowerCase());
         maxDia = Math.max(maxDia, dia.falta / Math.max(1, calc.trabalhandoNoDia[d] || 0));
       });
       ops.push({
         id: "he", titulo: "Pagar hora extra", custo: (D + extraGrade) * SEM_POR_MES * valorHora * (1 + adic),
         viavel: !inviavel.length,
         txt: inviavel.length
-          ? "Não resolve sozinha: em " + inviavel.join(", ") + " seriam mais de 2 h extras por pessoa, acima do limite legal."
+          ? "Não resolve sozinha: em " + inviavel.join(", ") + (longo ? " o buraco passa de 2 h seguidas, e cada pessoa pode fazer no máximo 2 h extras por dia, esticando o próprio turno." : " seriam mais de 2 h extras por pessoa, acima do limite legal.")
           : horas(D) + " extras por semana divididas na equipe (até 2 h por pessoa por dia), com " + Math.round(adic * 100) + "% de adicional. Hora: " + brl(valorHora) + "."
       });
 
-      var hContrato, custoContr, txtContr;
-      if (D <= 30) {
-        hContrato = Math.min(30, Math.ceil(D / 2) * 2);
-        custoContr = sal * (hContrato / R.jornadaSemanal) * enc;
-        txtContr = "1 pessoa em contrato parcial de " + hContrato + " h por semana (salário proporcional × " + String(enc).replace(".", ",") + " de encargos), cobrindo os horários descobertos.";
+      // Contratar: monta a escala com 1, 2… pessoas a mais até cobrir tudo. A conta só por horas
+      // (falta ÷ jornada) engana: o que limita são os turnos por dia, e quem entra também tem 2 folgas.
+      var custoContr, txtContr, J = R.jornadaSemanal, parcial = function (h) { return Math.min(30, Math.ceil(h / 2) * 2); };
+      var sims = [{ falta: D, dias: DIAS.filter(function (d) { return calc.dias[d].aberto && calc.dias[d].falta; }) }];
+      for (var n = 1; n <= 4 && sims[n - 1].falta > 0.01; n++) sims.push(simularContratacao(s, v, s.semana || "A", n));
+      var nInt = sims.length - 1, cobre = sims[nInt].falta <= 0.01;
+      // Candidatas: k integrais + 1 meio período cobrindo o que ainda falta (até 30 h), ou só integrais.
+      var opcoesC = [];
+      sims.forEach(function (sm, k) {
+        if (sm.falta <= 0.01) opcoesC.push({ n: k, h: 0, custo: k * sal * enc });
+        else if (sm.falta <= 30) opcoesC.push({ n: k, h: parcial(sm.falta), dias: sm.dias, custo: k * sal * enc + sal * (parcial(sm.falta) / J) * enc });
+      });
+      var esc0 = opcoesC.sort(function (a, b) { return a.custo - b.custo; })[0];
+      var diasTxt = function (ds) { return (ds || []).map(function (d) { return NOME_DIA_CURTO[d].toLowerCase(); }).join(", "); };
+      if (esc0) {
+        custoContr = esc0.custo;
+        txtContr = (esc0.n ? esc0.n + (esc0.n === 1 ? " pessoa" : " pessoas") + " em tempo integral (" + R.rotulo + ")" + (esc0.h ? " e " : "") : "") +
+          (esc0.h ? (esc0.n ? "1 em" : "1 pessoa em") + " meio período de " + esc0.h + " h por semana, nos horários que faltam (" + diasTxt(esc0.dias) + ")" : "") +
+          ", com salário de " + brl(sal) + (esc0.h ? " (proporcional no meio período)" : "") + " × " + String(enc).replace(".", ",") + " de encargos.";
+        if (esc0.h && sims[esc0.n + 1]) txtContr += " Mais 1 pessoa em tempo integral no lugar do meio período sairia mais caro e ainda deixaria " + (sims[esc0.n + 1].falta > 0.01 ? horas(sims[esc0.n + 1].falta) + " sem cobertura" : "horas sobrando") + ": o que falta são turnos em dias específicos, não horas na semana.";
       } else {
-        // Tempo integral para o grosso; o que sobra vira contrato parcial (até 30 h) ou mais 1 integral.
-        var n = Math.floor(D / R.jornadaSemanal), resto = D - n * R.jornadaSemanal;
-        var hParcial = resto > 0.01 && resto <= 30 ? Math.min(30, Math.ceil(resto / 2) * 2) : 0;
-        if (resto > 30) n++;
-        custoContr = n * sal * enc + (hParcial ? sal * (hParcial / R.jornadaSemanal) * enc : 0);
-        txtContr = n + (n === 1 ? " pessoa" : " pessoas") + " em tempo integral (" + R.rotulo + ")" +
-          (hParcial ? " e 1 em contrato parcial de " + hParcial + " h" : "") +
-          ", com salário de " + brl(sal) + (hParcial ? " (proporcional no parcial)" : "") + " × " + String(enc).replace(".", ",") + " de encargos.";
+        custoContr = nInt * sal * enc;
+        txtContr = nInt + " pessoas em tempo integral ainda deixam " + horas(sims[nInt].falta) + " sem cobertura. Vale rever o horário de funcionamento ou o número de pessoas por dia.";
       }
-      ops.push({ id: "contratar", titulo: "Contratar", custo: custoContr + extraGrade * SEM_POR_MES * valorHora * (1 + adic), viavel: true, txt: txtContr, acao: "Colocar 1 pessoa nova na escala" });
+      ops.push({ id: "contratar", titulo: "Contratar", custo: custoContr + extraGrade * SEM_POR_MES * valorHora * (1 + adic), viavel: !!esc0, txt: txtContr, acao: "Colocar 1 pessoa nova na escala" });
 
       var piores = DIAS.filter(function (d) { return calc.dias[d].aberto && calc.dias[d].falta; });
       ops.push({
@@ -648,6 +689,11 @@
         "Por isso ficam <b>" + horas(calc.falta) + " sem cobertura</b>" + (pede > capac ? ", e só a diferença entre o que o horário pede e o que a equipe tem já dá " + horas(pede - capac) + "." : ".") +
         " O card de custos mostra quanto sai cada jeito de cobrir.</p>";
     } else conta += "Todo o horário está coberto.</p>";
+    var ct = contaTurnos(state, state.versao);
+    conta += "<p><b>A conta dos turnos.</b> Mais importante que as horas é o número de turnos: o seu horário pede <b>" + ct.total + " turnos por semana</b> (" +
+      DIAS.filter(function (d) { return ct.porDia[d]; }).map(function (d) { return NOME_DIA_CURTO[d].toLowerCase() + " " + ct.porDia[d]; }).join(", ") +
+      "), e cada pessoa faz no máximo 5, por causa das 2 folgas. Para cobrir tudo são necessárias <b>" + ct.pessoas + " pessoas</b>; hoje a equipe tem " + state.equipe.length + "." +
+      (ct.pessoas > state.equipe.length ? " Faltam os turnos de " + (ct.pessoas - state.equipe.length) + (ct.pessoas - state.equipe.length === 1 ? " pessoa" : " pessoas") + ", mesmo que a soma das horas pareça dar. O card de custos mostra a saída mais barata, que pode ser um meio período só nos dias que faltam." : "") + "</p>";
     $("#explicaTxt").innerHTML = "<ul>" + li.join("") + "</ul>" + conta +
       "<p><b>Folgas.</b> Cada pessoa tem 2 folgas por semana e pelo menos 11 h de descanso entre um dia e outro. Quem folga no fim de semana alterna entre as semanas A e B, para ninguém trabalhar todo sábado e domingo.</p>" + baseLegal();
   }

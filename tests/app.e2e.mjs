@@ -97,6 +97,17 @@ try {
   ok(await page.getAttribute(".side-nav [data-v=\"40\"]", "aria-selected") === "true", "item 40 h ativo na sidebar");
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "app-40b.png"), fullPage: true });
 
+  console.log("5b. custos por simulação (padaria de 5 pessoas, 33 turnos)");
+  {
+    const p5 = await (await browser.newContext()).newPage();
+    await p5.goto(BASE + "/app/#d=" + hash); await p5.waitForSelector("#grid [data-p]");
+    const ops = await p5.textContent("#opcoes");
+    ok(/Pagar hora extra[\s\S]*não resolve/.test(ops), "hora extra não resolve buraco de 5 h seguidas");
+    ok(/meio período de \d+ h/.test(ops) && /turnos em dias específicos/.test(ops), "contratar sugere integral + meio período e explica por quê");
+    ok(/33 turnos por semana/.test(await p5.textContent("#explicaTxt")) && /7 pessoas/.test(await p5.textContent("#explicaTxt")), "conta: 33 turnos pedem 7 pessoas");
+    await p5.close();
+  }
+
   console.log("6. simular contratação");
   const n0 = await page.locator("#grid tbody tr").count();
   const acao = page.locator('[data-acao="contratar"]');
@@ -156,6 +167,8 @@ try {
   await page.keyboard.press("Escape");
   ok(/A conta das horas/.test(await page.textContent("#explicaTxt")), "explicação de como a escala foi montada");
   ok(/Valor da hora/.test(await page.textContent("#custoCalc")), "explicação do cálculo dos custos");
+  const contaT = await page.textContent("#explicaTxt");
+  ok(/A conta dos turnos/.test(contaT) && /turnos por semana/.test(contaT), "explicação da conta dos turnos");
   ok(await page.evaluate(() => localStorage.getItem("j40h:vista")) === "turno", "visão escolhida fica guardada");
   ok(await page.locator('#explicaTxt a.lei[href*="planalto.gov.br"]').count() >= 5, "base legal com link para a lei");
   ok(/CLT, art\. 66/.test(await page.textContent("#explicaTxt")), "explicação cita o artigo do descanso de 11 h");
