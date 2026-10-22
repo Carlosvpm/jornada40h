@@ -2,7 +2,9 @@
   "name": "jornada40h-painel",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "sync-escala": "node scripts/sync-escala.mjs",
     "dev": "npm run sync-escala && next dev -p 3040",
@@ -11,6 +13,7 @@
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.1.0",
     "better-sqlite3": "13.0.3",
     "next": "16.4.2",
     "react": "19.3.1",

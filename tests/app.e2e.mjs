@@ -46,6 +46,8 @@ const hash = Buffer.from(JSON.stringify(estado)).toString("base64url");
 const browser = await chromium.launch({ channel: process.env.PW ? undefined : "chrome" });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 }, acceptDownloads: true });
+  // Estes passos usam a visão por pessoa (uma linha por pessoa); a visão por turno tem a seção 9b.
+  await ctx.addInitScript(() => { try { if (!sessionStorage.getItem("vistaOk")) { localStorage.setItem("j40h:vista", "pessoa"); sessionStorage.setItem("vistaOk", "1"); } } catch (e) {} });
   const page = await ctx.newPage();
   const erros = [];
   page.on("pageerror", e => erros.push(e.message));
@@ -141,10 +143,26 @@ try {
   await page.click('[data-tema="system"]');
   ok(await page.evaluate(() => !document.documentElement.dataset.theme), "volta a seguir o sistema");
 
+  console.log("9b. visão por turno");
+  await page.click('#vistas [data-vista="turno"]');
+  await page.waitForSelector("#grid.por-turno .pc");
+  const nomesTurno = await page.$$eval("#grid.por-turno tbody td.p b", els => els.map(e => e.textContent));
+  ok(nomesTurno.includes("Abertura") && nomesTurno.includes("Folga"), "linhas por turno: " + nomesTurno.join(", "));
+  const est = await page.evaluate(() => window.__j40h.state);
+  const trabalhamSeg = est.equipe.filter(p => (est.escalas[est.versao][est.semana][p.id] || {}).seg?.tipo === "turno").length;
+  ok(await page.locator('#grid.por-turno tbody tr:not(.g-folga):not(.g-livre) .pc[data-d="seg"]').count() === trabalhamSeg, "cada pessoa que trabalha na segunda aparece num turno");
+  await page.locator('#grid.por-turno .g-folga .pc').first().click();
+  ok(await page.isVisible("#dlg"), "clicar na pessoa abre a edição do dia dela");
+  await page.keyboard.press("Escape");
+  ok(/A conta das horas/.test(await page.textContent("#explicaTxt")), "explicação de como a escala foi montada");
+  ok(/Valor da hora/.test(await page.textContent("#custoCalc")), "explicação do cálculo dos custos");
+  ok(await page.evaluate(() => localStorage.getItem("j40h:vista")) === "turno", "visão escolhida fica guardada");
+  await page.click('#vistas [data-vista="pessoa"]');
+
   console.log("10. celular");
   const m = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await m.goto(BASE + "/app/#d=" + hash);
-  await m.waitForSelector("#grid button.cell");
+  await m.waitForSelector("#grid [data-p]");
   const largura = await m.evaluate(() => document.documentElement.scrollWidth);
   ok(largura <= 390, "sem rolagem horizontal da página no celular (" + largura + "px)");
   if (SHOTS) await m.screenshot({ path: path.join(SHOTS, "app-mobile.png"), fullPage: true });
@@ -152,7 +170,7 @@ try {
   console.log("11. sem link: abre exemplo");
   const p2 = await (await browser.newContext()).newPage();
   await p2.goto(BASE + "/app/");
-  await p2.waitForSelector("#grid button.cell");
+  await p2.waitForSelector("#grid [data-p]");
   ok(await p2.evaluate(() => document.querySelector("#cfg").open), "exemplo abre com a configuração aberta");
 
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));

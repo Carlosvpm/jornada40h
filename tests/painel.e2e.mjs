@@ -26,7 +26,7 @@ fs.cpSync(path.join(PAINEL, "public"), path.join(STANDALONE, "public"), { recurs
 
 const srv = spawn(process.execPath, ["server.js"], {
   cwd: STANDALONE,
-  env: { ...process.env, PORT: String(PORTA), HOSTNAME: "127.0.0.1", DATA_DIR, ADMIN_KEY, NODE_ENV: "production", EMAIL_DEV_LOG: "1", RESEND_API_KEY: "" },
+  env: { ...process.env, PORT: String(PORTA), HOSTNAME: "127.0.0.1", DATA_DIR, ADMIN_KEY, NODE_ENV: "production", EMAIL_DEV_LOG: "1", RESEND_API_KEY: "", ANTHROPIC_API_KEY: "", IA_MOCK: "1" },
   stdio: ["ignore", "pipe", "pipe"],
 });
 let log = "";
@@ -59,7 +59,7 @@ async function entrarPelaTela(page, email) {
   await espera(() => ultimoCodigo(email) && ultimoCodigo(email) !== antes);
   await page.fill("input[name=codigo]", ultimoCodigo(email));
   await page.click("button[type=submit]");
-  await page.waitForSelector("#grid button.cell", { timeout: 15000 });
+  await page.waitForSelector("#grid [data-p]", { timeout: 15000 });
 }
 
 const browser = await chromium.launch({ channel: process.env.PW ? undefined : "chrome" });
@@ -74,7 +74,9 @@ try {
   console.log("2. acesso liberado + login por código");
   const rl = await liberar("Cliente@Exemplo.com", { nome: "Cliente", estado });
   ok(rl.ok && /\/painel\/login$/.test((await rl.json()).link), "acesso liberado devolve o link do login");
-  const page = await browser.newPage({ viewport: { width: 1360, height: 900 } });
+  const ctxP = await browser.newContext({ viewport: { width: 1360, height: 900 } });
+  await ctxP.addInitScript(() => { try { localStorage.setItem("j40h:vista", "pessoa"); } catch (e) {} });
+  const page = await ctxP.newPage();
   const erros = [];
   page.on("pageerror", e => erros.push(e.message));
   await entrarPelaTela(page, "cliente@exemplo.com");
@@ -92,6 +94,23 @@ try {
   await page.reload();
   await page.waitForSelector("#grid button.cell");
   ok(await page.locator("#grid .cell.folga").count() === folgas, "edição continua depois de recarregar");
+
+  console.log("3b. ajuste com IA (resposta simulada)");
+  ok(await page.isVisible("#btnIA"), "botão Ajuste com IA aparece no painel");
+  await page.click("#btnIA");
+  await page.fill("#iaPedido", "A primeira pessoa não pode trabalhar aos sábados");
+  await page.click('[data-ia="enviar"]');
+  await page.waitForSelector("#iaResultado:not([hidden]) .ia-comp", { timeout: 15000 });
+  ok(/sábado/.test(await page.textContent("#iaResultado")), "proposta mostra resumo e o que muda");
+  ok(await page.locator(".ia-comp tbody tr").count() === 4, "comparação antes e depois");
+  const antesIA = await page.evaluate(() => JSON.stringify(window.__j40h.state.equipe));
+  await page.click('[data-ia="aplicar"]');
+  const eq = await page.evaluate(() => window.__j40h.state.equipe);
+  ok(eq[0].naoPode.includes("sab") && JSON.stringify(eq) !== antesIA, "aplicar grava a proposta");
+  await page.click('#iaDica [data-dica="desfazer"]');
+  ok(await page.evaluate(() => JSON.stringify(window.__j40h.state.equipe)) === antesIA, "desfazer volta ao que era");
+  const semLogin = await fetch(BASE + "/painel/api/ia", { method: "POST", body: "{}" });
+  ok(semLogin.status === 401, "IA sem login → 401");
 
   console.log("4. sair, código errado, entrar de novo");
   await page.click("#btnLink");

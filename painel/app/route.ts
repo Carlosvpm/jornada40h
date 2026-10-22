@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { usuarioAtual } from "@/lib/auth";
+import { iaAtiva } from "@/lib/ia";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
   const u = await usuarioAtual();
   // Atrás do proxy, req.url traz o host interno (0.0.0.0:3040): usa o endereço público.
   if (!u) return NextResponse.redirect(new URL("/painel/login", process.env.PUBLIC_URL || req.url));
-  const config = { api: "/painel/api/escala", sair: "/painel/api/logout", login: "/painel/login", usuario: { nome: u.nome, email: u.email } };
+  const config = { api: "/painel/api/escala", ia: iaAtiva() ? "/painel/api/ia" : null, sair: "/painel/api/logout", login: "/painel/login", usuario: { nome: u.nome, email: u.email } };
   const js = JSON.stringify(config).replace(/</g, "\\u003c");
   return new NextResponse(html().replace("__CONFIG__", `<script>window.J40H_PAINEL=${js}</script>`), {
     headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },

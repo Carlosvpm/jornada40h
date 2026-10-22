@@ -32,6 +32,7 @@
   function falada(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; var h = Math.floor(m / 60), r = m % 60; return r ? h + "h" + (r < 10 ? "0" : "") + r : h + "h"; }
   function horas(h) { var v = Math.round(h * 10) / 10; return String(v).replace(".", ",") + " h"; }
   function brl(v) { return "R$ " + Math.round(v).toLocaleString("pt-BR"); }
+  function brl2(v) { return "R$ " + v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function uid() { return Math.random().toString(36).slice(2, 9); }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -484,15 +485,158 @@
     return ((partes[0] || "?")[0] + (partes.length > 1 ? partes[partes.length - 1][0] : "")).toUpperCase();
   }
 
+  var vista = (function () { try { return localStorage.getItem("j40h:vista") === "pessoa" ? "pessoa" : "turno"; } catch (e) { return "turno"; } })();
+
   function renderGrade(calc) {
-    var v = state.versao, sem = state.semana, R = VERSOES[v];
-    var h = '<thead><tr><th class="p cap">Equipe</th>';
+    if (vista === "pessoa") renderGradePessoa(calc); else renderGradeTurno(calc);
+    $("#grid").className = "grid " + (vista === "pessoa" ? "por-pessoa" : "por-turno");
+    document.querySelectorAll("#vistas [data-vista]").forEach(function (b) { b.setAttribute("aria-selected", b.dataset.vista === vista ? "true" : "false"); });
+    $("#legenda").hidden = vista === "turno";
+    $("#pend").hidden = !state.pendente;
+    renderEquipe(calc);
+    renderExplica(calc);
+    $("#gradeNota").textContent = "Semana " + state.semana + ": quem folga no fim de semana alterna entre as semanas A e B. Intervalo de refeição (1 h para turnos acima de 6 h) fica dentro do turno e não conta como trabalho: combine o horário para não esvaziar o balcão.";
+  }
+
+  function thDias() {
+    var h = "";
     DIAS.forEach(function (d) {
       var f = state.funcionamento[d];
       h += '<th class="dia' + (d === HOJE ? " hoje" : "") + '"><button type="button" class="dia-b" data-dia="' + d + '" title="Editar horário de ' + NOME_DIA[d] + '"><b>' + NOME_DIA[d] + '<svg class="ic"><use href="#i-edit"/></svg></b>' +
-        (f ? '<span class="hr">' + falada(min(f.abre)) + "–" + falada(min(f.fecha)) + '</span><span class="pp"><svg class="ic"><use href="#i-users"/></svg>' + f.pessoas + "</span>"
+        (f ? '<span class="hr">' + falada(min(f.abre)) + "–" + falada(min(f.fecha)) + '</span><span class="pp" title="pessoas ao mesmo tempo"><svg class="ic"><use href="#i-users"/></svg>' + f.pessoas + "</span>"
            : '<span class="hr">fechado</span>') + "</button></th>";
     });
+    return h;
+  }
+
+  function tfootCobertura(calc) {
+    var h = '<tfoot><tr class="cob"><td class="p">Cobertura</td>';
+    DIAS.forEach(function (d) {
+      var dia = calc.dias[d];
+      if (!dia.aberto) { h += "<td></td>"; return; }
+      h += '<td><div class="bars">' + dia.blocos.map(function (b) { return "<i" + (b.n < b.need ? ' class="f"' : b.n > b.need ? ' class="s"' : "") + ' title="' + hhmm(b.t) + ": " + b.n + " de " + b.need + '"></i>'; }).join("") + "</div>";
+      h += dia.falta ? '<div class="cobtxt f"><b>' + horas(dia.falta) + " a cobrir</b><span>" + esc(textoFaixa(dia.faixas)) + "</span></div>" : '<div class="cobtxt"><b>Coberto</b></div>';
+      h += "</td>";
+    });
+    return h + (vista === "pessoa" ? "<td></td>" : "") + "</tr></tfoot>";
+  }
+
+  // Grupo do turno pelo horário (não pelo rótulo): vale também para turnos editados à mão.
+  var GRUPOS = [
+    { id: "abertura", nome: "Abertura", sub: "entra quando abre" },
+    { id: "meio", nome: "Meio do dia", sub: "reforço no movimento" },
+    { id: "fechamento", nome: "Fechamento", sub: "sai quando fecha" },
+    { id: "dia", nome: "Dia todo", sub: "abre e fecha" },
+    { id: "folga", nome: "Folga", sub: "descanso da semana" },
+    { id: "livre", nome: "Reserva", sub: "sem turno marcado" }
+  ];
+
+  function grupoDe(c, f) {
+    if (c.tipo !== "turno") return c.tipo;
+    var a = min(f.abre), b = min(f.fecha); if (b <= a) b += 1440;
+    var i = min(c.inicio), e = min(c.fim); if (e <= i) e += 1440;
+    var abre = i <= a + 15, fecha = e >= b - 15;
+    return abre && fecha ? "dia" : abre ? "abertura" : fecha ? "fechamento" : "meio";
+  }
+
+  function renderGradeTurno(calc) {
+    var v = state.versao, sem = state.semana;
+    var mapa = {};
+    GRUPOS.forEach(function (g) { mapa[g.id] = {}; DIAS.forEach(function (d) { mapa[g.id][d] = []; }); });
+    state.equipe.forEach(function (p, i) {
+      DIAS.forEach(function (d) {
+        var f = state.funcionamento[d]; if (!f) return;
+        var c = celula(state, v, sem, p.id, d);
+        mapa[grupoDe(c, f)][d].push({ p: p, i: i, c: c, err: !!calc.pessoas[i].erros[d] });
+      });
+    });
+    var h = '<thead><tr><th class="p cap">Turno</th>' + thDias() + "</tr></thead><tbody>";
+    GRUPOS.forEach(function (g) {
+      var tem = DIAS.some(function (d) { return mapa[g.id][d].length; });
+      if (!tem && g.id !== "folga") return;
+      h += '<tr class="g-' + g.id + '"><td class="p"><b>' + g.nome + "</b><small>" + g.sub + "</small></td>";
+      DIAS.forEach(function (d) {
+        var lista = mapa[g.id][d], hj = d === HOJE ? " hoje" : "";
+        if (!state.funcionamento[d]) { h += '<td class="fech' + hj + '"></td>'; return; }
+        // Horário mais comum do turno no dia vai no topo; quem foge dele mostra o próprio horário.
+        var cont = {}, topo = "";
+        lista.forEach(function (x) { if (x.c.tipo === "turno") { var k = x.c.inicio + "-" + x.c.fim; cont[k] = (cont[k] || 0) + 1; if (!topo || cont[k] > cont[topo]) topo = k; } });
+        h += '<td class="' + hj.trim() + '">';
+        if (topo) { var tt = topo.split("-"); h += '<div class="faixa">' + falada(min(tt[0])) + "–" + falada(min(tt[1])) + "</div>"; }
+        h += '<div class="pcs">';
+        lista.forEach(function (x) {
+          var k = x.c.tipo === "turno" ? x.c.inicio + "-" + x.c.fim : "";
+          var dif = k && k !== topo ? "<small>" + falada(min(x.c.inicio)) + "–" + falada(min(x.c.fim)) + "</small>" : "";
+          var tit = x.p.nome + " · " + NOME_DIA[d] + (x.c.tipo === "turno" ? " · " + falada(min(x.c.inicio)) + "–" + falada(min(x.c.fim)) + " (" + horas(dur(x.c)) + ")" : x.c.tipo === "folga" ? " · folga" : " · reserva");
+          h += '<button type="button" class="pc c' + (x.i % 8) + (x.err ? " erro" : "") + '" data-p="' + x.p.id + '" data-d="' + d + '" title="' + esc(tit) + '"><span class="dot"></span><span class="nm">' + esc(x.p.nome || "Pessoa") + "</span>" + dif + "</button>";
+        });
+        h += "</div></td>";
+      });
+      h += "</tr>";
+    });
+    h += "</tbody>" + tfootCobertura(calc);
+    $("#grid").innerHTML = h;
+  }
+
+  function renderEquipe(calc) {
+    var R = VERSOES[state.versao];
+    var h = state.equipe.map(function (p, i) {
+      var pc = calc.pessoas[i], over = pc.horas > R.jornadaSemanal + 1e-9;
+      var tags = [];
+      if (p.folgaFixa) tags.push("folga " + NOME_DIA_CURTO[p.folgaFixa].toLowerCase());
+      if (p.naoPode && p.naoPode.length) tags.push("não pode " + p.naoPode.map(function (d) { return NOME_DIA_CURTO[d].toLowerCase(); }).join(", "));
+      return '<button type="button" class="pp-chip c' + (i % 8) + '" data-pessoa="' + p.id + '" title="Editar ' + esc(p.nome) + '"><span class="ini">' + esc(iniciais(pc.nome)) + "</span><span><b>" + esc(pc.nome) + '</b><small><span class="' + (over ? "over" : "") + '">' + horas(pc.horas) + "</span>" + (p.funcao ? " · " + esc(p.funcao) : "") + (tags.length ? " · " + esc(tags.join(" · ")) : "") + "</small></span></button>";
+    }).join("");
+    $("#equipeStrip").innerHTML = h + '<button type="button" class="pp-chip add" id="btnAddPessoa2"><span class="ini"><svg class="ic"><use href="#i-plus"/></svg></span><span><b>Adicionar</b><small>pessoa na equipe</small></span></button>';
+  }
+
+  // Explica a escala com os números dela: turnos de cada dia e a conta das horas.
+  function renderExplica(calc) {
+    var R = VERSOES[state.versao];
+    var dias = montarDias(state.funcionamento, { jornadaDiariaMax: R.jornadaDiariaMax });
+    var grupos = [];
+    DIAS.forEach(function (d) {
+      var f = state.funcionamento[d]; if (!f) return;
+      var k = f.abre + f.fecha + f.pessoas, g = grupos.filter(function (x) { return x.k === k; })[0];
+      if (g) g.dias.push(d); else grupos.push({ k: k, dias: [d], f: f, turnos: (dias[d] && dias[d].turnos) || [] });
+    });
+    var nomeDias = function (ds) {
+      var idx = ds.map(function (d) { return DIAS.indexOf(d); });
+      var seguidos = idx.every(function (x, j) { return !j || x === idx[j - 1] + 1; });
+      if (ds.length > 2 && seguidos) return NOME_DIA[ds[0]] + " a " + NOME_DIA[ds[ds.length - 1]].toLowerCase();
+      return ds.map(function (d, j) { return j ? NOME_DIA[d].toLowerCase() : NOME_DIA[d]; }).join(ds.length === 2 ? " e " : ", ");
+    };
+    var li = grupos.map(function (g) {
+      var aberto = dur({ inicio: g.f.abre, fim: g.f.fecha });
+      var t = "<b>" + nomeDias(g.dias) + "</b>: aberto " + falada(min(g.f.abre)) + "–" + falada(min(g.f.fecha)) + " (" + horas(aberto) + "), com " + g.f.pessoas + (Number(g.f.pessoas) === 1 ? " pessoa" : " pessoas") + " ao mesmo tempo. ";
+      if (g.turnos.length <= 1) t += "Cabe num turno só de " + horas(aberto) + ".";
+      else {
+        t += "Como ninguém pode passar de " + horas(R.jornadaDiariaMax) + " por dia, o dia vira " + g.turnos.length + " turnos: " +
+          g.turnos.map(function (x) { return x.rotulo.toLowerCase() + " " + falada(x.inicio) + "–" + falada(x.fim); }).join(", ") + ".";
+        var a = g.turnos[0], b = g.turnos[1];
+        if (b && b.inicio < a.fim) t += " Eles se cruzam das " + falada(b.inicio) + " às " + falada(a.fim) + ": é a hora da troca e do intervalo de refeição.";
+      }
+      return "<li>" + t + "</li>";
+    });
+    var pede = 0;
+    DIAS.forEach(function (d) { var f = state.funcionamento[d]; if (f) pede += dur({ inicio: f.abre, fim: f.fecha }) * Math.max(1, Number(f.pessoas) || 1); });
+    var trab = calc.pessoas.reduce(function (t, p) { return t + p.horas; }, 0);
+    var capac = state.equipe.length * R.jornadaSemanal;
+    var conta = "<p><b>A conta das horas.</b> O seu horário pede <b>" + horas(pede) + "</b> de trabalho por semana (horas abertas × pessoas ao mesmo tempo). " +
+      "A equipe tem até <b>" + horas(capac) + "</b> (" + state.equipe.length + " × " + R.rotulo + ") e está escalada para <b>" + horas(trab) + "</b>. ";
+    if (calc.falta > 0.01) {
+      conta += (calc.sobra > 0.01 ? horas(calc.sobra) + " dessas horas caem em horários que já têm gente suficiente (quando os turnos se cruzam) e não cobrem outro horário. " : "") +
+        "Por isso ficam <b>" + horas(calc.falta) + " sem cobertura</b>" + (pede > capac ? ", e só a diferença entre o que o horário pede e o que a equipe tem já dá " + horas(pede - capac) + "." : ".") +
+        " O card de custos mostra quanto sai cada jeito de cobrir.</p>";
+    } else conta += "Todo o horário está coberto.</p>";
+    $("#explicaTxt").innerHTML = "<ul>" + li.join("") + "</ul>" + conta +
+      "<p><b>Folgas.</b> Cada pessoa tem 2 folgas por semana e pelo menos 11 h de descanso entre um dia e outro. Quem folga no fim de semana alterna entre as semanas A e B, para ninguém trabalhar todo sábado e domingo.</p>";
+  }
+
+  function renderGradePessoa(calc) {
+    var v = state.versao, sem = state.semana, R = VERSOES[v];
+    var h = '<thead><tr><th class="p cap">Equipe</th>';
+    h += thDias();
     h += '<th class="h cap">Horas</th></tr></thead><tbody>';
     state.equipe.forEach(function (p, i) {
       var pc = calc.pessoas[i];
@@ -512,18 +656,8 @@
       var pct = Math.min(100, Math.round(pc.horas / R.jornadaSemanal * 100));
       h += '<td class="h' + (pc.horas > R.jornadaSemanal + 1e-9 ? " over" : "") + '"><b>' + horas(pc.horas) + '</b><span class="hbar" title="' + horas(pc.horas) + " de " + horas(R.jornadaSemanal) + '"><i style="width:' + pct + '%"></i></span></td></tr>';
     });
-    h += '</tbody><tfoot><tr class="cob"><td class="p">Cobertura</td>';
-    DIAS.forEach(function (d) {
-      var dia = calc.dias[d];
-      if (!dia.aberto) { h += "<td></td>"; return; }
-      h += '<td><div class="bars">' + dia.blocos.map(function (b) { return "<i" + (b.n < b.need ? ' class="f"' : b.n > b.need ? ' class="s"' : "") + ' title="' + hhmm(b.t) + ": " + b.n + " de " + b.need + '"></i>'; }).join("") + "</div>";
-      h += dia.falta ? '<div class="cobtxt f"><b>' + horas(dia.falta) + " a cobrir</b><span>" + esc(textoFaixa(dia.faixas)) + "</span></div>" : '<div class="cobtxt"><b>Coberto</b></div>';
-      h += "</td>";
-    });
-    h += "<td></td></tr></tfoot>";
+    h += "</tbody>" + tfootCobertura(calc);
     $("#grid").innerHTML = h;
-    $("#pend").hidden = !state.pendente;
-    $("#gradeNota").textContent = "Semana " + sem + ": quem folga no fim de semana alterna entre as semanas A e B. Intervalo de refeição (1 h para turnos acima de 6 h) fica dentro do turno e não conta como trabalho: combine o horário para não esvaziar o balcão.";
   }
 
   function renderCustos(cus) {
@@ -539,6 +673,16 @@
         (o.acao ? '<button type="button" class="b ghost sm acao" data-acao="' + o.id + '">' + esc(o.acao) + "</button>" : "") + "</div>";
     });
     $("#opcoes").innerHTML = h;
+    var R = VERSOES[state.versao], C = state.custos, enc = Number(C.encargos) || 1, sal = Number(C.salario) || 0, adic = (Number(C.he) || 50) / 100;
+    var calc = [
+      "<b>Custo de um funcionário:</b> salário de " + brl(sal) + " × " + String(enc).replace(".", ",") + " = " + brl(sal * enc) + " por mês. O multiplicador junta encargos, férias, 13º e FGTS.",
+      "<b>Valor da hora:</b> " + brl(sal) + " ÷ " + (R.jornadaSemanal * 5) + " h por mês (" + R.rotulo + " × 5 semanas) = " + brl2(cus.valorHora) + ".",
+      "<b>Hora extra:</b> " + brl2(cus.valorHora) + " + " + Math.round(adic * 100) + "% = " + brl2(cus.valorHora * (1 + adic)) + " por hora, no máximo 2 h por pessoa por dia.",
+      "<b>Horas sem cobertura por mês:</b> " + horas(cus.D) + " por semana × " + String(SEM_POR_MES).replace(".", ",") + " semanas = " + horas(cus.D * SEM_POR_MES) + "."
+    ];
+    if (cus.extraGrade > 0.01) calc.push("<b>Hora extra já na grade:</b> " + horas(cus.extraGrade) + " por semana, somada em todas as opções.");
+    calc.push("<b>Contratar:</b> tempo integral para cada " + R.rotulo + " que falta; o resto (até 30 h) vira contrato parcial com salário proporcional.");
+    $("#custoCalc").innerHTML = calc.map(function (x) { return "<li>" + x + "</li>"; }).join("");
   }
 
   function renderAlertas(calc, cus) {
@@ -634,6 +778,9 @@
 
   function salvarCelula() {
     if (!editando) return;
+    var snap = JSON.stringify(state), antes = metricas(state);
+    var pe = state.equipe.filter(function (x) { return x.id === editando.id; })[0];
+    var rot = (pe ? pe.nome : "Pessoa") + " · " + NOME_DIA[editando.d].toLowerCase();
     var tipo = (document.querySelector("#dlgForm input[name=tipo]:checked") || {}).value || "livre";
     var g = state.escalas[state.versao][state.semana];
     g[editando.id] = g[editando.id] || {};
@@ -644,6 +791,7 @@
     } else g[editando.id][editando.d] = { tipo: tipo };
     editando = null;
     salvar(); render();
+    verificarPiora(snap, antes, "Mudei " + rot);
     return true;
   }
 
@@ -720,7 +868,7 @@
     document.querySelectorAll("[data-s]").forEach(function (b) { b.addEventListener("click", function () { state.semana = b.dataset.s; salvar(); render(); }); });
 
     $("#grid").addEventListener("click", function (e) {
-      var b = e.target.closest("button.cell"); if (b) return abrirCelula(b.dataset.p, b.dataset.d);
+      var b = e.target.closest("button[data-p][data-d]"); if (b) return abrirCelula(b.dataset.p, b.dataset.d);
       var w = e.target.closest("[data-pessoa]"); if (w) return abrirPessoa(w.dataset.pessoa);
       var dd = e.target.closest("[data-dia]"); if (dd) return abrirDia(dd.dataset.dia);
     });
@@ -902,6 +1050,7 @@
   function salvarPessoa() {
     var nome = $("#pNome").value.trim();
     if (!nome) { toast("Escreva o nome da pessoa."); $("#pNome").focus(); return false; }
+    var snap = JSON.stringify(state), antes = metricas(state);
     var naoPode = Array.prototype.map.call(document.querySelectorAll("#pNaoPode [data-pnp]:checked"), function (x) { return x.dataset.pnp; });
     var fixa = $("#pFixa").value;
     var p = pessoaEd ? state.equipe.filter(function (x) { return x.id === pessoaEd; })[0] : null;
@@ -916,6 +1065,7 @@
     p.folgaFixa = fixa;
     p.naoPode = naoPode;
     salvar(); renderCfg(); render();
+    verificarPiora(snap, antes, "Editei " + nome);
   }
 
   function abrirDia(d) {
@@ -931,6 +1081,7 @@
   }
 
   function salvarDia() {
+    var snap = JSON.stringify(state), m0 = metricas(state);
     var antes = JSON.stringify(state.funcionamento[diaEd] || null);
     if (!$("#dAberto").checked) state.funcionamento[diaEd] = null;
     else {
@@ -939,10 +1090,230 @@
     }
     if (JSON.stringify(state.funcionamento[diaEd]) !== antes) marcarPendente();
     salvar(); renderCfg(); render();
+    verificarPiora(snap, m0, "Mudei o horário de " + NOME_DIA[diaEd].toLowerCase());
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Métricas, desfazer e Ajuste com IA                                 */
+  /* ------------------------------------------------------------------ */
+
+  function metricas(s) {
+    var c = calcular(s, s.versao, s.semana), k = custos(s, s.versao, c);
+    var best = k.ops.filter(function (o) { return o.best; })[0];
+    return { falta: c.falta, erros: c.erros.length, custo: best ? best.custo : 0, folha: k.folha, calc: c, cus: k };
+  }
+
+  function problemas(a, b) {
+    var p = [];
+    if (b.falta > a.falta + 0.01) p.push("mais " + horas(b.falta - a.falta) + " sem cobertura por semana");
+    if (b.erros > a.erros) p.push((b.erros - a.erros) + (b.erros - a.erros === 1 ? " ponto novo fora da lei" : " pontos novos fora da lei"));
+    if (b.custo > a.custo + 1) p.push("custo extra sobe " + brl(b.custo - a.custo) + "/mês");
+    return p;
+  }
+
+  var desfazerSnap = null;
+  function desfazer() {
+    if (!desfazerSnap) return;
+    state = normalizar(JSON.parse(desfazerSnap)); desfazerSnap = null;
+    salvar(); renderCfg(); render();
+    $("#iaDica").hidden = true;
+    toast("Mudança desfeita.");
+  }
+
+  function dica(html, botoes) {
+    $("#iaDica").innerHTML = '<div class="txt">' + html + '</div><div class="bts">' + botoes + '<button type="button" class="x" data-dica="fechar" title="Fechar">×</button></div>';
+    $("#iaDica").hidden = false;
+  }
+
+  // Depois de uma edição à mão: se piorou cobertura, lei ou custo, avisa e oferece desfazer ou pedir à IA.
+  function verificarPiora(snap, antes, rotulo) {
+    var p = problemas(antes, metricas(state));
+    if (!p.length) { $("#iaDica").hidden = true; return; }
+    desfazerSnap = snap;
+    var pedido = rotulo + ". Isso causou: " + p.join("; ") + ". Mantendo essa mudança, como resolvo esses problemas?";
+    dica("<b>Atenção:</b> essa mudança deixou " + esc(p.join(", ")) + ".",
+      '<button type="button" class="b ghost sm" data-dica="desfazer">Desfazer</button>' +
+      (PAINEL && PAINEL.ia ? '<button type="button" class="b ia sm" data-dica="ia" data-pedido="' + esc(pedido) + '"><svg class="ic"><use href="#i-spark"/></svg>Pedir sugestão à IA</button>' : ""));
+  }
+
+  function contextoIA() {
+    var R = VERSOES[state.versao], m = metricas(state), c = m.calc;
+    return {
+      versao: state.versao, semana: state.semana,
+      regras: { jornadaSemanal: R.jornadaSemanal, jornadaDiariaMax: R.jornadaDiariaMax },
+      negocio: state.negocio,
+      funcionamento: DIAS.reduce(function (o, d) { var f = state.funcionamento[d]; o[d] = f ? { aberto: true, abre: f.abre, fecha: f.fecha, pessoas: Number(f.pessoas) || 1 } : { aberto: false, abre: "", fecha: "", pessoas: 0 }; return o; }, {}),
+      equipe: state.equipe.map(function (p) { return { id: p.id, nome: p.nome, funcao: p.funcao, salario: p.salario || 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [] }; }),
+      custos: state.custos,
+      grade: state.equipe.map(function (p, i) {
+        return { pessoaId: p.id, nome: p.nome, horasSemana: c.pessoas[i].horas, dias: DIAS.reduce(function (o, d) {
+          var x = celula(state, state.versao, state.semana, p.id, d);
+          o[d] = x.tipo === "turno" ? x.inicio + "-" + x.fim : x.tipo === "livre" ? "reserva" : x.tipo; return o;
+        }, {}) };
+      }),
+      metricas: {
+        horasSemCobertura: c.falta,
+        ondeFalta: DIAS.filter(function (d) { return c.dias[d].aberto && c.dias[d].falta; }).map(function (d) { return NOME_DIA[d] + ": " + textoFaixa(c.dias[d].faixas); }),
+        pontosForaDaLei: c.erros, avisos: c.avisos,
+        folhaMes: Math.round(m.folha),
+        opcoesDeCusto: m.cus.ops.map(function (o) { return { titulo: o.titulo, custoMes: Math.round(o.custo), resolve: o.viavel, maisBarata: !!o.best, detalhe: o.txt }; })
+      }
+    };
+  }
+
+  var HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+  // Aplica a proposta numa cópia do estado (prévia). Nada é gravado até o cliente aceitar.
+  function aplicarProposta(prop) {
+    var s = JSON.parse(JSON.stringify(state));
+    var antesEstr = JSON.stringify([s.funcionamento, s.equipe]);
+    DIAS.forEach(function (d) {
+      var f = prop.funcionamento && prop.funcionamento[d]; if (!f) return;
+      s.funcionamento[d] = f.aberto && HORA_RE.test(f.abre) && HORA_RE.test(f.fecha) && f.abre !== f.fecha
+        ? { abre: f.abre, fecha: f.fecha, pessoas: Math.max(1, Math.min(50, Math.round(Number(f.pessoas) || 1))) } : null;
+    });
+    if (Array.isArray(prop.equipe) && prop.equipe.length) {
+      var usados = {};
+      s.equipe = prop.equipe.slice(0, 60).map(function (p) {
+        var antigo = state.equipe.filter(function (x) { return x.id === p.id && !usados[x.id]; })[0];
+        if (antigo) usados[antigo.id] = 1;
+        return {
+          id: antigo ? antigo.id : uid(), nome: String(p.nome || "").trim().slice(0, 40) || "Pessoa", funcao: String(p.funcao || "").trim().slice(0, 40),
+          salario: Number(p.salario) > 0 ? Number(p.salario) : null, folgaFixa: DIAS.indexOf(p.folgaFixa) >= 0 ? p.folgaFixa : "",
+          naoPode: (p.naoPode || []).filter(function (d) { return DIAS.indexOf(d) >= 0; })
+        };
+      });
+    }
+    if (prop.custos) ["salario", "encargos", "he"].forEach(function (k) { var v = Number(prop.custos[k]); if (v > 0) s.custos[k] = v; });
+    if (prop.remontar) { gerarTudo(s); s.pendente = false; }
+    else if (JSON.stringify([s.funcionamento, s.equipe]) !== antesEstr) s.pendente = true;
+    (prop.celulas || []).forEach(function (c) {
+      if (DIAS.indexOf(c.dia) < 0 || !s.equipe.some(function (p) { return p.id === c.pessoaId; })) return;
+      var g = s.escalas[s.versao][s.semana]; g[c.pessoaId] = g[c.pessoaId] || {};
+      if (c.tipo === "turno" && HORA_RE.test(c.inicio) && HORA_RE.test(c.fim) && c.inicio !== c.fim) g[c.pessoaId][c.dia] = { tipo: "turno", inicio: c.inicio, fim: c.fim, rotulo: "" };
+      else if (c.tipo === "folga" || c.tipo === "livre") g[c.pessoaId][c.dia] = { tipo: c.tipo };
+    });
+    return s;
+  }
+
+  var ia = { pedido: "", resultado: null, previa: null, anterior: null };
+
+  function iaPasso(qual) {
+    $("#iaPasso1").hidden = qual !== 1;
+    $("#iaCarregando").hidden = qual !== 2;
+    $("#iaResultado").hidden = qual !== 3;
+    var acts = { 1: '<button class="b ghost" value="cancel" type="submit">Cancelar</button><button class="b ia" type="button" data-ia="enviar"><svg class="ic"><use href="#i-spark"/></svg>Gerar proposta</button>', 2: "", 3: "" };
+    if (qual === 3) {
+      var r = ia.resultado;
+      acts[3] = r && r.entendeu === false
+        ? '<button class="b ghost" value="cancel" type="submit">Fechar</button><button class="b" type="button" data-ia="voltar">Escrever de novo</button>'
+        : '<button class="b ghost" value="cancel" type="submit">Descartar</button><button class="b ghost" type="button" data-ia="voltar">Mudar o pedido</button>' +
+          (ia.piorou ? '<button class="b ghost" type="button" data-ia="melhorar"><svg class="ic"><use href="#i-spark"/></svg>Pedir alternativa melhor</button>' : "") +
+          '<button class="b" type="button" data-ia="aplicar">Aplicar proposta</button>';
+    }
+    $("#iaActs").innerHTML = acts[qual];
+  }
+
+  function abrirIA(pedido) {
+    ia = { pedido: pedido || "", resultado: null, previa: null, anterior: null };
+    $("#iaPedido").value = ia.pedido;
+    var m = metricas(state), sug = [];
+    if (m.falta > 0.01) sug.push("Cobrir os horários descobertos sem contratar ninguém");
+    if (m.erros) sug.push("Corrigir os pontos fora da lei");
+    sug.push("Reduzir o custo da escala");
+    if (state.equipe[0]) sug.push((state.equipe[0].nome || "Ana") + " não pode trabalhar aos sábados");
+    sug.push("Equilibrar quem folga no fim de semana");
+    $("#iaChips").innerHTML = sug.map(function (x) { return '<button type="button" data-sug="' + esc(x) + '">' + esc(x) + "</button>"; }).join("");
+    iaPasso(1);
+    $("#dlgIA").showModal();
+    setTimeout(function () { $("#iaPedido").focus(); }, 50);
+  }
+
+  function enviarIA() {
+    var pedido = $("#iaPedido").value.trim();
+    if (!pedido) { toast("Escreva o que você quer mudar."); return; }
+    ia.pedido = pedido;
+    iaPasso(2);
+    fetch(PAINEL.ia, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pedido: pedido, contexto: contextoIA(), anterior: ia.anterior || undefined }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); })
+      .then(function (x) {
+        if (x.status === 401) { location.href = PAINEL.login; return; }
+        if (!x.ok || !x.j.resultado) { toast(x.j.erro || "A IA não respondeu. Tente de novo."); iaPasso(1); return; }
+        mostrarIA(x.j.resultado);
+      })
+      .catch(function () { toast("Sem conexão com a IA. Tente de novo."); iaPasso(1); });
+  }
+
+  function mostrarIA(r) {
+    ia.resultado = r;
+    var h = '<p class="ia-resumo">' + esc(r.resumo || "") + "</p>";
+    if (r.entendeu === false) { $("#iaResultado").innerHTML = h; ia.piorou = false; iaPasso(3); return; }
+    ia.previa = aplicarProposta(r.proposta || {});
+    var a = metricas(state), b = metricas(ia.previa), auto = problemas(a, b);
+    ia.piorou = auto.length > 0 || (r.avisos || []).length > 0;
+    ia.problemas = auto;
+    ia.depois = b;
+    if ((r.mudancas || []).length) h += '<p class="rot">O que muda</p><ul class="ia-mud">' + r.mudancas.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>";
+    var linha = function (rot, va, vb, fmt, menorMelhor) {
+      var cls = Math.abs(vb - va) < 0.01 ? "" : (vb < va) === menorMelhor ? " melhor" : " pior";
+      return "<tr><td>" + rot + "</td><td>" + fmt(va) + '</td><td class="' + cls.trim() + '">' + fmt(vb) + "</td></tr>";
+    };
+    h += '<p class="rot">Antes e depois</p><table class="ia-comp"><thead><tr><th></th><th>Hoje</th><th>Com a proposta</th></tr></thead><tbody>' +
+      linha("Horas sem cobertura/semana", a.falta, b.falta, horas, true) +
+      linha("Pontos fora da lei", a.erros, b.erros, String, true) +
+      linha("Custo extra para cobrir (mês)", a.custo, b.custo, brl, true) +
+      linha("Folha da equipe (mês)", a.folha, b.folha, brl, true) + "</tbody></table>";
+    var avisos = (r.avisos || []).concat(auto.length ? ["A proposta deixa " + auto.join(", ") + "."] : []);
+    if (avisos.length) h += '<div class="ia-avisos"><b>Atenção</b><ul>' + avisos.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>";
+    if (ia.previa.pendente) h += '<p class="muted sm">A grade atual fica como está; depois de aplicar, use “Montar a escala de novo” para redistribuir os turnos.</p>';
+    $("#iaResultado").innerHTML = h;
+    iaPasso(3);
+  }
+
+  function ligarIA() {
+    if (!PAINEL || !PAINEL.ia) return;
+    $("#btnIA").hidden = false;
+    $("#btnIA").addEventListener("click", function () { abrirIA(""); });
+    $("#iaChips").addEventListener("click", function (e) { var b = e.target.closest("[data-sug]"); if (b) { $("#iaPedido").value = b.dataset.sug; $("#iaPedido").focus(); } });
+    $("#iaPedido").addEventListener("keydown", function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) enviarIA(); });
+    $("#iaActs").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-ia]"); if (!b) return;
+      var acao = b.dataset.ia;
+      if (acao === "enviar") enviarIA();
+      else if (acao === "voltar") { ia.anterior = null; iaPasso(1); }
+      else if (acao === "melhorar") {
+        ia.anterior = { proposta: ia.resultado.proposta, avisosDaIA: ia.resultado.avisos, problemasMedidos: ia.problemas,
+          metricasComAProposta: { horasSemCobertura: ia.depois.falta, pontosForaDaLei: ia.depois.calc.erros, custoExtraMes: Math.round(ia.depois.custo), folhaMes: Math.round(ia.depois.folha) } };
+        $("#iaPedido").value = ia.pedido;
+        enviarIA();
+      } else if (acao === "aplicar") {
+        desfazerSnap = JSON.stringify(state);
+        state = ia.previa;
+        salvar(); renderCfg(); render();
+        $("#dlgIA").close();
+        dica("<b>Proposta da IA aplicada.</b> " + esc(ia.resultado.resumo || ""), '<button type="button" class="b ghost sm" data-dica="desfazer">Desfazer</button>');
+      }
+    });
   }
 
   function ligarEdicao() {
-    $("#btnAddPessoa2").addEventListener("click", function () { abrirPessoa(null); });
+    $("#iaDica").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-dica]"); if (!b) return;
+      if (b.dataset.dica === "desfazer") desfazer();
+      else if (b.dataset.dica === "fechar") $("#iaDica").hidden = true;
+      else if (b.dataset.dica === "ia") abrirIA(b.dataset.pedido);
+    });
+    $("#equipeStrip").addEventListener("click", function (e) {
+      if (e.target.closest("#btnAddPessoa2")) return abrirPessoa(null);
+      var w = e.target.closest("[data-pessoa]"); if (w) abrirPessoa(w.dataset.pessoa);
+    });
+    $("#vistas").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-vista]"); if (!b) return;
+      vista = b.dataset.vista;
+      try { localStorage.setItem("j40h:vista", vista); } catch (er) {}
+      render();
+    });
+    ligarIA();
     $("#dlgPForm").addEventListener("submit", function (e) {
       if (e.submitter && e.submitter.value === "ok" && salvarPessoa() === false) e.preventDefault();
     });
