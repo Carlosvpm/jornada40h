@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
+<script>try { var t = localStorage.getItem("j40h:tema"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
 </head>
 <body>
 
@@ -27,6 +28,12 @@
     <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
     <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+    <symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-store" viewBox="0 0 24 24"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M2 7h20v3a2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-2-2z"/></symbol>
   </defs>
 </svg>
@@ -50,9 +57,7 @@
       <a class="nav-i" href="#sec-alertas"><svg class="ic"><use href="#i-alert"/></svg>Alertas<span class="badge" id="sbAlertas" hidden></span></a>
       <p class="grp">Configuração</p>
       <a class="nav-i" href="#cfg" id="navCfg"><svg class="ic"><use href="#i-sliders"/></svg>Negócio e equipe</a>
-      <p class="grp">Exportar</p>
-      <button type="button" class="nav-i" id="btnPdf2"><svg class="ic"><use href="#i-file"/></svg>Baixar PDF</button>
-      <button type="button" class="nav-i" id="btnXlsx2"><svg class="ic"><use href="#i-sheet"/></svg>Baixar planilha</button>
+      <p class="grp">Conta</p>
       <button type="button" class="nav-i" id="btnLink"><svg class="ic"><use href="#i-link"/></svg>Copiar meu link</button>
     </nav>
     <div class="side-foot">Jornada 40h · escala 5x2<br><span id="tSalvo">salvo neste aparelho</span></div>
@@ -66,9 +71,19 @@
         <b id="tSaud">Olá</b>
         <small id="tData"></small>
       </div>
-      <div class="acts">
-        <button class="b ghost" id="btnXlsx" type="button"><svg class="ic"><use href="#i-sheet"/></svg><span>Planilha</span></button>
-        <button class="b" id="btnPdf" type="button"><svg class="ic"><use href="#i-file"/></svg><span>PDF</span></button>
+      <div class="perfil">
+        <button class="avatar" id="perfilBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Perfil e tema">J</button>
+        <div class="perfil-menu" id="perfilMenu" role="menu" hidden>
+          <div class="quem"><b id="pmNome"></b><small id="pmEmail"></small></div>
+          <p class="rot">Tema</p>
+          <div class="temas" id="temas">
+            <button type="button" data-tema="light"><svg class="ic"><use href="#i-sun"/></svg>Claro</button>
+            <button type="button" data-tema="dark"><svg class="ic"><use href="#i-moon"/></svg>Escuro</button>
+            <button type="button" data-tema="system"><svg class="ic"><use href="#i-monitor"/></svg>Sistema</button>
+          </div>
+          <button type="button" class="pm-i" id="pmLink" role="menuitem"><svg class="ic"><use href="#i-link"/></svg>Copiar meu link</button>
+          <button type="button" class="pm-i sair" id="pmSair" role="menuitem" hidden><svg class="ic"><use href="#i-logout"/></svg>Sair da conta</button>
+        </div>
       </div>
     </header>
 
@@ -84,6 +99,10 @@
           <p class="muted" id="tSub">Escala 5x2 da sua equipe, pronta para a nova jornada.</p>
         </div>
         <div class="filters">
+          <div class="exportar">
+            <button class="b ghost" id="btnXlsx" type="button"><svg class="ic"><use href="#i-sheet"/></svg>Baixar planilha</button>
+            <button class="b" id="btnPdf" type="button"><svg class="ic"><use href="#i-file"/></svg>Baixar PDF</button>
+          </div>
           <div class="seg" role="tablist" aria-label="Versão da jornada">
             <button role="tab" data-v="42" type="button">42 h</button>
             <button role="tab" data-v="40" type="button">40 h</button>
@@ -101,12 +120,19 @@
         <div class="card-h">
           <div>
             <h2>Escala da semana <span id="tSemana"></span></h2>
-            <p class="muted sm">Clique em qualquer dia para trocar o turno ou a folga. Tudo é recalculado na hora.</p>
+            <p class="muted sm">Clique num turno para trocar horário ou folga, no nome para editar a pessoa e no dia para mudar o horário de funcionamento.</p>
           </div>
+          <button class="b ghost sm" id="btnAddPessoa2" type="button"><svg class="ic"><use href="#i-plus"/></svg>Adicionar pessoa</button>
+        </div>
+        <div class="pend" id="pend" hidden>
+          <span>Você mudou a equipe ou o horário. A grade atual foi mantida; monte de novo para redistribuir turnos e folgas com os dados novos.</span>
+          <button class="b sm" id="btnRegen2" type="button">Montar a escala de novo</button>
+        </div>
+        <div class="grid-box"><div class="grid-scroll"><table class="grid" id="grid"></table></div></div>
+        <div class="grid-foot">
+          <p class="note" id="gradeNota"></p>
           <div class="legend"><span class="lg turno">turno</span><span class="lg folga">folga</span><span class="lg livre">reserva</span><span class="lg falta">falta gente</span></div>
         </div>
-        <div class="grid-scroll"><table class="grid" id="grid"></table></div>
-        <p class="note" id="gradeNota"></p>
       </section>
 
       <div class="cols">
@@ -173,6 +199,48 @@
     <div class="dlg-acts">
       <button class="b ghost" value="cancel" type="submit">Cancelar</button>
       <button class="b" value="ok" type="submit" id="dlgOk">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgP">
+  <form method="dialog" id="dlgPForm" novalidate>
+    <h3 id="dlgPTitulo">Pessoa</h3>
+    <div class="row2">
+      <label>Nome<input type="text" id="pNome" maxlength="40" autocomplete="off"></label>
+      <label>Função<input type="text" id="pFuncao" maxlength="40" placeholder="atendente, caixa…" autocomplete="off"></label>
+    </div>
+    <div class="row2">
+      <label>Salário (opcional)<input type="number" id="pSal" min="0" step="10" inputmode="decimal" placeholder="usa a média"></label>
+      <label>Folga fixa<select id="pFixa"></select></label>
+    </div>
+    <p class="lbl-dias">Dias que não pode trabalhar</p>
+    <div class="dias-chk" id="pNaoPode"></div>
+    <p class="muted sm">Folga fixa e dias que não pode valem quando a escala é montada de novo.</p>
+    <div class="dlg-acts">
+      <button class="b ghost perigo" id="pRemover" type="button">Remover da equipe</button>
+      <span class="sp"></span>
+      <button class="b ghost" value="cancel" type="submit">Cancelar</button>
+      <button class="b" value="ok" type="submit">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgD">
+  <form method="dialog" id="dlgDForm" novalidate>
+    <h3 id="dlgDTitulo"></h3>
+    <label class="chk"><input type="checkbox" id="dAberto"> Abre neste dia</label>
+    <div id="dCampos">
+      <div class="row2">
+        <label>Abre<input type="time" id="dAbre" step="60"></label>
+        <label>Fecha<input type="time" id="dFecha" step="60"></label>
+      </div>
+      <label>Pessoas ao mesmo tempo<input type="number" id="dPessoas" min="1" max="50" inputmode="numeric"></label>
+    </div>
+    <p class="muted sm">A cobertura é recalculada na hora. Para redistribuir os turnos, monte a escala de novo.</p>
+    <div class="dlg-acts">
+      <button class="b ghost" value="cancel" type="submit">Cancelar</button>
+      <button class="b" value="ok" type="submit">Salvar</button>
     </div>
   </form>
 </dialog>

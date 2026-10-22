@@ -81,7 +81,11 @@
     s.custos = s.custos || { salario: 1800, encargos: 1.7, he: 50 };
     s.versao = VERSOES[s.versao] ? s.versao : "42";
     s.semana = s.semana === "B" ? "B" : "A";
-    s.equipe = (s.equipe || []).map(function (p) { return { id: p.id || uid(), nome: p.nome || "", funcao: p.funcao || "", salario: p.salario || null, folgaFixa: p.folgaFixa || "" }; });
+    s.equipe = (s.equipe || []).map(function (p) {
+      var np = Array.isArray(p.naoPode) ? p.naoPode.filter(function (d) { return DIAS.indexOf(d) >= 0; }) : [];
+      return { id: p.id || uid(), nome: p.nome || "", funcao: p.funcao || "", salario: p.salario || null, folgaFixa: p.folgaFixa || "", naoPode: np };
+    });
+    s.pendente = !!s.pendente;
     if (!s.escalas || !s.escalas["42"] || !s.escalas["40"]) gerarTudo(s);
     return s;
   }
@@ -143,6 +147,7 @@
       vistos[nome] = true;
       var f = { nome: nome, funcao: p.funcao };
       if (p.folgaFixa) f.folgaFixa = p.folgaFixa;
+      if (p.naoPode && p.naoPode.length) f.naoPode = p.naoPode.slice();
       return f;
     });
     return {
@@ -460,6 +465,7 @@
       kpi(calc.erros.length ? "red" : "green", "i-shield", "Pontos fora da lei", String(calc.erros.length), calc.erros.length ? "veja os alertas" : "jornada, folgas e descanso ok");
 
     renderGrade(calc);
+    atualizarPerfil();
     renderCustos(cus);
     renderAlertas(calc, cus);
   }
@@ -469,35 +475,54 @@
       '<div class="kic"><svg class="ic"><use href="#' + icone + '"/></svg></div></div>';
   }
 
+  // Rótulo curto na grade (o completo fica no title).
+  var ROTULO_CURTO = { "abertura": "abre", "fechamento": "fecha", "meio": "meio", "turno único": "único" };
+  var HOJE = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"][new Date().getDay()];
+
+  function iniciais(nome) {
+    var partes = String(nome || "?").trim().split(/\s+/);
+    return ((partes[0] || "?")[0] + (partes.length > 1 ? partes[partes.length - 1][0] : "")).toUpperCase();
+  }
+
   function renderGrade(calc) {
     var v = state.versao, sem = state.semana, R = VERSOES[v];
-    var h = '<thead><tr><th class="p">Pessoa</th>';
+    var h = '<thead><tr><th class="p cap">Equipe</th>';
     DIAS.forEach(function (d) {
       var f = state.funcionamento[d];
-      h += "<th><b>" + NOME_DIA[d] + "</b>" + (f ? falada(min(f.abre)) + "–" + falada(min(f.fecha)) + " · " + f.pessoas + (Number(f.pessoas) === 1 ? " pessoa" : " pessoas") : "fechado") + "</th>";
+      h += '<th class="dia' + (d === HOJE ? " hoje" : "") + '"><button type="button" class="dia-b" data-dia="' + d + '" title="Editar horário de ' + NOME_DIA[d] + '"><b>' + NOME_DIA[d] + '<svg class="ic"><use href="#i-edit"/></svg></b>' +
+        (f ? '<span class="hr">' + falada(min(f.abre)) + "–" + falada(min(f.fecha)) + '</span><span class="pp"><svg class="ic"><use href="#i-users"/></svg>' + f.pessoas + "</span>"
+           : '<span class="hr">fechado</span>') + "</button></th>";
     });
-    h += '<th style="text-align:right">Horas</th></tr></thead><tbody>';
+    h += '<th class="h cap">Horas</th></tr></thead><tbody>';
     state.equipe.forEach(function (p, i) {
       var pc = calc.pessoas[i];
-      h += '<tr><td class="p"><b>' + esc(pc.nome) + "</b><small>" + esc(p.funcao || "") + "</small></td>";
+      var tags = [];
+      if (p.folgaFixa) tags.push("folga fixa " + NOME_DIA_CURTO[p.folgaFixa].toLowerCase());
+      if (p.naoPode && p.naoPode.length) tags.push("não pode " + p.naoPode.map(function (d) { return NOME_DIA_CURTO[d].toLowerCase(); }).join(", "));
+      h += '<tr><td class="p"><button type="button" class="who" data-pessoa="' + p.id + '" title="Editar ' + esc(pc.nome) + '"><span class="ini">' + esc(iniciais(pc.nome)) + "</span><span><b>" + esc(pc.nome) + "</b><small>" + esc(p.funcao || "sem função") + "</small>" +
+        (tags.length ? '<span class="tags">' + esc(tags.join(" · ")) + "</span>" : "") + "</span></button></td>";
       DIAS.forEach(function (d) {
-        var c = celula(state, v, sem, p.id, d), err = pc.erros[d] ? " erro" : "";
-        if (c.tipo === "fechado") h += '<td><span class="cell fechado">fechado</span></td>';
-        else if (c.tipo === "turno") h += '<td><button type="button" class="cell turno' + err + '" data-p="' + p.id + '" data-d="' + d + '">' + falada(min(c.inicio)) + "–" + falada(min(c.fim)) + "<small>" + horas(dur(c)) + (c.rotulo ? " · " + esc(c.rotulo.toLowerCase()) : "") + "</small></button></td>";
-        else if (c.tipo === "folga") h += '<td><button type="button" class="cell folga" data-p="' + p.id + '" data-d="' + d + '">Folga</button></td>';
-        else h += '<td><button type="button" class="cell livre" data-p="' + p.id + '" data-d="' + d + '">Reserva<small>sem turno</small></button></td>';
+        var c = celula(state, v, sem, p.id, d), err = pc.erros[d] ? " erro" : "", hj = d === HOJE ? ' class="hoje"' : "";
+        var attr = ' data-p="' + p.id + '" data-d="' + d + '"';
+        if (c.tipo === "fechado") h += "<td" + hj + '><span class="cell fechado">fechado</span></td>';
+        else if (c.tipo === "turno") h += "<td" + hj + '><button type="button" class="cell turno' + err + '"' + attr + ' title="' + esc((c.rotulo || "Turno") + " · " + horas(dur(c))) + '"><b>' + falada(min(c.inicio)) + "–" + falada(min(c.fim)) + "</b><small>" + horas(dur(c)) + (c.rotulo ? " · " + esc(ROTULO_CURTO[c.rotulo.toLowerCase()] || c.rotulo.toLowerCase()) : "") + "</small></button></td>";
+        else if (c.tipo === "folga") h += "<td" + hj + '><button type="button" class="cell folga' + err + '"' + attr + "><b>Folga</b></button></td>";
+        else h += "<td" + hj + '><button type="button" class="cell livre' + err + '"' + attr + "><b>Reserva</b><small>sem turno</small></button></td>";
       });
-      h += '<td class="h' + (pc.horas > R.jornadaSemanal + 1e-9 ? " over" : "") + '">' + horas(pc.horas) + "</td></tr>";
+      var pct = Math.min(100, Math.round(pc.horas / R.jornadaSemanal * 100));
+      h += '<td class="h' + (pc.horas > R.jornadaSemanal + 1e-9 ? " over" : "") + '"><b>' + horas(pc.horas) + '</b><span class="hbar" title="' + horas(pc.horas) + " de " + horas(R.jornadaSemanal) + '"><i style="width:' + pct + '%"></i></span></td></tr>';
     });
-    h += '</tbody><tfoot><tr class="cob"><td class="lbl">Cobertura</td>';
+    h += '</tbody><tfoot><tr class="cob"><td class="p">Cobertura</td>';
     DIAS.forEach(function (d) {
       var dia = calc.dias[d];
       if (!dia.aberto) { h += "<td></td>"; return; }
       h += '<td><div class="bars">' + dia.blocos.map(function (b) { return "<i" + (b.n < b.need ? ' class="f"' : b.n > b.need ? ' class="s"' : "") + ' title="' + hhmm(b.t) + ": " + b.n + " de " + b.need + '"></i>'; }).join("") + "</div>";
-      h += '<div class="cobtxt' + (dia.falta ? " f" : "") + '">' + (dia.falta ? horas(dia.falta) + " descobertas: " + textoFaixa(dia.faixas) : "coberto") + "</div></td>";
+      h += dia.falta ? '<div class="cobtxt f"><b>' + horas(dia.falta) + " a cobrir</b><span>" + esc(textoFaixa(dia.faixas)) + "</span></div>" : '<div class="cobtxt"><b>Coberto</b></div>';
+      h += "</td>";
     });
     h += "<td></td></tr></tfoot>";
     $("#grid").innerHTML = h;
+    $("#pend").hidden = !state.pendente;
     $("#gradeNota").textContent = "Semana " + sem + ": quem folga no fim de semana alterna entre as semanas A e B. Intervalo de refeição (1 h para turnos acima de 6 h) fica dentro do turno e não conta como trabalho: combine o horário para não esvaziar o balcão.";
   }
 
@@ -540,6 +565,12 @@
   /* Configuração (horário e equipe)                                    */
   /* ------------------------------------------------------------------ */
 
+  function chipsDias(marcados, chave) {
+    return '<div class="dias-chk">' + DIAS.map(function (d) {
+      return '<label title="' + NOME_DIA[d] + '"><input type="checkbox" data-' + chave + '="' + d + '"' + ((marcados || []).indexOf(d) >= 0 ? " checked" : "") + "><span>" + NOME_DIA_CURTO[d] + "</span></label>";
+    }).join("") + "</div>";
+  }
+
   function renderCfg() {
     $("#fNome").value = state.negocio.nome || "";
     $("#fTipo").value = state.negocio.tipo || "";
@@ -553,12 +584,13 @@
     });
     $("#tblHorario").innerHTML = h + "</tbody>";
 
-    var e = "<thead><tr><th>Nome</th><th>Função</th><th>Salário (opcional)</th><th>Folga fixa</th><th></th></tr></thead><tbody>";
+    var e = "<thead><tr><th>Nome</th><th>Função</th><th>Salário (opcional)</th><th>Folga fixa</th><th>Não pode trabalhar</th><th></th></tr></thead><tbody>";
     state.equipe.forEach(function (p) {
       e += '<tr data-id="' + p.id + '"><td><input type="text" maxlength="40" data-e="nome" value="' + esc(p.nome) + '"></td>' +
         '<td><input type="text" maxlength="40" data-e="funcao" value="' + esc(p.funcao) + '"></td>' +
         '<td><input type="number" min="0" step="10" data-e="salario" placeholder="média" value="' + (p.salario || "") + '"></td>' +
         '<td><select data-e="folgaFixa"><option value="">rodízio</option>' + DIAS.map(function (d) { return '<option value="' + d + '"' + (p.folgaFixa === d ? " selected" : "") + ">" + NOME_DIA[d] + "</option>"; }).join("") + "</select></td>" +
+        '<td>' + chipsDias(p.naoPode, "np") + "</td>" +
         '<td><button type="button" class="x" data-del="' + p.id + '" title="Remover">×</button></td></tr>';
     });
     $("#tblEquipe").innerHTML = e + "</tbody>";
@@ -688,7 +720,9 @@
     document.querySelectorAll("[data-s]").forEach(function (b) { b.addEventListener("click", function () { state.semana = b.dataset.s; salvar(); render(); }); });
 
     $("#grid").addEventListener("click", function (e) {
-      var b = e.target.closest("button.cell"); if (b) abrirCelula(b.dataset.p, b.dataset.d);
+      var b = e.target.closest("button.cell"); if (b) return abrirCelula(b.dataset.p, b.dataset.d);
+      var w = e.target.closest("[data-pessoa]"); if (w) return abrirPessoa(w.dataset.pessoa);
+      var dd = e.target.closest("[data-dia]"); if (dd) return abrirDia(dd.dataset.dia);
     });
     $("#dlgForm").addEventListener("change", atualizaDlg);
     $("#dlgForm").addEventListener("input", function (e) { if (e.target.type === "time") $("#dlgIni").dataset.rot = ""; atualizaDlg(); });
@@ -712,7 +746,7 @@
     });
     $("#opcoes").addEventListener("click", function (e) {
       var b = e.target.closest("[data-acao]"); if (!b) return;
-      state.equipe.push({ id: uid(), nome: "Nova contratação", funcao: "a contratar", salario: null, folgaFixa: "" });
+      state.equipe.push({ id: uid(), nome: "Nova contratação", funcao: "a contratar", salario: null, folgaFixa: "", naoPode: [] });
       gerarTudo(state); salvar(); renderCfg(); render();
       toast("Pessoa nova colocada na escala. Veja como fica a cobertura.");
     });
@@ -733,6 +767,10 @@
     $("#tblEquipe").addEventListener("change", function (e) {
       var tr = e.target.closest("tr[data-id]"); if (!tr) return;
       var p = state.equipe.filter(function (x) { return x.id === tr.dataset.id; })[0]; if (!p) return;
+      if (e.target.dataset.np) {
+        p.naoPode = Array.prototype.map.call(tr.querySelectorAll("[data-np]:checked"), function (x) { return x.dataset.np; });
+        marcarPendente(); salvar(); render(); return;
+      }
       var k = e.target.dataset.e;
       p[k] = k === "salario" ? (Number(e.target.value) || null) : e.target.value.trim();
       if (k === "folgaFixa") marcarPendente();
@@ -745,31 +783,30 @@
       salvar(); renderCfg(); render();
     });
     $("#btnAddPessoa").addEventListener("click", function () {
-      var p = { id: uid(), nome: "Pessoa " + (state.equipe.length + 1), funcao: "", salario: null, folgaFixa: "" };
+      var p = { id: uid(), nome: "Pessoa " + (state.equipe.length + 1), funcao: "", salario: null, folgaFixa: "", naoPode: [] };
       state.equipe.push(p);
       marcarPendente(); salvar(); renderCfg(); render();
     });
 
-    var confirmando = false;
-    $("#btnRegen").addEventListener("click", function () {
-      var b = $("#btnRegen");
-      if (!confirmando) {
-        confirmando = true; b.textContent = "Clique de novo para confirmar"; b.classList.add("danger");
-        setTimeout(function () { confirmando = false; b.textContent = "Montar a escala de novo com estes dados"; b.classList.remove("danger"); }, 4000);
+    // Montar de novo apaga mudanças feitas à mão: pede um segundo clique para confirmar.
+    function montarDeNovo(b, texto) {
+      if (!b.dataset.conf) {
+        b.dataset.conf = "1"; b.textContent = "Clique de novo para confirmar"; b.classList.add("danger");
+        setTimeout(function () { delete b.dataset.conf; b.textContent = texto; b.classList.remove("danger"); }, 4000);
         return;
       }
-      confirmando = false; b.textContent = "Montar a escala de novo com estes dados"; b.classList.remove("danger");
+      delete b.dataset.conf; b.textContent = texto; b.classList.remove("danger");
+      state.pendente = false;
       gerarTudo(state); salvar(); render();
       $("#regenAviso").textContent = "Refaz as escalas de 42 h e 40 h. As mudanças feitas à mão na grade se perdem.";
       toast("Escalas de 42 h e 40 h montadas de novo.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
+    }
+    $("#btnRegen").addEventListener("click", function () { montarDeNovo(this, "Montar a escala de novo com estes dados"); if (!this.dataset.conf) window.scrollTo({ top: 0, behavior: "smooth" }); });
+    $("#btnRegen2").addEventListener("click", function () { montarDeNovo(this, "Montar a escala de novo"); });
 
     function pdf() { fecharMenu(); toast("Na janela de impressão, escolha “Salvar como PDF”."); setTimeout(function () { window.print(); }, 400); }
     $("#btnPdf").addEventListener("click", pdf);
-    $("#btnPdf2").addEventListener("click", pdf);
     $("#btnXlsx").addEventListener("click", baixarPlanilha);
-    $("#btnXlsx2").addEventListener("click", function () { fecharMenu(); baixarPlanilha(); });
 
     // Menu lateral (gaveta no celular)
     function fecharMenu() { $("#side").classList.remove("open"); $("#backdrop").classList.remove("on"); }
@@ -778,21 +815,154 @@
     $("#backdrop").addEventListener("click", fecharMenu);
     document.querySelectorAll(".side-nav a, .side-nav [data-v]").forEach(function (a) { a.addEventListener("click", fecharMenu); });
     $("#navCfg").addEventListener("click", function () { $("#cfg").open = true; });
+    ligarPerfil();
+    ligarEdicao();
+  }
+
+  function sair() {
+    fetch(PAINEL.sair, { method: "POST", credentials: "same-origin" }).finally(function () { location.href = PAINEL.login; });
+  }
+
+  function copiarLink() {
+    var url = linkPessoal();
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(function () { toast("Link copiado. Guarde: ele abre a sua escala em qualquer aparelho."); }, function () { toast("Copie o endereço da barra do navegador."); });
+    else toast("Copie o endereço da barra do navegador.");
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Perfil e tema                                                      */
+  /* ------------------------------------------------------------------ */
+
+  function temaAtual() {
+    try { var t = localStorage.getItem("j40h:tema"); return t === "light" || t === "dark" ? t : "system"; } catch (e) { return "system"; }
+  }
+
+  function aplicarTema(t) {
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    else delete document.documentElement.dataset.theme;
+    try { if (t === "system") localStorage.removeItem("j40h:tema"); else localStorage.setItem("j40h:tema", t); } catch (e) {}
+    document.querySelectorAll("#temas [data-tema]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.tema === t ? "true" : "false"); });
+  }
+
+  function ligarPerfil() {
+    var menu = $("#perfilMenu"), btn = $("#perfilBtn");
+    function abrir(sim) { menu.hidden = !sim; btn.setAttribute("aria-expanded", sim ? "true" : "false"); }
+    btn.addEventListener("click", function (e) { e.stopPropagation(); abrir(menu.hidden); });
+    document.addEventListener("click", function (e) { if (!menu.hidden && !e.target.closest(".perfil")) abrir(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !menu.hidden) { abrir(false); btn.focus(); } });
+    $("#temas").addEventListener("click", function (e) { var b = e.target.closest("[data-tema]"); if (b) aplicarTema(b.dataset.tema); });
+    aplicarTema(temaAtual());
+    // PDF sempre no tema claro.
+    var antes = null;
+    window.addEventListener("beforeprint", function () { antes = document.documentElement.dataset.theme || null; document.documentElement.dataset.theme = "light"; });
+    window.addEventListener("afterprint", function () { if (antes) document.documentElement.dataset.theme = antes; else delete document.documentElement.dataset.theme; });
+
     if (PAINEL) {
-      $("#btnLink").innerHTML = '<svg class="ic"><use href="#i-x"/></svg>Sair (' + esc(PAINEL.usuario.email) + ")";
-      $("#btnLink").addEventListener("click", function () {
-        fetch(PAINEL.sair, { method: "POST", credentials: "same-origin" }).finally(function () { location.href = PAINEL.login; });
-      });
-      return;
+      $("#pmNome").textContent = PAINEL.usuario.nome || "Minha conta";
+      $("#pmEmail").textContent = PAINEL.usuario.email;
+      btn.textContent = iniciais(PAINEL.usuario.nome || PAINEL.usuario.email);
+      $("#pmLink").hidden = true;
+      $("#pmSair").hidden = false;
+      $("#pmSair").addEventListener("click", sair);
+      $("#btnLink").innerHTML = '<svg class="ic"><use href="#i-logout"/></svg>Sair da conta';
+      $("#btnLink").addEventListener("click", sair);
+    } else {
+      $("#pmEmail").textContent = "Escala salva neste aparelho";
+      $("#pmLink").addEventListener("click", function () { abrir(false); copiarLink(); });
+      $("#btnLink").addEventListener("click", copiarLink);
     }
-    $("#btnLink").addEventListener("click", function () {
-      var url = linkPessoal();
-      if (navigator.clipboard) navigator.clipboard.writeText(url).then(function () { toast("Link copiado. Guarde: ele abre a sua escala em qualquer aparelho."); }, function () { toast("Copie o endereço da barra do navegador."); });
-      else toast("Copie o endereço da barra do navegador.");
+  }
+
+  function atualizarPerfil() {
+    if (PAINEL) return;
+    $("#pmNome").textContent = state.negocio.nome || "Minha escala";
+    $("#perfilBtn").textContent = iniciais(state.negocio.nome || "Jornada");
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Editar pessoa e dia pela grade                                     */
+  /* ------------------------------------------------------------------ */
+
+  var pessoaEd = null, diaEd = null;
+
+  function abrirPessoa(id) {
+    var p = id ? state.equipe.filter(function (x) { return x.id === id; })[0] : null;
+    pessoaEd = p ? p.id : null;
+    $("#dlgPTitulo").textContent = p ? "Editar " + (p.nome || "pessoa") : "Adicionar pessoa";
+    $("#pNome").value = p ? p.nome : "Pessoa " + (state.equipe.length + 1);
+    $("#pFuncao").value = p ? p.funcao : "";
+    $("#pSal").value = p && p.salario ? p.salario : "";
+    $("#pFixa").innerHTML = '<option value="">rodízio</option>' + DIAS.map(function (d) { return '<option value="' + d + '"' + (p && p.folgaFixa === d ? " selected" : "") + ">" + NOME_DIA[d] + "</option>"; }).join("");
+    $("#pNaoPode").innerHTML = chipsDias(p ? p.naoPode : [], "pnp").replace(/^<div class="dias-chk">|<\/div>$/g, "");
+    $("#pRemover").hidden = !p;
+    $("#pRemover").classList.remove("confirma"); $("#pRemover").textContent = "Remover da equipe";
+    $("#dlgP").showModal();
+  }
+
+  function salvarPessoa() {
+    var nome = $("#pNome").value.trim();
+    if (!nome) { toast("Escreva o nome da pessoa."); $("#pNome").focus(); return false; }
+    var naoPode = Array.prototype.map.call(document.querySelectorAll("#pNaoPode [data-pnp]:checked"), function (x) { return x.dataset.pnp; });
+    var fixa = $("#pFixa").value;
+    var p = pessoaEd ? state.equipe.filter(function (x) { return x.id === pessoaEd; })[0] : null;
+    if (!p) {
+      p = { id: uid(), nome: nome, funcao: "", salario: null, folgaFixa: "", naoPode: [] };
+      state.equipe.push(p);
+      marcarPendente();
+    } else if (p.folgaFixa !== fixa || p.naoPode.join() !== naoPode.join()) marcarPendente();
+    p.nome = nome;
+    p.funcao = $("#pFuncao").value.trim();
+    p.salario = Number($("#pSal").value) || null;
+    p.folgaFixa = fixa;
+    p.naoPode = naoPode;
+    salvar(); renderCfg(); render();
+  }
+
+  function abrirDia(d) {
+    diaEd = d;
+    var f = state.funcionamento[d];
+    $("#dlgDTitulo").textContent = "Horário de " + NOME_DIA[d].toLowerCase();
+    $("#dAberto").checked = !!f;
+    $("#dAbre").value = f ? f.abre : "08:00";
+    $("#dFecha").value = f ? f.fecha : "18:00";
+    $("#dPessoas").value = f ? f.pessoas : 1;
+    $("#dCampos").style.display = f ? "" : "none";
+    $("#dlgD").showModal();
+  }
+
+  function salvarDia() {
+    var antes = JSON.stringify(state.funcionamento[diaEd] || null);
+    if (!$("#dAberto").checked) state.funcionamento[diaEd] = null;
+    else {
+      if (!$("#dAbre").value || !$("#dFecha").value) { toast("Preencha a hora de abrir e de fechar."); return false; }
+      state.funcionamento[diaEd] = { abre: $("#dAbre").value, fecha: $("#dFecha").value, pessoas: Math.max(1, Math.min(50, Number($("#dPessoas").value) || 1)) };
+    }
+    if (JSON.stringify(state.funcionamento[diaEd]) !== antes) marcarPendente();
+    salvar(); renderCfg(); render();
+  }
+
+  function ligarEdicao() {
+    $("#btnAddPessoa2").addEventListener("click", function () { abrirPessoa(null); });
+    $("#dlgPForm").addEventListener("submit", function (e) {
+      if (e.submitter && e.submitter.value === "ok" && salvarPessoa() === false) e.preventDefault();
+    });
+    $("#pRemover").addEventListener("click", function () {
+      var b = this;
+      if (state.equipe.length <= 1) return toast("A escala precisa de pelo menos 1 pessoa.");
+      if (!b.classList.contains("confirma")) { b.classList.add("confirma"); b.textContent = "Confirmar remoção"; return; }
+      state.equipe = state.equipe.filter(function (p) { return p.id !== pessoaEd; });
+      $("#dlgP").close();
+      marcarPendente(); salvar(); renderCfg(); render();
+      toast("Pessoa removida da equipe.");
+    });
+    $("#dAberto").addEventListener("change", function () { $("#dCampos").style.display = this.checked ? "" : "none"; });
+    $("#dlgDForm").addEventListener("submit", function (e) {
+      if (e.submitter && e.submitter.value === "ok" && salvarDia() === false) e.preventDefault();
     });
   }
 
   function marcarPendente() {
+    state.pendente = true;
     $("#regenAviso").textContent = "Você mudou horário ou equipe. A grade atual foi mantida; clique para montar de novo com os dados novos (as mudanças feitas à mão na grade se perdem).";
   }
 

@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 }
 
 // Libera o acesso de um cliente (cria a conta) e grava a escala inicial, se vier.
-// Corpo: { email, nome?, estado? }. O cliente entra em /painel/login com o e-mail e recebe um código.
+// Corpo: { email, nome?, estado?, substituir? }. O cliente entra em /painel/login com o e-mail e recebe um código.
 export async function POST(req: Request) {
   if (!autorizado(req)) return negar(req);
   const corpo = await req.json().catch(() => ({}));
@@ -33,7 +33,13 @@ export async function POST(req: Request) {
   const nome = typeof corpo.nome === "string" ? corpo.nome.trim().slice(0, 80) : "";
   const estado = corpo.estado && typeof corpo.estado === "object" ? JSON.stringify(corpo.estado) : null;
   const db = getDb();
-  db.transaction(() => liberarAcesso(db, email, nome, estado))();
+  db.transaction(() => {
+    const id = liberarAcesso(db, email, nome, estado);
+    // substituir: true troca a escala que a conta já tem (ex.: copiar a escala de um cliente para conferir).
+    if (estado && corpo.substituir === true) {
+      db.prepare("INSERT INTO escalas (usuario_id, estado, atualizado_em) VALUES (?, ?, datetime('now')) ON CONFLICT(usuario_id) DO UPDATE SET estado = excluded.estado, atualizado_em = excluded.atualizado_em").run(id, estado);
+    }
+  })();
   const base = process.env.PUBLIC_URL || new URL(req.url).origin;
   return NextResponse.json({ link: `${base}/painel/login`, email });
 }

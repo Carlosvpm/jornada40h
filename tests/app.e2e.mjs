@@ -115,7 +115,33 @@ try {
   if (SHOTS) await page.pdf({ path: path.join(SHOTS, "app.pdf"), format: "A4", landscape: true, printBackground: true });
   await page.emulateMedia({ media: "screen" });
 
-  console.log("9. celular");
+  console.log("9. edita pessoa e dia pela grade");
+  await page.click("[data-pessoa]");
+  await page.fill("#pNome", "Joana Teste");
+  await page.check('#pNaoPode [data-pnp="seg"]', { force: true });
+  await page.click('#dlgPForm button[value="ok"]');
+  ok(/Joana Teste/.test(await page.textContent("#grid tbody tr:first-child td.p")), "nome editado aparece na grade");
+  ok(await page.isVisible("#pend"), "restrição nova mostra o aviso para montar de novo");
+  await page.click("#btnRegen2"); await page.click("#btnRegen2");
+  ok(!(await page.isVisible("#pend")), "montar de novo some com o aviso");
+  const segJoana = await page.evaluate(() => { const s = window.__j40h.state, id = s.equipe[0].id; return ["A", "B"].map(sem => s.escalas[s.versao][sem][id].seg.tipo); });
+  ok(segJoana.every(t => t === "folga"), "dia que não pode trabalhar vira folga nas semanas A e B");
+  const n1 = await page.locator("#grid tbody tr").count();
+  await page.click("#btnAddPessoa2");
+  await page.fill("#pNome", "Pessoa Nova");
+  await page.click('#dlgPForm button[value="ok"]');
+  ok(await page.locator("#grid tbody tr").count() === n1 + 1, "adicionar pessoa pela grade");
+  await page.click('[data-dia="dom"]');
+  await page.uncheck("#dAberto");
+  await page.click('#dlgDForm button[value="ok"]');
+  ok(await page.locator("#grid .cell.fechado").count() === n1 + 1, "fechar domingo pelo cabeçalho do dia");
+  await page.click("#perfilBtn");
+  await page.click('[data-tema="dark"]');
+  ok(await page.evaluate(() => document.documentElement.dataset.theme === "dark" && localStorage.getItem("j40h:tema") === "dark"), "tema escuro pelo menu de perfil");
+  await page.click('[data-tema="system"]');
+  ok(await page.evaluate(() => !document.documentElement.dataset.theme), "volta a seguir o sistema");
+
+  console.log("10. celular");
   const m = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await m.goto(BASE + "/app/#d=" + hash);
   await m.waitForSelector("#grid button.cell");
@@ -123,7 +149,7 @@ try {
   ok(largura <= 390, "sem rolagem horizontal da página no celular (" + largura + "px)");
   if (SHOTS) await m.screenshot({ path: path.join(SHOTS, "app-mobile.png"), fullPage: true });
 
-  console.log("10. sem link: abre exemplo");
+  console.log("11. sem link: abre exemplo");
   const p2 = await (await browser.newContext()).newPage();
   await p2.goto(BASE + "/app/");
   await p2.waitForSelector("#grid button.cell");
