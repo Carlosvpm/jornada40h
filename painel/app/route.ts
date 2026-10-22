@@ -20,7 +20,8 @@ function html(): string {
 
 export async function GET(req: Request) {
   const u = await usuarioAtual();
-  if (!u) return NextResponse.redirect(new URL("/painel/login", req.url));
+  // Atrás do proxy, req.url traz o host interno (0.0.0.0:3040): usa o endereço público.
+  if (!u) return NextResponse.redirect(new URL("/painel/login", process.env.PUBLIC_URL || req.url));
   const config = { api: "/painel/api/escala", sair: "/painel/api/logout", login: "/painel/login", usuario: { nome: u.nome, email: u.email } };
   const js = JSON.stringify(config).replace(/</g, "\\u003c");
   return new NextResponse(html().replace("__CONFIG__", `<script>window.J40H_PAINEL=${js}</script>`), {
