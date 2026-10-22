@@ -1,3 +1,9 @@
+# Robô da Meta precisa baixar as imagens dos anúncios em /ads/.
+User-agent: facebookexternalhit
+User-agent: Facebot
+User-agent: meta-externalagent
+Allow: /
+
 User-agent: *
 Allow: /
 Disallow: /obrigado.html
