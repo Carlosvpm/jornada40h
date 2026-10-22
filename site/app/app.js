@@ -1573,5 +1573,5 @@
   }
 
   // Usado pelo teste automatizado.
-  window.__j40h = { get state() { return state; }, calcular: calcular, custos: custos, linkPessoal: linkPessoal };
+  window.__j40h = { get state() { return state; }, calcular: calcular, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, aplicarProposta: aplicarProposta, metricas: metricas };
 })();

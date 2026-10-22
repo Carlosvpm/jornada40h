@@ -14,7 +14,9 @@ export const iaAtiva = () => !!process.env.ANTHROPIC_API_KEY || process.env.IA_M
 export const MODELOS = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"] as const;
 export type Modelo = (typeof MODELOS)[number];
 export const ehModelo = (m: unknown): m is Modelo => MODELOS.includes(m as Modelo);
-const modeloPadrao = (): Modelo => (ehModelo(process.env.IA_MODELO) ? process.env.IA_MODELO : "claude-opus-5-5");
+// Sonnet 5.5 por padrão: na avaliação de 22/10 (tests/ia-modelos.mjs, 8 pedidos) acertou 8/8, contra 7/8 do
+// Opus e do Haiku, a US$ 0,02 por pedido (Opus US$ 0,06) e mais rápido.
+const modeloPadrao = (): Modelo => (ehModelo(process.env.IA_MODELO) ? process.env.IA_MODELO : "claude-sonnet-5-5");
 
 const hora = { type: "string", description: "HH:MM (24 h) ou vazio" };
 const dia = { type: "string", enum: [...DIAS] };
