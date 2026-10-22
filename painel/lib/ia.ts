@@ -9,6 +9,13 @@ const DIAS = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"] as const;
 
 export const iaAtiva = () => !!process.env.ANTHROPIC_API_KEY || process.env.IA_MOCK === "1";
 
+// Modelo do ajuste: IA_MODELO no ambiente troca sem deploy de código. Só o Opus tem o reserva no servidor
+// (fallbacks: "default"); o Haiku 5.5 não aceita, então os outros vão sem.
+export const MODELOS = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"] as const;
+export type Modelo = (typeof MODELOS)[number];
+export const ehModelo = (m: unknown): m is Modelo => MODELOS.includes(m as Modelo);
+const modeloPadrao = (): Modelo => (ehModelo(process.env.IA_MODELO) ? process.env.IA_MODELO : "claude-opus-5-5");
+
 const hora = { type: "string", description: "HH:MM (24 h) ou vazio" };
 const dia = { type: "string", enum: [...DIAS] };
 
@@ -104,7 +111,8 @@ Fundamento legal:
 Trechos de lei (compilação do Planalto, out/2026):
 ${BASE_LEGAL}`;
 
-export type PedidoIA = { pedido: string; contexto: unknown; anterior?: unknown };
+export type PedidoIA = { pedido: string; contexto: unknown; anterior?: unknown; modelo?: Modelo };
+export type Uso = { modelo: Modelo; entrada: number; saida: number; cacheLido: number; cacheGravado: number };
 
 function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; folgaFixa: string; naoPode: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
   const equipe = (ctx.equipe || []).map((p, i) => ({ ...p, salario: p.salario || 0, naoPode: i === 0 ? Array.from(new Set([...(p.naoPode || []), "sab"])) : p.naoPode || [] }));
@@ -117,8 +125,9 @@ function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salari
   };
 }
 
-export async function pedirAjuste({ pedido, contexto, anterior }: PedidoIA): Promise<unknown> {
-  if (process.env.IA_MOCK === "1" && !process.env.ANTHROPIC_API_KEY) return mock(contexto as Parameters<typeof mock>[0]);
+export async function pedirAjuste({ pedido, contexto, anterior, modelo }: PedidoIA): Promise<{ resultado: unknown; uso: Uso | null }> {
+  if (process.env.IA_MOCK === "1" && !process.env.ANTHROPIC_API_KEY) return { resultado: mock(contexto as Parameters<typeof mock>[0]), uso: null };
+  const m = modelo || modeloPadrao();
 
   const partes = [
     `Pedido do dono:\n${pedido}`,
@@ -128,20 +137,22 @@ export async function pedirAjuste({ pedido, contexto, anterior }: PedidoIA): Pro
 
   const client = new Anthropic();
   const resposta = await client.beta.messages.create({
-    model: "claude-opus-5-5",
+    model: m,
     max_tokens: 16000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    ...(m === "claude-opus-5-5" ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
     output_config: { effort: "medium", format: { type: "json_schema", schema: SCHEMA } },
-    system: SISTEMA,
+    // Instruções e trechos de lei são iguais em todo pedido: ficam em cache e a entrada sai mais barata.
+    system: [{ type: "text", text: SISTEMA, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: partes.join("\n\n") }],
   });
 
   if (resposta.stop_reason === "refusal") throw new ErroIA("A IA não conseguiu responder a esse pedido. Tente escrever de outro jeito.");
   if (resposta.stop_reason === "max_tokens") throw new ErroIA("A resposta da IA ficou grande demais. Tente um pedido mais curto.");
   const texto = resposta.content.map(b => (b.type === "text" ? b.text : "")).join("");
+  const u = resposta.usage;
+  const uso: Uso = { modelo: m, entrada: u.input_tokens, saida: u.output_tokens, cacheLido: u.cache_read_input_tokens || 0, cacheGravado: u.cache_creation_input_tokens || 0 };
   try {
-    return JSON.parse(texto);
+    return { resultado: JSON.parse(texto), uso };
   } catch {
     throw new ErroIA("A IA devolveu uma resposta que não deu para ler. Tente de novo.");
   }

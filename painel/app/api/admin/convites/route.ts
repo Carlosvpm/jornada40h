@@ -1,22 +1,8 @@
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
 import { getDb, liberarAcesso } from "@/lib/db";
-import { ipDe, normalizaEmail } from "@/lib/auth";
-import { limitar } from "@/lib/limite";
+import { normalizaEmail } from "@/lib/auth";
+import { autorizado, negar } from "@/lib/admin";
 import { enviarAcesso } from "@/lib/email";
-
-function autorizado(req: Request): boolean {
-  const chave = process.env.ADMIN_KEY || "";
-  const enviada = req.headers.get("x-admin-key") || "";
-  if (chave.length < 24 || enviada.length !== chave.length) return false;
-  return timingSafeEqual(Buffer.from(enviada), Buffer.from(chave));
-}
-
-// Só falhas de chave contam para o limite (o Apps Script chama isto a cada venda).
-function negar(req: Request) {
-  return limitar([{ chave: "admin:ip:" + ipDe(req), max: 20, janelaMin: 15 }]) ||
-    NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
-}
 
 // Confere a chave sem efeito colateral (usado por testarPainel() no Apps Script).
 export async function GET(req: Request) {

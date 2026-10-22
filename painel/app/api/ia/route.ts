@@ -30,7 +30,8 @@ export async function POST(req: Request) {
   if (!corpo.contexto || typeof corpo.contexto !== "object") return NextResponse.json({ erro: "Escala inválida." }, { status: 400 });
 
   try {
-    const resultado = await pedirAjuste({ pedido, contexto: corpo.contexto, anterior: corpo.anterior });
+    const { resultado, uso } = await pedirAjuste({ pedido, contexto: corpo.contexto, anterior: corpo.anterior });
+    if (uso) console.log("[ia] uso", JSON.stringify(uso));
     return NextResponse.json({ resultado });
   } catch (e) {
     if (e instanceof ErroIA) return NextResponse.json({ erro: e.message }, { status: 422 });
