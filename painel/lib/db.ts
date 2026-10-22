@@ -42,16 +42,30 @@ let db: Database.Database | null = null;
 
 // Versões anteriores tinham login com senha e convites por link. Leva as contas e os convites
 // pendentes (com a escala inicial) para o modelo sem senha.
+// Recria uma tabela com a definição do SCHEMA atual, mantendo as linhas (receita do SQLite:
+// cria a nova, copia, apaga a velha e renomeia a nova; renomear a velha reescreveria as FKs das outras).
+function recriar(d: Database.Database, tabela: string, colunas: string) {
+  const def = SCHEMA.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${tabela} \\(([\\s\\S]*?)\\n\\);`))![1];
+  d.exec(`
+    CREATE TABLE ${tabela}_nova (${def});
+    INSERT INTO ${tabela}_nova (${colunas}) SELECT ${colunas} FROM ${tabela};
+    DROP TABLE ${tabela};
+    ALTER TABLE ${tabela}_nova RENAME TO ${tabela};
+  `);
+}
+
 function migrar(d: Database.Database) {
   const cols = (d.prepare("PRAGMA table_info(usuarios)").all() as { name: string }[]).map(c => c.name);
-  if (cols.includes("senha_hash")) {
+  // Uma versão desta migração renomeava usuarios e deixava as FKs de sessoes/escalas apontando
+  // para "usuarios_antigos", que já não existe. Refaz essas tabelas com a FK certa.
+  const quebradas = (d.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND sql LIKE '%usuarios_antigos%'").all() as { name: string }[]).map(t => t.name);
+  if (cols.includes("senha_hash") || quebradas.length) {
     d.pragma("foreign_keys = OFF");
-    d.exec(`
-      ALTER TABLE usuarios RENAME TO usuarios_antigos;
-      CREATE TABLE usuarios (id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE, nome TEXT NOT NULL DEFAULT '', criado_em TEXT NOT NULL DEFAULT (datetime('now')));
-      INSERT INTO usuarios (id, email, nome, criado_em) SELECT id, email, nome, criado_em FROM usuarios_antigos;
-      DROP TABLE usuarios_antigos;
-    `);
+    d.transaction(() => {
+      if (cols.includes("senha_hash")) recriar(d, "usuarios", "id, email, nome, criado_em");
+      if (quebradas.includes("sessoes")) recriar(d, "sessoes", "token_hash, usuario_id, expira_em");
+      if (quebradas.includes("escalas")) recriar(d, "escalas", "usuario_id, estado, atualizado_em");
+    })();
     d.pragma("foreign_keys = ON");
   }
   const temConvites = d.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='convites'").get();
