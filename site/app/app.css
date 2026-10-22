@@ -305,6 +305,12 @@ dialog > form > label { margin-bottom: 10px; }
 .pc .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pc); flex-shrink: 0; }
 .pc .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .pc small { margin-left: auto; font-size: 10.5px; font-weight: 600; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.grid.por-turno .pc { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: grab; }
+.pc.saindo { opacity: .35; }
+.pc.fantasma { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; cursor: grabbing; box-shadow: var(--shadow-md); transform-origin: 0 0; opacity: .95; }
+.grid.arrastando, .grid.arrastando .pc { cursor: grabbing; }
+.grid.arrastando td[data-ag] { transition: background .1s; }
+.grid.por-turno td.alvo { background: var(--gold-soft); box-shadow: inset 0 0 0 2px var(--gold); }
 .pc.erro { border-color: var(--red); box-shadow: 0 0 0 1px var(--red) inset; }
 .g-folga .pc, .g-livre .pc { background: var(--card); border-style: dashed; color: var(--muted); font-weight: 500; }
 .grid.por-turno th.p, .grid.por-turno td.p { width: 140px; }
@@ -321,6 +327,8 @@ dialog > form > label { margin-bottom: 10px; }
 .explica > div, .explica > ul { padding: 0 16px 14px 30px; font-size: 13px; line-height: 1.6; color: var(--text); }
 .explica ul { margin: 0; padding-left: 18px; }
 .explica li { margin-bottom: 6px; }
+a.lei { color: var(--gold-ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; white-space: nowrap; }
+.explica .nota { color: var(--muted); font-size: 12px; }
 .explica p { margin: 10px 0 0; }
 .explica.calc { margin-top: 14px; }
 .explica.calc ul { padding: 0 16px 14px 34px; }

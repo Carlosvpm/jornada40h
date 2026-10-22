@@ -14,6 +14,25 @@
   var SEMANAS = ["A", "B"];
   var SEM_POR_MES = 4.33;
   var INTERJORNADA_MIN = 11 * 60;
+  // Base legal das regras da escala. Texto conferido na compilação do Planalto (via github.com/ctresb/leis,
+  // out/2026); não substitui o Diário Oficial nem a convenção coletiva da categoria.
+  var FONTE = {
+    cf: "https://www.planalto.gov.br/ccivil_03/constituicao/constituicaocompilado.htm",
+    ec141: "https://www.planalto.gov.br/ccivil_03/constituicao/emendas/emc/emc141.htm",
+    clt: "https://www.planalto.gov.br/ccivil_03/decreto-lei/del5452.htm",
+    l605: "https://www.planalto.gov.br/ccivil_03/leis/l0605.htm",
+    l10101: "https://www.planalto.gov.br/ccivil_03/leis/l10101.htm"
+  };
+  var LEIS = {
+    jornada: { ref: "CF, art. 7º, XIII", fonte: "cf", regra: "Jornada normal de até 8 h por dia e 40 h por semana (redação da EC 141/2026), com compensação de horários por acordo ou convenção. A EC 141 reduz o limite semanal aos poucos: por isso a escala tem a versão de 42 h e a de 40 h." },
+    he: { ref: "CLT, art. 59", fonte: "clt", regra: "A jornada pode ter no máximo 2 horas extras por dia, pagas com pelo menos 50% a mais que a hora normal (§ 1º; CF, art. 7º, XVI)." },
+    interjornada: { ref: "CLT, art. 66", fonte: "clt", regra: "Entre duas jornadas, no mínimo 11 horas seguidas de descanso." },
+    dsr: { ref: "CLT, art. 67; Lei 605/1949, art. 1º", fonte: "clt", regra: "Todo empregado tem um descanso semanal de 24 horas seguidas, de preferência no domingo. A escala 5x2 dá 2 folgas por semana, acima desse mínimo." },
+    intervalo: { ref: "CLT, art. 71", fonte: "clt", regra: "Turno de mais de 6 h tem intervalo de 1 a 2 h para refeição; de 4 a 6 h, 15 minutos. O intervalo não conta como hora trabalhada (§ 2º)." },
+    domingo: { ref: "Lei 10.101/2000, art. 6º", fonte: "l10101", regra: "No comércio, o trabalho no domingo é permitido (respeitada a lei do município), e a folga semanal precisa cair no domingo pelo menos 1 vez a cada 3 semanas. Para mulheres, a CLT (art. 386) pede revezamento quinzenal." },
+    revezamento: { ref: "CLT, art. 67, parágrafo único", fonte: "clt", regra: "Onde há trabalho no domingo, a escala de revezamento é organizada por mês e fica à vista da fiscalização." }
+  };
+  function lei(k) { return " (" + LEIS[k].ref + ")"; }
   var LS_KEY = "j40h:escala:v1";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
   // Modo conta (/painel): o estado vem do banco e é salvo nele. Sem isso, fica no aparelho e no link.
@@ -353,20 +372,20 @@
         var c = celula(s, v, sem, p.id, d);
         if (c.tipo !== "turno") { folgas++; return; }
         var du = dur(c); h += du;
-        if (du > R.jornadaDiariaMax + 2 + 1e-9) { erros[d] = 1; res.erros.push(nome + " faz " + horas(du) + " " + prep(d) + ": passa do máximo de " + horas(R.jornadaDiariaMax + 2) + " por dia (jornada + 2 h extras)."); }
-        else if (du > R.jornadaDiariaMax + 1e-9) res.avisos.push(nome + " faz " + horas(du) + " " + prep(d) + ": " + horas(du - R.jornadaDiariaMax) + " de hora extra.");
+        if (du > R.jornadaDiariaMax + 2 + 1e-9) { erros[d] = 1; res.erros.push(nome + " faz " + horas(du) + " " + prep(d) + ": passa do máximo de " + horas(R.jornadaDiariaMax + 2) + " por dia (jornada + 2 h extras)" + lei("he") + "."); }
+        else if (du > R.jornadaDiariaMax + 1e-9) res.avisos.push(nome + " faz " + horas(du) + " " + prep(d) + ": " + horas(du - R.jornadaDiariaMax) + " de hora extra, paga com adicional" + lei("he") + ".");
         var prox = DIAS[i + 1];
         if (prox) {
           var c2 = celula(s, v, sem, p.id, prox);
           if (c2.tipo === "turno") {
             var fim = min(c.fim); if (fim <= min(c.inicio)) fim += 1440;
             var desc = min(c2.inicio) + 1440 - fim;
-            if (desc < INTERJORNADA_MIN) { erros[prox] = 1; res.erros.push(nome + " descansa só " + horas(desc / 60) + " entre " + NOME_DIA[d].toLowerCase() + " e " + NOME_DIA[prox].toLowerCase() + " (mínimo de 11 h entre um dia e outro)."); }
+            if (desc < INTERJORNADA_MIN) { erros[prox] = 1; res.erros.push(nome + " descansa só " + horas(desc / 60) + " entre " + NOME_DIA[d].toLowerCase() + " e " + NOME_DIA[prox].toLowerCase() + " (mínimo de 11 h entre um dia e outro)" + lei("interjornada") + "."); }
           }
         }
       });
-      if (h > R.jornadaSemanal + 1e-9) res.erros.push(nome + " soma " + horas(h) + " na semana, " + horas(h - R.jornadaSemanal) + " acima da jornada de " + R.rotulo + " (vira hora extra).");
-      if (folgas < 2) res.erros.push(nome + " tem " + (folgas === 1 ? "só 1 folga" : "nenhuma folga") + " na semana. Na escala 5x2 são 2.");
+      if (h > R.jornadaSemanal + 1e-9) res.erros.push(nome + " soma " + horas(h) + " na semana, " + horas(h - R.jornadaSemanal) + " acima da jornada de " + R.rotulo + " (vira hora extra)" + lei("jornada") + ".");
+      if (folgas < 2) res.erros.push(nome + " tem " + (folgas === 1 ? "só 1 folga" : "nenhuma folga") + " na semana. Na escala 5x2 são 2; a lei exige pelo menos 1 descanso de 24 h" + lei("dsr") + ".");
       res.pessoas.push({ id: p.id, nome: nome, horas: h, folgas: folgas, erros: erros, extra: Math.max(0, h - R.jornadaSemanal) });
     });
     return res;
@@ -561,7 +580,7 @@
         // Horário mais comum do turno no dia vai no topo; quem foge dele mostra o próprio horário.
         var cont = {}, topo = "";
         lista.forEach(function (x) { if (x.c.tipo === "turno") { var k = x.c.inicio + "-" + x.c.fim; cont[k] = (cont[k] || 0) + 1; if (!topo || cont[k] > cont[topo]) topo = k; } });
-        h += '<td class="' + hj.trim() + '">';
+        h += '<td class="' + hj.trim() + '" data-ag="' + g.id + '" data-ad="' + d + '"' + (topo ? ' data-faixa="' + topo + '"' : "") + ">";
         if (topo) { var tt = topo.split("-"); h += '<div class="faixa">' + falada(min(tt[0])) + "–" + falada(min(tt[1])) + "</div>"; }
         h += '<div class="pcs">';
         lista.forEach(function (x) {
@@ -630,7 +649,7 @@
         " O card de custos mostra quanto sai cada jeito de cobrir.</p>";
     } else conta += "Todo o horário está coberto.</p>";
     $("#explicaTxt").innerHTML = "<ul>" + li.join("") + "</ul>" + conta +
-      "<p><b>Folgas.</b> Cada pessoa tem 2 folgas por semana e pelo menos 11 h de descanso entre um dia e outro. Quem folga no fim de semana alterna entre as semanas A e B, para ninguém trabalhar todo sábado e domingo.</p>";
+      "<p><b>Folgas.</b> Cada pessoa tem 2 folgas por semana e pelo menos 11 h de descanso entre um dia e outro. Quem folga no fim de semana alterna entre as semanas A e B, para ninguém trabalhar todo sábado e domingo.</p>" + baseLegal();
   }
 
   function renderGradePessoa(calc) {
@@ -685,6 +704,24 @@
     $("#custoCalc").innerHTML = calc.map(function (x) { return "<li>" + x + "</li>"; }).join("");
   }
 
+  // Troca as citações "(CLT, art. 66)" do texto (já escapado) por links para a lei no Planalto.
+  function citar(html) {
+    Object.keys(LEIS).forEach(function (k) {
+      var L = LEIS[k];
+      html = html.split("(" + esc(L.ref) + ")").join('(<a class="lei" href="' + FONTE[L.fonte] + '" target="_blank" rel="noopener" title="' + esc(L.regra) + '">' + esc(L.ref) + "</a>)");
+    });
+    return html;
+  }
+
+  function baseLegal() {
+    return '<p><b>Base legal.</b> Cada alerta da escala cita a regra de onde vem:</p><ul class="leis">' +
+      ["jornada", "he", "interjornada", "dsr", "intervalo", "domingo", "revezamento"].map(function (k) {
+        var L = LEIS[k];
+        return '<li><a class="lei" href="' + FONTE[L.fonte] + '" target="_blank" rel="noopener">' + esc(L.ref) + "</a>: " + esc(L.regra) + "</li>";
+      }).join("") +
+      '</ul><p class="nota">Texto conferido na compilação do Planalto. A convenção coletiva da sua categoria pode ter regras próprias (piso, adicional maior, folga no domingo); na dúvida, confirme com seu contador. Veja também as <a href="' + FONTE.ec141 + '" target="_blank" rel="noopener">regras de transição da EC 141/2026</a>.</p>';
+  }
+
   function renderAlertas(calc, cus) {
     var li = [];
     calc.erros.forEach(function (e) { li.push('<li class="erro">' + esc(e) + "</li>"); });
@@ -699,10 +736,10 @@
       var semDomingo = state.equipe.filter(function (p) {
         return SEMANAS.every(function (s) { return celula(state, state.versao, s, p.id, "dom").tipo === "turno"; });
       }).map(function (p) { return p.nome; });
-      if (semDomingo.length) li.push("<li>" + esc(semDomingo.join(", ")) + (semDomingo.length === 1 ? " trabalha" : " trabalham") + " no domingo nas semanas A e B. No comércio, a folga precisa cair no domingo pelo menos 1 vez a cada 3 semanas: ajuste numa das semanas.</li>");
+      if (semDomingo.length) li.push("<li>" + esc(semDomingo.join(", ")) + (semDomingo.length === 1 ? " trabalha" : " trabalham") + " no domingo nas semanas A e B. No comércio, a folga precisa cair no domingo pelo menos 1 vez a cada 3 semanas" + esc(lei("domingo")) + ": ajuste numa das semanas.</li>");
     }
     if (calc.sobra > 0.01) li.push("<li>Há " + horas(calc.sobra) + " por semana com gente a mais que o necessário: serve de reserva para faltas, férias e atestados.</li>");
-    $("#alertas").innerHTML = li.join("");
+    $("#alertas").innerHTML = citar(li.join(""));
   }
 
   /* ------------------------------------------------------------------ */
@@ -1128,12 +1165,13 @@
   // Depois de uma edição à mão: se piorou cobertura, lei ou custo, avisa e oferece desfazer ou pedir à IA.
   function verificarPiora(snap, antes, rotulo) {
     var p = problemas(antes, metricas(state));
-    if (!p.length) { $("#iaDica").hidden = true; return; }
+    if (!p.length) { $("#iaDica").hidden = true; return false; }
     desfazerSnap = snap;
     var pedido = rotulo + ". Isso causou: " + p.join("; ") + ". Mantendo essa mudança, como resolvo esses problemas?";
     dica("<b>Atenção:</b> essa mudança deixou " + esc(p.join(", ")) + ".",
       '<button type="button" class="b ghost sm" data-dica="desfazer">Desfazer</button>' +
       (PAINEL && PAINEL.ia ? '<button type="button" class="b ia sm" data-dica="ia" data-pedido="' + esc(pedido) + '"><svg class="ic"><use href="#i-spark"/></svg>Pedir sugestão à IA</button>' : ""));
+    return true;
   }
 
   function contextoIA() {
@@ -1246,14 +1284,14 @@
 
   function mostrarIA(r) {
     ia.resultado = r;
-    var h = '<p class="ia-resumo">' + esc(r.resumo || "") + "</p>";
+    var h = '<p class="ia-resumo">' + citar(esc(r.resumo || "")) + "</p>";
     if (r.entendeu === false) { $("#iaResultado").innerHTML = h; ia.piorou = false; iaPasso(3); return; }
     ia.previa = aplicarProposta(r.proposta || {});
     var a = metricas(state), b = metricas(ia.previa), auto = problemas(a, b);
     ia.piorou = auto.length > 0 || (r.avisos || []).length > 0;
     ia.problemas = auto;
     ia.depois = b;
-    if ((r.mudancas || []).length) h += '<p class="rot">O que muda</p><ul class="ia-mud">' + r.mudancas.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>";
+    if ((r.mudancas || []).length) h += '<p class="rot">O que muda</p><ul class="ia-mud">' + r.mudancas.map(function (x) { return "<li>" + citar(esc(x)) + "</li>"; }).join("") + "</ul>";
     var linha = function (rot, va, vb, fmt, menorMelhor) {
       var cls = Math.abs(vb - va) < 0.01 ? "" : (vb < va) === menorMelhor ? " melhor" : " pior";
       return "<tr><td>" + rot + "</td><td>" + fmt(va) + '</td><td class="' + cls.trim() + '">' + fmt(vb) + "</td></tr>";
@@ -1264,7 +1302,7 @@
       linha("Custo extra para cobrir (mês)", a.custo, b.custo, brl, true) +
       linha("Folha da equipe (mês)", a.folha, b.folha, brl, true) + "</tbody></table>";
     var avisos = (r.avisos || []).concat(auto.length ? ["A proposta deixa " + auto.join(", ") + "."] : []);
-    if (avisos.length) h += '<div class="ia-avisos"><b>Atenção</b><ul>' + avisos.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>";
+    if (avisos.length) h += '<div class="ia-avisos"><b>Atenção</b><ul>' + avisos.map(function (x) { return "<li>" + citar(esc(x)) + "</li>"; }).join("") + "</ul></div>";
     if (ia.previa.pendente) h += '<p class="muted sm">A grade atual fica como está; depois de aplicar, use “Montar a escala de novo” para redistribuir os turnos.</p>';
     $("#iaResultado").innerHTML = h;
     iaPasso(3);
@@ -1314,6 +1352,7 @@
       render();
     });
     ligarIA();
+    ligarArrastar();
     $("#dlgPForm").addEventListener("submit", function (e) {
       if (e.submitter && e.submitter.value === "ok" && salvarPessoa() === false) e.preventDefault();
     });
@@ -1330,6 +1369,131 @@
     $("#dlgDForm").addEventListener("submit", function (e) {
       if (e.submitter && e.submitter.value === "ok" && salvarDia() === false) e.preventDefault();
     });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Arrastar pessoas pelo quadro por turno                             */
+  /* ------------------------------------------------------------------ */
+
+  // Horário para quem cai num turno: o mais comum da linha naquele dia; senão o turno do motor que
+  // cai nesse grupo; senão um turno do tamanho da jornada encostado na abertura ou no fechamento.
+  function turnoDoGrupo(g, d, faixa) {
+    if (faixa) { var t = faixa.split("-"); return { inicio: t[0], fim: t[1] }; }
+    var f = state.funcionamento[d], R = VERSOES[state.versao], J = Math.round(R.jornadaDiariaMax * 60);
+    var dia = montarDias(state.funcionamento, { jornadaDiariaMax: R.jornadaDiariaMax })[d];
+    var achou = ((dia && dia.turnos) || []).filter(function (t) { return grupoDe({ tipo: "turno", inicio: hhmm(t.inicio), fim: hhmm(t.fim) }, f) === g; })[0];
+    if (achou) return { inicio: hhmm(achou.inicio), fim: hhmm(achou.fim), rotulo: achou.rotulo };
+    var a = min(f.abre), b = min(f.fecha); if (b <= a) b += 1440;
+    var aberto = b - a, len = Math.min(J, aberto);
+    if (g === "dia" && aberto <= J + 120) return { inicio: f.abre, fim: f.fecha };
+    if (g === "fechamento") return { inicio: hhmm(b - len), fim: f.fecha };
+    if (g === "meio") { var m = a + Math.round((aberto - len) / 2 / 30) * 30; return { inicio: hhmm(m), fim: hhmm(m + len) }; }
+    return { inicio: f.abre, fim: hhmm(a + len) };
+  }
+
+  // Solta a pessoa id (que estava no dia "de") no grupo g do dia "para". Em outro dia, as duas
+  // células da pessoa trocam de lugar: ela leva o turno para o dia novo e o dia antigo fica com o
+  // que ela tinha no dia novo (assim o número de folgas não muda).
+  function moverPessoa(id, de, g, para, faixa) {
+    if (!state.funcionamento[para]) return;
+    var grade = state.escalas[state.versao][state.semana];
+    grade[id] = grade[id] || {};
+    var atual = celula(state, state.versao, state.semana, id, para);
+    if (grupoDe(atual, state.funcionamento[para]) === g) {
+      if (de !== para) toast("Essa pessoa já está nesse turno " + prep(para) + ".");
+      return;
+    }
+    var snap = JSON.stringify(state), antes = metricas(state);
+    var pe = state.equipe.filter(function (x) { return x.id === id; })[0], nome = pe ? pe.nome : "Pessoa";
+    var nova;
+    if (g === "folga" || g === "livre") nova = { tipo: g };
+    else { var t = turnoDoGrupo(g, para, faixa); nova = { tipo: "turno", inicio: t.inicio, fim: t.fim, rotulo: t.rotulo || "" }; }
+    if (de !== para) {
+      // O dia antigo recebe o que a pessoa fazia no dia novo, no turno equivalente do dia antigo.
+      var gAtual = grupoDe(atual, state.funcionamento[para]);
+      if (atual.tipo !== "turno") grade[id][de] = { tipo: atual.tipo };
+      else {
+        var td = document.querySelector('#grid td[data-ag="' + gAtual + '"][data-ad="' + de + '"]');
+        var t2 = turnoDoGrupo(gAtual, de, td ? td.dataset.faixa : "");
+        grade[id][de] = { tipo: "turno", inicio: t2.inicio, fim: t2.fim, rotulo: t2.rotulo || "" };
+      }
+    }
+    grade[id][para] = nova;
+    salvar(); render();
+    var nomeDe = function (c) { return c.tipo === "turno" ? "das " + falada(min(c.inicio)) + " às " + falada(min(c.fim)) : c.tipo === "folga" ? "de folga" : "de reserva"; };
+    var rot = nome + " " + prep(para) + " " + nomeDe(nova) + (de !== para ? " e " + prep(de) + " " + nomeDe(grade[id][de]) : "");
+    if (!verificarPiora(snap, antes, "Movi " + rot)) {
+      desfazerSnap = snap;
+      dica("Movi " + esc(rot) + ".", '<button type="button" class="b ghost sm" data-dica="desfazer">Desfazer</button>');
+    }
+  }
+
+  function ligarArrastar() {
+    var grid = $("#grid"), box = grid.closest(".grid-scroll") || grid.parentNode;
+    var ar = null, ignorarClique = false;
+    function alvo(x, y) {
+      var el = document.elementFromPoint(x, y), td = el && el.closest && el.closest("#grid td[data-ag]");
+      return td && grid.contains(td) ? td : null;
+    }
+    function marcar(td) {
+      if (ar.alvo === td) return;
+      if (ar.alvo) ar.alvo.classList.remove("alvo");
+      ar.alvo = td; if (td) td.classList.add("alvo");
+    }
+    function comecar() {
+      ar.on = true;
+      var r = ar.el.getBoundingClientRect();
+      ar.fant = ar.el.cloneNode(true);
+      ar.fant.classList.add("fantasma");
+      ar.fant.style.width = r.width + "px";
+      ar.dx = ar.x0 - r.left; ar.dy = ar.y0 - r.top;
+      document.body.appendChild(ar.fant);
+      ar.el.classList.add("saindo");
+      grid.classList.add("arrastando");
+      try { ar.el.setPointerCapture(ar.id); } catch (e) {}
+    }
+    function mover(x, y) {
+      ar.fant.style.transform = "translate(" + (x - ar.dx) + "px," + (y - ar.dy) + "px)";
+      marcar(alvo(x, y));
+      var b = box.getBoundingClientRect();
+      if (x < b.left + 40) box.scrollLeft -= 12; else if (x > b.right - 40) box.scrollLeft += 12;
+    }
+    function fim(soltar, x, y) {
+      if (!ar) return;
+      clearTimeout(ar.timer);
+      var a = ar; ar = null;
+      if (!a.on) return;
+      ignorarClique = true; setTimeout(function () { ignorarClique = false; }, 0);
+      a.fant.remove(); a.el.classList.remove("saindo"); grid.classList.remove("arrastando");
+      if (a.alvo) a.alvo.classList.remove("alvo");
+      var td = soltar ? alvo(x, y) : null;
+      if (td) moverPessoa(a.p, a.d, td.dataset.ag, td.dataset.ad, td.dataset.faixa || "");
+    }
+    grid.addEventListener("pointerdown", function (e) {
+      if (vista !== "turno" || e.button > 0) return;
+      var el = e.target.closest(".pc[data-p]"); if (!el) return;
+      ar = { el: el, p: el.dataset.p, d: el.dataset.d, id: e.pointerId, x0: e.clientX, y0: e.clientY, toque: e.pointerType !== "mouse", on: false, alvo: null };
+      // No toque, segurar 0,3 s começa a arrastar; mexer antes disso é rolagem da tabela.
+      if (ar.toque) ar.timer = setTimeout(function () { if (ar && !ar.on) { comecar(); mover(ar.x0, ar.y0); if (navigator.vibrate) navigator.vibrate(15); } }, 300);
+    });
+    document.addEventListener("pointermove", function (e) {
+      if (!ar || e.pointerId !== ar.id) return;
+      if (!ar.on) {
+        var longe = Math.abs(e.clientX - ar.x0) + Math.abs(e.clientY - ar.y0) > 6;
+        if (!longe) return;
+        if (ar.toque) { clearTimeout(ar.timer); ar = null; return; }
+        comecar();
+      }
+      e.preventDefault();
+      mover(e.clientX, e.clientY);
+    });
+    document.addEventListener("pointerup", function (e) { if (ar && e.pointerId === ar.id) fim(true, e.clientX, e.clientY); });
+    document.addEventListener("pointercancel", function (e) { if (ar && e.pointerId === ar.id) fim(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && ar) fim(false); });
+    // Com o dedo já arrastando, a página não rola.
+    document.addEventListener("touchmove", function (e) { if (ar && ar.on) e.preventDefault(); }, { passive: false });
+    grid.addEventListener("contextmenu", function (e) { if (e.target.closest(".pc")) e.preventDefault(); });
+    grid.addEventListener("click", function (e) { if (ignorarClique) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
   }
 
   function marcarPendente() {

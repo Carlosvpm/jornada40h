@@ -157,6 +157,37 @@ try {
   ok(/A conta das horas/.test(await page.textContent("#explicaTxt")), "explicação de como a escala foi montada");
   ok(/Valor da hora/.test(await page.textContent("#custoCalc")), "explicação do cálculo dos custos");
   ok(await page.evaluate(() => localStorage.getItem("j40h:vista")) === "turno", "visão escolhida fica guardada");
+  ok(await page.locator('#explicaTxt a.lei[href*="planalto.gov.br"]').count() >= 5, "base legal com link para a lei");
+  ok(/CLT, art\. 66/.test(await page.textContent("#explicaTxt")), "explicação cita o artigo do descanso de 11 h");
+
+  console.log("9c. arrastar pessoas no quadro");
+  const arrasta = async (de, para) => {
+    const a = await page.locator(de).first().boundingBox(), b = await page.locator(para).first().boundingBox();
+    await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(a.x + a.width / 2 + 10, a.y + a.height / 2 + 10, { steps: 3 });
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 8 });
+    await page.mouse.up();
+  };
+  const celEst = (id, d) => page.evaluate(([id, d]) => { const s = window.__j40h.state; return (s.escalas[s.versao][s.semana][id] || {})[d] || { tipo: "livre" }; }, [id, d]);
+  const folgado = page.locator('#grid.por-turno .g-folga .pc[data-d="ter"]').first();
+  const idF = await folgado.getAttribute("data-p");
+  await arrasta(`#grid.por-turno .g-folga .pc[data-p="${idF}"][data-d="ter"]`, '#grid.por-turno tr.g-abertura td[data-ad="ter"]');
+  const c1 = await celEst(idF, "ter");
+  ok(c1.tipo === "turno", "arrastar da folga para a abertura põe a pessoa no turno (" + JSON.stringify(c1) + ")");
+  ok(!(await page.isVisible("#dlg")), "arrastar não abre a edição");
+  ok(await page.isVisible("#iaDica") && /Desfazer/.test(await page.textContent("#iaDica")), "mostra o que mudou com opção de desfazer");
+  await page.click('#iaDica [data-dica="desfazer"]');
+  ok((await celEst(idF, "ter")).tipo === "folga", "desfazer volta a folga");
+  const trab = page.locator('#grid.por-turno tr.g-abertura .pc[data-d="seg"]').first();
+  const idT = await trab.getAttribute("data-p");
+  let dAlvo = null;
+  for (const d of ["ter", "qua", "qui", "sex", "sab"]) if ((await celEst(idT, d)).tipo === "turno") { dAlvo = d; break; }
+  await arrasta(`#grid.por-turno tr.g-abertura .pc[data-p="${idT}"][data-d="seg"]`, `#grid.por-turno tr.g-folga td[data-ad="${dAlvo}"]`);
+  const seg2 = await celEst(idT, "seg"), alvo2 = await celEst(idT, dAlvo);
+  ok(alvo2.tipo === "folga" && seg2.tipo === "turno", `arrastar para a folga de outro dia troca os dois dias (seg ${seg2.tipo}, ${dAlvo} ${alvo2.tipo})`);
+  const folgasDepois = await page.evaluate(id => { const s = window.__j40h.state; return Object.values(s.escalas[s.versao][s.semana][id]).filter(c => c.tipo !== "turno").length; }, idT);
+  ok(folgasDepois >= 2, "a troca entre dias mantém as folgas da semana");
   await page.click('#vistas [data-vista="pessoa"]');
 
   console.log("10. celular");
