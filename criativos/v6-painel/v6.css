@@ -1,0 +1,10 @@
+.shot { position: relative; overflow: hidden; }
+.shot img { display: block; width: 100%; height: auto; }
+.shot.fade::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 120px; background: linear-gradient(transparent, var(--surface)); }
+.window .shot { border-radius: 0; }
+.clip { border-radius: 22px; overflow: hidden; border: 2px solid var(--line-2); box-shadow: 0 40px 90px rgba(0,0,0,.55); }
+.clip img { display: block; width: 100%; height: auto; }
+.real { margin-top: 14px; font-size: 20px; color: var(--muted); text-align: center; }
+.feats { display: flex; flex-wrap: wrap; gap: 12px 28px; font-size: 25px; color: var(--text); }
+.feats span { display: inline-flex; align-items: center; gap: 10px; }
+.feats svg { width: 26px; height: 26px; color: var(--off); flex: none; }

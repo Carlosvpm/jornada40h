@@ -314,7 +314,12 @@ dialog > form > label { margin-bottom: 10px; }
 .pc.erro { border-color: var(--red); box-shadow: 0 0 0 1px var(--red) inset; }
 .g-folga .pc, .g-livre .pc { background: var(--card); border-style: dashed; color: var(--muted); font-weight: 500; }
 .grid.por-turno th.p, .grid.por-turno td.p { width: 140px; }
-@media (max-width: 640px) { .grid.por-turno th.p, .grid.por-turno td.p { width: 100px; } .grid.por-turno td.p small { display: none; } }
+@media (max-width: 640px) {
+  .grid.por-turno th.p, .grid.por-turno td.p { width: 100px; }
+  .grid.por-turno td.p { padding: 10px 8px; }
+  .grid.por-turno td.p b { font-size: 12.5px; overflow-wrap: normal; hyphens: auto; }
+  .grid.por-turno td.p small { display: none; }
+}
 
 /* Explicações */
 .explica { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-1); }

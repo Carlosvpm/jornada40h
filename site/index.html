@@ -347,6 +347,22 @@
   .deliver { display: grid; gap: 28px; align-items: start; }
   @media (min-width: 1000px) { .deliver { grid-template-columns: minmax(0, 1fr) 440px; gap: 48px; } }
   .deliver-cap { font-size: 13px; color: var(--muted); margin: 12px 2px 0; text-align: center; }
+  .painel-shot { margin: 0 auto 28px; max-width: 1080px; }
+  .painel-shot .window img { display: block; width: 100%; height: auto; }
+  .painel-feats { display: grid; gap: 20px; }
+  @media (min-width: 820px) { .painel-feats { grid-template-columns: repeat(3, 1fr); } }
+  .pfeat { background: var(--surface); border: 1px solid var(--line-2); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
+  .pfeat .pimg { height: 300px; overflow: hidden; border-bottom: 1px solid var(--line); background: var(--bg); }
+  .pfeat .pimg img { display: block; width: 100%; height: auto; }
+  .pfeat .pimg.cel { display: grid; justify-items: center; padding-top: 18px; }
+  .pfeat .pimg.cel img { width: 62%; border-radius: 22px 22px 0 0; border: 1px solid var(--line-2); border-bottom: 0; }
+  .pfeat div.ptxt { padding: 18px 20px 20px; }
+  .pfeat h3 { margin: 0 0 6px; font-size: 18px; line-height: 1.25; }
+  .pfeat p { margin: 0; color: var(--muted); font-size: 15px; }
+  .ia-box { margin: 20px auto 0; max-width: 1080px; display: flex; gap: 14px; align-items: flex-start; padding: 18px 20px; border-radius: 18px; border: 1px solid var(--line-2); background: var(--surface); }
+  .ia-box svg { flex-shrink: 0; width: 22px; height: 22px; color: var(--gold); margin-top: 2px; }
+  .ia-box p { margin: 0; color: var(--muted); font-size: 15px; }
+  .ia-box b { color: var(--text); }
   .pricebox { background: var(--surface); border: 1px solid rgba(230,184,74,.45); border-radius: 22px; padding: 28px 22px; box-shadow: 0 0 0 6px rgba(230,184,74,.05), 0 30px 70px rgba(0,0,0,.4); }
   .pricebox h3 { font-family: var(--display); font-size: 27px; letter-spacing: -0.02em; text-align: center; margin-bottom: 4px; }
   .pricebox > p { text-align: center; color: var(--muted); margin: 0 0 8px; }
@@ -356,6 +372,7 @@
   .gets svg { width: 20px; height: 20px; color: var(--gold); flex: none; margin-top: 2px; }
   .gets b { display: block; color: #fff; font-weight: 600; }
   .gets span { color: var(--muted); font-size: 14px; }
+  .gets span a { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
   .limited { text-align: center; font-size: 13px; color: var(--muted); margin: 12px 0 0; }
 
   .guarantee { display: grid; grid-template-columns: 76px 1fr; gap: 18px; align-items: center; max-width: 720px; margin: 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px; }
@@ -401,7 +418,7 @@
     <a class="brand" href="#"><span class="mark">40h</span>Jornada 40h</a>
     <div class="nav-links">
       <a href="#card">Calculadora</a>
-      <a href="#exemplo">Exemplo</a>
+      <a href="#painel">O painel</a>
       <a href="#oferta">Como funciona</a>
       <a href="#faq">Dúvidas</a>
       <a href="fim-da-escala-6x1/">Guia do fim da 6x1</a>
@@ -416,7 +433,7 @@
     <div class="hero-copy">
       <span class="badge"><svg><use href="#i-scale"/></svg>Fim da 6x1 promulgado: EC 141/2026</span>
       <h1 id="h1">Sua escala 5x2 pronta para o <em>fim da escala 6x1</em></h1>
-      <p class="sub">A escala completa da sua equipe, <b>pessoa por pessoa</b>, nas versões de <b>42h (dezembro)</b> e <b>40h (2027)</b>. Em PDF e planilha, em até 48 horas.</p>
+      <p class="sub">A escala completa da sua equipe, <b>pessoa por pessoa</b>, nas versões de <b>42h (dezembro)</b> e <b>40h (2027)</b>. Em PDF, planilha e num painel online para ajustar, em até 48 horas.</p>
       <div class="price hero-price"><span class="de">de <s class="precoCheio"></s></span><strong class="precoFundador"></strong><span>pagamento único<br>garantia de 7 dias</span></div>
       <a class="btn hero-cta" href="#card" data-scroll="card">Fazer o diagnóstico do meu negócio<small>1 minuto, sem cadastro</small></a>
       <a class="pdf-link hero-pdf" href="exemplo/escala-5x2-exemplo.pdf" target="_blank" rel="noopener"><svg><use href="#i-doc"/></svg>Ver um exemplo de escala pronta (PDF)</a>
@@ -425,7 +442,7 @@
         <li><svg><use href="#i-check"/></svg><div><b>A escala completa, pessoa por pessoa</b><span>Versão 42h (a partir de ~16/12/2026) e versão 40h (~16/12/2027), com 2 folgas por semana para cada um</span></div></li>
         <li><svg><use href="#i-check"/></svg><div><b>Relatório de custos</b><span>Contratar × hora extra × reduzir horário, e qual sai mais barato para você</span></div></li>
         <li><svg><use href="#i-check"/></svg><div><b>PDF para imprimir e planilha para ajustar</b><span>Entregue em até 48 horas</span></div></li>
-        <li><svg><use href="#i-check"/></svg><div><b>Acesso antecipado ao app da transição, com IA</b><span>Sem custo extra para quem compra agora</span></div></li>
+        <li><svg><use href="#i-check"/></svg><div><b>Painel online para ajustar, com IA</b><span>Arraste pessoas entre turnos e veja custos e alertas da lei na hora. <a href="#painel">Ver telas</a></span></div></li>
       </ul>
     </div>
 
@@ -539,7 +556,7 @@
       <section class="unlock" id="unlock" hidden>
         <div class="price"><span class="de">de <s class="precoCheio"></s></span><strong class="precoFundador"></strong><span>pagamento único</span></div>
         <a class="btn checkout" id="unlockBtn" href="#" rel="noopener">Liberar meu resultado completo + escala pronta — <span class="precoFundador"></span><small>Pix ou cartão · garantia de 7 dias</small></a>
-        <p class="compare">Escalas de 42h e 40h em PDF e planilha em até 48h, relatório de custos e acesso antecipado ao app com IA.</p>
+        <p class="compare">Escalas de 42h e 40h em PDF e planilha em até 48h, relatório de custos e o painel online com Ajuste com IA.</p>
         <a class="wa whatsapp" href="#" target="_blank" rel="noopener" hidden><svg><use href="#i-wa"/></svg>Tirar uma dúvida no WhatsApp</a>
         <a class="pdf-link" href="exemplo/escala-5x2-exemplo.pdf" target="_blank" rel="noopener"><svg><use href="#i-doc"/></svg>Ver um exemplo de escala pronta (PDF)</a>
       </section>
@@ -609,6 +626,36 @@
   </div>
 </section>
 
+<!-- O PAINEL POR DENTRO -->
+<section class="sec" id="painel" style="padding-top:0">
+  <div class="container">
+    <h2 class="sec-title">Sua escala também fica num painel online</h2>
+    <p class="sec-lead">Além do PDF e da planilha, você recebe acesso ao painel da sua escala. Mudou a equipe ou o horário? Você ajusta ali, e ele refaz as contas na hora.</p>
+    <figure class="painel-shot">
+      <div class="window">
+        <div class="win-bar"><span class="win-dots"><i></i><i></i><i></i></span><span class="win-title">Painel da escala</span><span class="win-tag">Tela real</span></div>
+        <picture><source media="(max-width: 600px)" srcset="img/painel-escala-celular.webp" width="780" height="1538"><img src="img/painel-escala.webp" width="1600" height="1489" loading="lazy" alt="Painel da escala de uma padaria fictícia: horas sem cobertura, equipe, saída mais barata, pontos fora da lei e a escala da semana por turno, com cada pessoa num cartão colorido"></picture>
+      </div>
+    </figure>
+    <div class="painel-feats">
+      <div class="pfeat">
+        <div class="pimg"><img src="img/painel-custos.webp" width="900" height="1393" loading="lazy" alt="Card de custos: folha atual, hora extra marcada como não resolve, contratar como a saída mais barata e reduzir horário"></div>
+        <div class="ptxt"><h3>Quanto custa cada saída</h3><p>Contratar, pagar hora extra ou reduzir horário, com o valor por mês. O painel diz quando a hora extra não resolve e quantas pessoas faltam de verdade.</p></div>
+      </div>
+      <div class="pfeat">
+        <div class="pimg"><img src="img/painel-alertas.webp" width="900" height="1349" loading="lazy" alt="Alertas da escala: jornada e descanso dentro da lei, horários que faltam gente e aviso de folga no domingo com o artigo da lei"></div>
+        <div class="ptxt"><h3>Alertas com o artigo da lei</h3><p>Jornada, folgas, descanso de 11 horas e domingo. Cada alerta mostra a regra e o artigo de onde ela vem, para você conferir.</p></div>
+      </div>
+      <div class="pfeat">
+        <div class="pimg cel"><img src="img/painel-celular.webp" width="600" height="1298" loading="lazy" alt="Painel da escala aberto no celular"></div>
+        <div class="ptxt"><h3>Ajuste arrastando, até no celular</h3><p>Arraste uma pessoa para outro turno ou outro dia. As horas, os custos e os alertas mudam na hora.</p></div>
+      </div>
+    </div>
+    <div class="ia-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg><p><b>Ajuste com IA.</b> Escreva o que mudou, do seu jeito: "a Bia não pode mais aos sábados" ou "contratei mais uma pessoa". A IA monta a proposta, você vê o antes e depois e só salva se quiser.</p></div>
+    <p class="note">Telas reais do painel, com uma padaria fictícia. A sua mostra a sua equipe e os seus horários.</p>
+  </div>
+</section>
+
 <!-- SOLUÇÃO + OFERTA -->
 <section class="sec" id="oferta" style="padding-top:0">
   <div class="container">
@@ -617,7 +664,7 @@
     <div class="steps">
       <div class="stepcard"><div class="n">1</div><b>Você responde um formulário de 5 minutos</b><span>Funções, horários de pico, quem pode trabalhar quando e os dias que você não fecha.</span></div>
       <div class="stepcard"><div class="n">2</div><b>Montamos a escala do seu negócio</b><span>Cada pessoa com 2 folgas, até 8 horas por dia, dentro do limite semanal de cada etapa, e todos os turnos cobertos.</span></div>
-      <div class="stepcard"><div class="n">3</div><b>Você recebe pronta para usar</b><span>Em PDF para imprimir e em planilha para ajustar, para as 42h e para as 40h, com o número exato de contratações.</span></div>
+      <div class="stepcard"><div class="n">3</div><b>Você recebe pronta para usar</b><span>No painel online, em PDF para imprimir e em planilha, para as 42h e para as 40h, com o número exato de contratações.</span></div>
     </div>
 
     <div class="deliver">
@@ -641,7 +688,7 @@
           <li><svg><use href="#i-check"/></svg><div><b>Número exato de contratações</b><span>Para você não contratar ninguém a mais do que precisa</span></div></li>
           <li><svg><use href="#i-check"/></svg><div><b>Dentro das regras da jornada nova</b><span>Até 8 horas por dia, 42 por semana na primeira etapa e 40 depois, com 2 folgas</span></div></li>
           <li><svg><use href="#i-check"/></svg><div><b>PDF para imprimir e planilha para ajustar</b><span>Entregue em até 48 horas</span></div></li>
-          <li><svg><use href="#i-check"/></svg><div><b>Acesso antecipado ao app da transição, com assistente de IA</b><span>Um assistente treinado nas regras do fim da escala 6x1: tire dúvidas sobre folgas, hora extra e prazos do seu negócio e ajuste a escala quando a equipe mudar. Quem compra agora entra primeiro, sem custo extra.</span></div></li>
+          <li><svg><use href="#i-check"/></svg><div><b>Painel online da sua escala, com Ajuste com IA</b><span>Arraste pessoas entre turnos, veja custos e alertas da lei na hora e peça mudanças à IA em português. <a href="#painel">Veja as telas</a>.</span></div></li>
         </ul>
         <div class="price"><span class="de">de <s class="precoCheio"></s></span><strong class="precoFundador"></strong><span>pagamento único</span></div>
         <p class="compare">Preço de lançamento até <b>31/10</b>. Menos do que um dia de trabalho de um funcionário.</p>
@@ -686,9 +733,9 @@
       <details><summary>E se eu abro no domingo ou à noite?</summary><p>A escala é montada com os seus dias e horários reais, incluindo domingos, feriados e turnos noturnos.</p></details>
       <details><summary>Isso substitui meu contador?</summary><p>Não. A escala organiza quem trabalha quando. Folha de pagamento, contratos e regras da convenção coletiva da sua categoria continuam com o seu contador, e você pode mostrar a escala para ele conferir.</p></details>
       <details><summary>Como e quando eu recebo?</summary><p>Depois do pagamento você recebe o formulário. Em até 48 horas depois de respondê-lo, as escalas de 42h e de 40h chegam por e-mail e WhatsApp, em PDF e planilha.</p></details>
-      <details><summary>O que é o app da transição?</summary><p>É a ferramenta que estamos lançando para você ajustar a escala sozinho quando a equipe, o horário ou a etapa da lei mudar, com alerta quando alguma regra é quebrada. Quem compra agora recebe acesso antecipado, incluído na compra.</p></details>
-      <details><summary>O que a IA faz?</summary><p>O app da transição vem com um assistente de IA treinado nas regras da Emenda 141 (fim da escala 6x1). Você pergunta, por exemplo, "posso dar a folga na segunda e no domingo?" ou "quanto custa cobrir o sábado com hora extra?", e ele responde com base na sua escala e nos seus números. Ele também ajuda a refazer a escala quando alguém sai, entra ou muda de horário. O app está em construção: quem compra agora recebe o acesso antecipado assim que ele abrir, sem custo extra. Para decisões jurídicas, confirme sempre com o seu contador.</p></details>
-      <details><summary>Quanto custa?</summary><p>R$ 47,90, pagamento único, por Pix ou cartão (de R$ 77, preço de lançamento até 31/10). Inclui as escalas de 42h e de 40h em PDF e planilha, o acesso antecipado ao app da transição e a garantia de 7 dias.</p></details>
+      <details><summary>O que é o painel online?</summary><p>É onde a sua escala fica depois da compra. Você entra com o seu e-mail, sem senha (chega um código de acesso), vê as escalas de 42h e de 40h, arrasta pessoas entre turnos e dias e muda horário e equipe. O painel recalcula na hora as horas sem cobertura, o custo de cada saída e os alertas da lei, e você baixa o PDF e a planilha atualizados. <a href="#painel">Veja as telas</a>.</p></details>
+      <details><summary>O que a IA faz?</summary><p>No painel, o botão "Ajuste com IA" recebe o que mudou, escrito do seu jeito: "a Bia não pode mais aos sábados" ou "contratei mais uma pessoa para a tarde". A IA monta uma proposta de escala, mostra o antes e depois (horas sem cobertura, custo e alertas) e só salva se você aceitar. Quando a mudança toca numa regra da lei, ela explica e cita o artigo. Para decisões jurídicas, confirme sempre com o seu contador.</p></details>
+      <details><summary>Quanto custa?</summary><p>R$ 47,90, pagamento único, por Pix ou cartão (de R$ 77, preço de lançamento até 31/10). Inclui as escalas de 42h e de 40h em PDF e planilha, o acesso ao painel online da sua escala (com Ajuste com IA) e a garantia de 7 dias.</p></details>
       <details><summary>Posso ver um exemplo antes de comprar?</summary><p>Sim. Depois do diagnóstico você vê o resultado principal, o custo da hora extra e a primeira linha da escala do seu negócio, e aqui está um <a href="exemplo/escala-5x2-exemplo.pdf" target="_blank" rel="noopener">exemplo de escala pronta em PDF</a>, com nomes fictícios.</p></details>
       <details><summary>Preciso pagar mensalidade?</summary><p>Não. É pagamento único de R$ 47,90.</p></details>
     </div>
