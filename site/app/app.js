@@ -692,6 +692,7 @@
       DIAS.forEach(function (d) {
         var f = state.funcionamento[d]; if (!f) return;
         var c = celula(state, v, sem, p.id, d);
+        if (c.tipo !== "turno" && parcial(p, v)) return; // meio período: só aparece nos dias em que trabalha
         mapa[grupoDe(c, f)][d].push({ p: p, i: i, c: c, err: !!calc.pessoas[i].erros[d] });
       });
     });
