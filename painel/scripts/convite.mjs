@@ -1,4 +1,5 @@
-// Cria um convite no painel e imprime o link (o cliente cria a senha nele).
+// Libera o acesso de um cliente ao painel (cria a conta, com escala inicial opcional) e imprime o link.
+// O cliente entra com o e-mail e recebe um código; não há senha.
 // Uso: node painel/scripts/convite.mjs email "Nome" [estado.json] [--base https://jornada40h.com.br]
 // A chave de admin vem de ~/.config/jornada40h/admin_key (mesmo valor do ADMIN_KEY no Dokploy).
 import fs from "node:fs";

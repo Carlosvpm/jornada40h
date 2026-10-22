@@ -1,5 +1,6 @@
-// Teste do painel com login (painel/, Next + SQLite): convite → senha → escala salva no banco →
-// login/logout → proteções. Roda o build standalone com um banco temporário.
+// Teste do painel (painel/, Next + SQLite): acesso liberado pelo admin → login por código no e-mail
+// → escala salva no banco → sair/entrar → limites e proteções. Roda o build standalone com banco
+// temporário; sem RESEND_API_KEY o servidor escreve o código no log (EMAIL_DEV_LOG=1).
 //
 // Uso: (cd painel && npm run build) && node tests/painel.e2e.mjs
 //      PW=/caminho/para/playwright-core node tests/painel.e2e.mjs
@@ -13,19 +14,19 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PW || "playwright-core");
 const PAINEL = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "painel");
+const Database = require(path.join(PAINEL, "node_modules", "better-sqlite3"));
 const STANDALONE = path.join(PAINEL, ".next", "standalone");
 const PORTA = 3900 + Math.floor(Math.random() * 90);
 const BASE = `http://127.0.0.1:${PORTA}`;
 const ADMIN_KEY = "teste-" + "x".repeat(30);
 const DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "j40h-painel-"));
 
-// O standalone precisa de .next/static e public ao lado do server.js (igual ao Dockerfile).
 fs.cpSync(path.join(PAINEL, ".next", "static"), path.join(STANDALONE, ".next", "static"), { recursive: true });
 fs.cpSync(path.join(PAINEL, "public"), path.join(STANDALONE, "public"), { recursive: true });
 
 const srv = spawn(process.execPath, ["server.js"], {
   cwd: STANDALONE,
-  env: { ...process.env, PORT: String(PORTA), HOSTNAME: "127.0.0.1", DATA_DIR, ADMIN_KEY, NODE_ENV: "production" },
+  env: { ...process.env, PORT: String(PORTA), HOSTNAME: "127.0.0.1", DATA_DIR, ADMIN_KEY, NODE_ENV: "production", EMAIL_DEV_LOG: "1", RESEND_API_KEY: "" },
   stdio: ["ignore", "pipe", "pipe"],
 });
 let log = "";
@@ -37,6 +38,10 @@ for (let i = 0; i < 50; i++) {
 
 let falhas = 0;
 const ok = (cond, msg) => { console.log((cond ? "  ok   " : "  FALHA ") + msg); if (!cond) falhas++; };
+const ultimoCodigo = email => [...log.matchAll(new RegExp(`\\[codigo\\] ${email.replace(/[.@]/g, "\\$&")} (\\d{6})`, "g"))].pop()?.[1];
+const espera = async (cond, ms = 5000) => { const t = Date.now(); while (!cond() && Date.now() - t < ms) await new Promise(r => setTimeout(r, 100)); };
+const post = (url, corpo, ip = "1.1.1.1", headers = {}) => fetch(BASE + url, { method: "POST", headers: { "Content-Type": "application/json", "x-real-ip": ip, ...headers }, body: JSON.stringify(corpo) });
+const liberar = (email, extra = {}) => post("/painel/api/admin/convites", { email, ...extra }, "9.9.9.9", { "x-admin-key": ADMIN_KEY });
 
 const estado = {
   negocio: { nome: "Padaria Exemplo", tipo: "Padaria" },
@@ -45,92 +50,128 @@ const estado = {
   custos: { salario: 1800, encargos: 1.7, he: 50 },
 };
 
+async function entrarPelaTela(page, email) {
+  await page.goto(BASE + "/painel/login");
+  await page.fill("input[name=email]", email);
+  const antes = ultimoCodigo(email);
+  await page.click("button[type=submit]");
+  await page.waitForSelector("input[name=codigo]");
+  await espera(() => ultimoCodigo(email) && ultimoCodigo(email) !== antes);
+  await page.fill("input[name=codigo]", ultimoCodigo(email));
+  await page.click("button[type=submit]");
+  await page.waitForSelector("#grid button.cell", { timeout: 15000 });
+}
+
 const browser = await chromium.launch({ channel: process.env.PW ? undefined : "chrome" });
 try {
   console.log("1. proteções");
   ok((await fetch(BASE + "/painel/api/escala")).status === 401, "API da escala sem sessão → 401");
-  const semChave = await fetch(BASE + "/painel/api/admin/convites", { method: "POST", body: "{}" });
-  ok(semChave.status === 401, "criar convite sem chave → 401");
+  ok((await post("/painel/api/admin/convites", {})).status === 401, "liberar acesso sem chave → 401");
   ok((await fetch(BASE + "/painel/api/admin/convites", { headers: { "x-admin-key": ADMIN_KEY } })).status === 200, "checagem da chave (GET) → 200");
-  ok((await fetch(BASE + "/painel/api/admin/convites", { headers: { "x-admin-key": ADMIN_KEY.slice(0, -1) + "y" } })).status === 401, "chave errada (GET) → 401");
   const r0 = await fetch(BASE + "/painel", { redirect: "manual" });
   ok(r0.status >= 300 && r0.status < 400 && /\/painel\/login/.test(r0.headers.get("location") || ""), "painel sem sessão redireciona para o login");
 
-  console.log("2. convite");
-  const rc = await fetch(BASE + "/painel/api/admin/convites", {
-    method: "POST", headers: { "x-admin-key": ADMIN_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ email: "Cliente@Exemplo.com", nome: "Cliente", estado }),
-  });
-  const { link } = await rc.json();
-  ok(rc.ok && /\/painel\/convite\//.test(link), "convite criado");
-
+  console.log("2. acesso liberado + login por código");
+  const rl = await liberar("Cliente@Exemplo.com", { nome: "Cliente", estado });
+  ok(rl.ok && /\/painel\/login$/.test((await rl.json()).link), "acesso liberado devolve o link do login");
   const page = await browser.newPage({ viewport: { width: 1360, height: 900 } });
   const erros = [];
   page.on("pageerror", e => erros.push(e.message));
-  await page.goto(link.replace(/^https?:\/\/[^/]+/, BASE));
-  ok(await page.inputValue("input[readonly]") === "cliente@exemplo.com", "convite mostra o e-mail normalizado");
-  await page.fill("input[name=senha]", "senha-forte-1");
-  await page.fill("input[name=senha2]", "senha-forte-1");
-  await page.click("button[type=submit]");
-  await page.waitForSelector("#grid button.cell", { timeout: 15000 });
-  ok(await page.textContent("#tNegocio") === "Padaria Exemplo", "escala inicial do convite carregada");
+  await entrarPelaTela(page, "cliente@exemplo.com");
+  ok(await page.textContent("#tNegocio") === "Padaria Exemplo", "login por código abre a escala inicial");
+  const db = new Database(path.join(DATA_DIR, "jornada40h.db"), { readonly: true });
+  ok(db.prepare("SELECT COUNT(*) n FROM codigos").get().n === 0, "código usado é apagado do banco");
+  ok(!JSON.stringify(db.prepare("SELECT * FROM codigos").all()).match(/\b\d{6}\b/), "banco não guarda código em claro");
 
-  console.log("3. convite não pode ser reusado");
-  const p2 = await browser.newPage();
-  await p2.goto(link.replace(/^https?:\/\/[^/]+/, BASE));
-  ok(/Convite expirado/.test(await p2.textContent("h1")), "link usado mostra 'Convite expirado'");
-  await p2.close();
-
-  console.log("4. edição salva no banco");
+  console.log("3. edição salva no banco");
   await page.locator("#grid button.cell.turno").first().click();
   await page.locator("#dlgForm input[value=folga]").check();
   await page.click("#dlgOk");
   await page.waitForFunction(() => document.querySelector("#tSalvo").textContent === "salvo na sua conta", null, { timeout: 5000 });
-  const folgasAntes = await page.locator("#grid .cell.folga").count();
+  const folgas = await page.locator("#grid .cell.folga").count();
   await page.reload();
   await page.waitForSelector("#grid button.cell");
-  ok(await page.locator("#grid .cell.folga").count() === folgasAntes, "edição continua depois de recarregar");
+  ok(await page.locator("#grid .cell.folga").count() === folgas, "edição continua depois de recarregar");
 
-  console.log("5. sair e entrar");
+  console.log("4. sair, código errado, entrar de novo");
   await page.click("#btnLink");
   await page.waitForURL(/\/painel\/login/);
   ok((await page.request.get(BASE + "/painel/api/escala")).status() === 401, "depois de sair a API volta a 401");
   await page.fill("input[name=email]", "cliente@exemplo.com");
-  await page.fill("input[name=senha]", "errada-123");
+  await page.click("button[type=submit]");
+  await page.waitForSelector("input[name=codigo]");
+  await page.fill("input[name=codigo]", "000000");
   await page.click("button[type=submit]");
   await page.waitForSelector(".erro");
-  ok(/incorretos/.test(await page.textContent(".erro")), "senha errada mostra erro");
-  await page.fill("input[name=senha]", "senha-forte-1");
+  ok(/errado ou vencido/.test(await page.textContent(".erro")), "código errado mostra erro");
+  await espera(() => ultimoCodigo("cliente@exemplo.com"));
+  await page.fill("input[name=codigo]", ultimoCodigo("cliente@exemplo.com"));
   await page.click("button[type=submit]");
   await page.waitForSelector("#grid button.cell", { timeout: 15000 });
-  ok(await page.locator("#grid .cell.folga").count() === folgasAntes, "login abre a escala salva");
+  ok(await page.locator("#grid .cell.folga").count() === folgas, "código certo abre a escala salva");
 
-  console.log("6. dados isolados por conta");
-  const rc2 = await fetch(BASE + "/painel/api/admin/convites", {
-    method: "POST", headers: { "x-admin-key": ADMIN_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ email: "outro@exemplo.com" }),
-  });
+  console.log("5. e-mail sem acesso: mesma resposta, nenhum código");
+  const rn = await post("/painel/api/codigo", { email: "ninguem@exemplo.com" }, "2.2.2.2");
+  ok(rn.ok && /Se este e-mail tem acesso/.test((await rn.json()).mensagem), "resposta igual à de quem tem acesso");
+  ok(!ultimoCodigo("ninguem@exemplo.com"), "nenhum código gerado para quem não tem acesso");
+
+  console.log("6. código vence em 15 min e é apagado");
+  await liberar("vence@exemplo.com");
+  await post("/painel/api/codigo", { email: "vence@exemplo.com" }, "3.3.3.3");
+  await espera(() => ultimoCodigo("vence@exemplo.com"));
+  const rw = new Database(path.join(DATA_DIR, "jornada40h.db"));
+  const linha = rw.prepare("SELECT expira_em FROM codigos WHERE email = ?").get("vence@exemplo.com");
+  ok(linha && Math.abs(linha.expira_em - Date.now() - 15 * 60e3) < 60e3, "código criado com validade de 15 min");
+  rw.prepare("UPDATE codigos SET expira_em = ? WHERE email = ?").run(Date.now() - 1000, "vence@exemplo.com");
+  const rv = await post("/painel/api/entrar", { email: "vence@exemplo.com", codigo: ultimoCodigo("vence@exemplo.com") }, "3.3.3.3");
+  ok(rv.status === 401, "código vencido não entra");
+  await espera(() => rw.prepare("SELECT COUNT(*) n FROM codigos WHERE email = ?").get("vence@exemplo.com").n === 0, 70000);
+  ok(rw.prepare("SELECT COUNT(*) n FROM codigos WHERE email = ?").get("vence@exemplo.com").n === 0, "faxina apaga o código vencido do banco");
+
+  console.log("7. código apagado depois de 5 erros");
+  await liberar("erra@exemplo.com");
+  await post("/painel/api/codigo", { email: "erra@exemplo.com" }, "4.4.4.4");
+  await espera(() => ultimoCodigo("erra@exemplo.com"));
+  const certo = ultimoCodigo("erra@exemplo.com");
+  const errado = certo === "111111" ? "222222" : "111111";
+  for (let i = 0; i < 5; i++) await post("/painel/api/entrar", { email: "erra@exemplo.com", codigo: errado }, "4.4.4.4");
+  ok((await post("/painel/api/entrar", { email: "erra@exemplo.com", codigo: certo }, "4.4.4.4")).status === 401, "depois de 5 erros nem o código certo entra");
+
+  console.log("8. rate limit");
+  await liberar("limite@exemplo.com");
+  ok((await post("/painel/api/codigo", { email: "limite@exemplo.com" }, "5.5.5.5")).ok, "1º código ok");
+  const r2 = await post("/painel/api/codigo", { email: "limite@exemplo.com" }, "5.5.5.6");
+  ok(r2.status === 429 && Number(r2.headers.get("retry-after")) > 0, "2º código no mesmo minuto (o 1º não usado) → 429 com Retry-After");
+  let ultimo;
+  for (let i = 0; i < 11; i++) ultimo = await post("/painel/api/codigo", { email: `x${i}@exemplo.com` }, "6.6.6.6");
+  ok(ultimo.status === 429, "11º pedido de código do mesmo IP → 429");
+  for (let i = 0; i < 31; i++) ultimo = await post("/painel/api/entrar", { email: `y${i % 3}@exemplo.com`, codigo: "123456" }, "7.7.7.7");
+  ok(ultimo.status === 429, "31ª tentativa de código do mesmo IP → 429");
+  for (let i = 0; i < 11; i++) ultimo = await post("/painel/api/entrar", { email: "alvo@exemplo.com", codigo: "123456" }, "8.8.8." + i);
+  ok(ultimo.status === 429, "11ª tentativa no mesmo e-mail, de IPs diferentes → 429");
+  for (let i = 0; i < 21; i++) ultimo = await post("/painel/api/admin/convites", { email: "a@b.com" }, "10.0.0.1", { "x-admin-key": "errada-" + "z".repeat(29) });
+  ok(ultimo.status === 429, "21ª chave de admin errada do mesmo IP → 429");
+
+  console.log("9. contas isoladas e link antigo de convite");
   const ctx2 = await browser.newContext();
   const q = await ctx2.newPage();
-  await q.goto((await rc2.json()).link.replace(/^https?:\/\/[^/]+/, BASE));
-  await q.fill("input[name=senha]", "outra-senha-1");
-  await q.fill("input[name=senha2]", "outra-senha-1");
-  await q.click("button[type=submit]");
-  await q.waitForSelector("#grid button.cell", { timeout: 15000 });
+  await liberar("outro@exemplo.com");
+  await entrarPelaTela(q, "outro@exemplo.com");
   ok(await q.textContent("#tNegocio") !== "Padaria Exemplo", "outra conta não vê a escala da primeira");
+  await q.goto(BASE + "/painel/convite/qualquer-token");
+  ok(/^\/painel(\/login)?\/?$/.test(new URL(q.url()).pathname), "link de convite antigo leva ao painel/login");
 
-  console.log("7. login no celular");
+  console.log("10. celular");
   const m = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await m.goto(BASE + "/painel/login");
   ok(await m.evaluate(() => document.documentElement.scrollWidth) <= 390, "login sem rolagem horizontal no celular");
   if (process.env.SHOTS) {
+    await m.fill("input[name=email]", "cliente@exemplo.com");
     await m.screenshot({ path: path.join(process.env.SHOTS, "painel-login-mobile.png") });
-    const d = await browser.newPage({ viewport: { width: 1360, height: 860 } });
-    await d.goto(BASE + "/painel/login");
-    await d.screenshot({ path: path.join(process.env.SHOTS, "painel-login.png") });
   }
 
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
+  db.close(); rw.close();
 } catch (e) {
   falhas++;
   console.log("  FALHA " + e.message + "\n" + log.slice(-2000));

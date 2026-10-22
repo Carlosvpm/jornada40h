@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { usuarioAtual } from "@/lib/auth";
+import { limitar } from "@/lib/limite";
 
 const LIMITE = 300_000; // bytes do estado serializado
 
@@ -16,6 +17,8 @@ export async function GET() {
 export async function PUT(req: Request) {
   const u = await usuarioAtual();
   if (!u) return NextResponse.json({ erro: "Entre de novo." }, { status: 401 });
+  const bloqueio = limitar([{ chave: "escala:" + u.id, max: 120, janelaMin: 1 }]);
+  if (bloqueio) return bloqueio;
   const texto = await req.text();
   if (texto.length > LIMITE) return NextResponse.json({ erro: "Escala grande demais." }, { status: 413 });
   let corpo: { estado?: unknown };

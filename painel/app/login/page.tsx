@@ -10,9 +10,9 @@ export default async function LoginPage() {
   return (
     <AuthShell>
       <h1>Entrar no painel</h1>
-      <p className="sub">Use o e-mail da sua compra e a senha que você criou.</p>
+      <p className="sub">Sem senha: digite o e-mail da sua compra e mandamos um código de acesso.</p>
       <LoginForm />
-      <p className="ajuda">Esqueceu a senha? Escreva para <a href="mailto:calculadora40h@gmail.com">calculadora40h@gmail.com</a> que mandamos um link novo.</p>
+      <p className="ajuda">Não recebeu ou mudou de e-mail? Escreva para <a href="mailto:calculadora40h@gmail.com">calculadora40h@gmail.com</a>.</p>
     </AuthShell>
   );
 }

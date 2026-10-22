@@ -31,3 +31,9 @@ input[readonly] { background: #F4F4F2; color: var(--muted); }
   .auth-side { display: none; }
   .auth-card .mobile-brand { display: flex; }
 }
+.info { background: #fff; border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+.info b { color: var(--text); }
+input.codigo { font-size: 24px; letter-spacing: 10px; text-align: center; font-weight: 700; }
+.acoes { display: flex; justify-content: space-between; margin-top: 14px; }
+.link { background: none; border: 0; padding: 0; color: var(--muted); font: 500 13px var(--sans); cursor: pointer; text-decoration: underline; }
+.link:disabled { color: var(--faint); text-decoration: none; cursor: default; }

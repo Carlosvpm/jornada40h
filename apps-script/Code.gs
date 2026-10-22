@@ -151,17 +151,17 @@ function registrarPedido(ss, p) {
     MailApp.sendEmail({
       to: p.email,
       subject: painel.link
-        ? "Sua escala 5x2 já está no painel · crie sua senha"
+        ? "Sua escala 5x2 já está no painel"
         : "Recebemos o briefing da sua escala 5x2 · entrega em até 48h úteis",
       htmlBody: shell("Briefing recebido, " + primeiroNome + "!",
         (painel.link
           ? "<p style=\"" + font + "font-size:15px;line-height:1.6;color:#14213D\">A primeira versão da escala de <b>" + esc(p.negocio) + "</b> já está pronta no seu painel, nas versões de 42h e 40h, com os custos de cada saída. Lá você troca turnos e folgas e baixa em PDF e planilha.</p>" +
-            "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:18px 0\"><tr><td style=\"background:#D4A72C;border-radius:10px\"><a href=\"" + painel.link + "\" style=\"display:inline-block;padding:14px 24px;" + font + "font-size:16px;font-weight:bold;color:#0B1428;text-decoration:none\">Criar minha senha e abrir a escala →</a></td></tr></table>" +
-            "<p style=\"" + font + "font-size:14px;line-height:1.6;color:#14213D\">O link é pessoal e vale por 14 dias. Uma pessoa da equipe revisa a sua escala e manda a versão final em PDF + planilha em até <b>48 horas úteis</b> no WhatsApp " + esc(p.whatsapp) + " e neste e-mail.</p>"
+            "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:18px 0\"><tr><td style=\"background:#D4A72C;border-radius:10px\"><a href=\"" + painel.link + "\" style=\"display:inline-block;padding:14px 24px;" + font + "font-size:16px;font-weight:bold;color:#0B1428;text-decoration:none\">Abrir minha escala →</a></td></tr></table>" +
+            "<p style=\"" + font + "font-size:14px;line-height:1.6;color:#14213D\">Para entrar, use este e-mail (" + esc(p.email) + "): mandamos um código de acesso na hora, sem senha. Uma pessoa da equipe revisa a sua escala e manda a versão final em PDF + planilha em até <b>48 horas úteis</b> no WhatsApp " + esc(p.whatsapp) + " e neste e-mail.</p>"
           : "<p style=\"" + font + "font-size:15px;line-height:1.6;color:#14213D\">Já estamos montando a escala de <b>" + esc(p.negocio) + "</b>. Você recebe em até <b>48 horas úteis</b> no WhatsApp " + esc(p.whatsapp) + " e neste e-mail, em PDF + planilha editável.</p>") +
         "<p style=\"" + font + "font-size:15px;line-height:1.6;color:#14213D\">Se algo abaixo estiver errado, é só responder este e-mail.</p>" + resumo),
       body: painel.link
-        ? "Sua escala de " + p.negocio + " já está no painel. Crie sua senha em: " + painel.link + " (link pessoal, vale 14 dias). Versão revisada em PDF + planilha em até 48h úteis."
+        ? "Sua escala de " + p.negocio + " já está no painel: " + painel.link + " . Entre com este e-mail e receba um código de acesso (sem senha). Versão revisada em PDF + planilha em até 48h úteis."
         : "Recebemos o briefing da escala de " + p.negocio + ". Entrega em até 48h úteis no WhatsApp " + p.whatsapp + ".",
       name: NOME_REMETENTE, replyTo: EMAIL_CONTATO
     });
@@ -173,7 +173,7 @@ function registrarPedido(ss, p) {
     htmlBody: shell("Novo briefing de escala",
       "<p style=\"" + font + "font-size:14px;line-height:1.6;color:#14213D\"><b>" + esc(p.nome) + "</b> · " + esc(p.whatsapp) + " · " + esc(p.email) + "<br>" + esc(p.negocio) + " · " + esc(p.tipo) + " · " + esc(p.cidade) + (p.pedido_kiwify ? " · pedido Kiwify " + esc(p.pedido_kiwify) : "") + "</p>" + resumo +
       "<p style=\"" + font + "font-size:13px;color:#5B6478\">Linha gravada na aba Pedidos (status: novo). Prazo: 48h úteis.<br>" +
-      (painel.link ? "Painel: convite criado e enviado ao cliente (escala inicial montada a partir do briefing)." : "Painel: convite NÃO criado (" + esc(painel.motivo) + "). Crie à mão: node painel/scripts/convite.mjs " + esc(p.email || "email") + " \"" + esc(p.nome) + "\"") + "</p>"),
+      (painel.link ? "Painel: acesso liberado e link enviado ao cliente (escala inicial montada a partir do briefing)." : "Painel: acesso NÃO liberado (" + esc(painel.motivo) + "). Libere à mão: node painel/scripts/convite.mjs " + esc(p.email || "email") + " \"" + esc(p.nome) + "\"") + "</p>"),
     name: "Jornada 40h · pedidos"
   });
 }
@@ -219,7 +219,7 @@ function estadoDoBriefing_(p) {
   };
 }
 
-/** Cria o convite no painel. Chave em Propriedades do script: PAINEL_ADMIN_KEY. */
+/** Libera o acesso no painel (cria a conta com a escala inicial). Chave em Propriedades do script: PAINEL_ADMIN_KEY. */
 function criarConvitePainel_(email, nome, estado) {
   const chave = PropertiesService.getScriptProperties().getProperty("PAINEL_ADMIN_KEY");
   if (!chave) return { link: "", motivo: "propriedade PAINEL_ADMIN_KEY não configurada no Apps Script" };
