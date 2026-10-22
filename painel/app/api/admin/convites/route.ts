@@ -12,6 +12,12 @@ function autorizado(req: Request): boolean {
   return timingSafeEqual(Buffer.from(enviada), Buffer.from(chave));
 }
 
+// Confere a chave sem efeito colateral (usado por testarPainel() no Apps Script).
+export async function GET(req: Request) {
+  if (!autorizado(req)) return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
+  return NextResponse.json({ ok: true });
+}
+
 // Cria um convite (conta nova ou troca de senha). Usado pelo Carlos/agentes, não pelo cliente.
 // Corpo: { email, nome?, estado? } — estado é a escala inicial (mesmo formato do dashboard).
 export async function POST(req: Request) {

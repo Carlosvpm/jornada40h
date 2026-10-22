@@ -51,6 +51,8 @@ try {
   ok((await fetch(BASE + "/painel/api/escala")).status === 401, "API da escala sem sessão → 401");
   const semChave = await fetch(BASE + "/painel/api/admin/convites", { method: "POST", body: "{}" });
   ok(semChave.status === 401, "criar convite sem chave → 401");
+  ok((await fetch(BASE + "/painel/api/admin/convites", { headers: { "x-admin-key": ADMIN_KEY } })).status === 200, "checagem da chave (GET) → 200");
+  ok((await fetch(BASE + "/painel/api/admin/convites", { headers: { "x-admin-key": ADMIN_KEY.slice(0, -1) + "y" } })).status === 401, "chave errada (GET) → 401");
   const r0 = await fetch(BASE + "/painel", { redirect: "manual" });
   ok(r0.status >= 300 && r0.status < 400 && /\/painel\/login/.test(r0.headers.get("location") || ""), "painel sem sessão redireciona para o login");
 

@@ -119,6 +119,12 @@ function registrarPedido(ss, p) {
   p.status = "novo";
   aba.appendRow(COLUNAS_PEDIDO.map(c => p[c] !== undefined ? p[c] : ""));
 
+  // Painel: só cria acesso para quem tem compra aprovada (obrigado.html é pública).
+  let painel = { link: "", motivo: "" };
+  if (!p.email) painel.motivo = "briefing sem e-mail";
+  else if (!compraAprovada_(ss, p.pedido_kiwify, p.email)) painel.motivo = "compra aprovada não encontrada na aba Vendas (pedido " + (p.pedido_kiwify || "—") + ")";
+  else painel = criarConvitePainel_(p.email, String(p.nome || "").trim(), estadoDoBriefing_(p));
+
   const esc = s => String(s || "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;" }[c]));
   const nomeDia = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado", dom: "Domingo" };
   const font = "font-family:Arial,Helvetica,sans-serif;";
@@ -144,11 +150,19 @@ function registrarPedido(ss, p) {
   if (p.email) {
     MailApp.sendEmail({
       to: p.email,
-      subject: "Recebemos o briefing da sua escala 5x2 · entrega em até 48h úteis",
+      subject: painel.link
+        ? "Sua escala 5x2 já está no painel · crie sua senha"
+        : "Recebemos o briefing da sua escala 5x2 · entrega em até 48h úteis",
       htmlBody: shell("Briefing recebido, " + primeiroNome + "!",
-        "<p style=\"" + font + "font-size:15px;line-height:1.6;color:#14213D\">Já estamos montando a escala de <b>" + esc(p.negocio) + "</b>. Você recebe em até <b>48 horas úteis</b> no WhatsApp " + esc(p.whatsapp) + " e neste e-mail, em PDF + planilha editável.</p>" +
+        (painel.link
+          ? "<p style=\"" + font + "font-size:15px;line-height:1.6;color:#14213D\">A primeira versão da escala de <b>" + esc(p.negocio) + "</b> já está pronta no seu painel, nas versões de 42h e 40h, com os custos de cada saída. Lá você troca turnos e folgas e baixa em PDF e planilha.</p>" +
+            "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:18px 0\"><tr><td style=\"background:#D4A72C;border-radius:10px\"><a href=\"" + painel.link + "\" style=\"display:inline-block;padding:14px 24px;" + font + "font-size:16px;font-weight:bold;color:#0B1428;text-decoration:none\">Criar minha senha e abrir a escala →</a></td></tr></table>" +
+            "<p style=\"" + font + "font-size:14px;line-height:1.6;color:#14213D\">O link é pessoal e vale por 14 dias. Uma pessoa da equipe revisa a sua escala e manda a versão final em PDF + planilha em até <b>48 horas úteis</b> no WhatsApp " + esc(p.whatsapp) + " e neste e-mail.</p>"
+          : "<p style=\"" + font + "font-size:15px;line-height:1.6;color:#14213D\">Já estamos montando a escala de <b>" + esc(p.negocio) + "</b>. Você recebe em até <b>48 horas úteis</b> no WhatsApp " + esc(p.whatsapp) + " e neste e-mail, em PDF + planilha editável.</p>") +
         "<p style=\"" + font + "font-size:15px;line-height:1.6;color:#14213D\">Se algo abaixo estiver errado, é só responder este e-mail.</p>" + resumo),
-      body: "Recebemos o briefing da escala de " + p.negocio + ". Entrega em até 48h úteis no WhatsApp " + p.whatsapp + ".",
+      body: painel.link
+        ? "Sua escala de " + p.negocio + " já está no painel. Crie sua senha em: " + painel.link + " (link pessoal, vale 14 dias). Versão revisada em PDF + planilha em até 48h úteis."
+        : "Recebemos o briefing da escala de " + p.negocio + ". Entrega em até 48h úteis no WhatsApp " + p.whatsapp + ".",
       name: NOME_REMETENTE, replyTo: EMAIL_CONTATO
     });
   }
@@ -158,9 +172,76 @@ function registrarPedido(ss, p) {
     subject: "🧾 Novo pedido: " + (p.negocio || p.nome) + " (" + (p.tipo || "") + ")",
     htmlBody: shell("Novo briefing de escala",
       "<p style=\"" + font + "font-size:14px;line-height:1.6;color:#14213D\"><b>" + esc(p.nome) + "</b> · " + esc(p.whatsapp) + " · " + esc(p.email) + "<br>" + esc(p.negocio) + " · " + esc(p.tipo) + " · " + esc(p.cidade) + (p.pedido_kiwify ? " · pedido Kiwify " + esc(p.pedido_kiwify) : "") + "</p>" + resumo +
-      "<p style=\"" + font + "font-size:13px;color:#5B6478\">Linha gravada na aba Pedidos (status: novo). Prazo: 48h úteis.</p>"),
+      "<p style=\"" + font + "font-size:13px;color:#5B6478\">Linha gravada na aba Pedidos (status: novo). Prazo: 48h úteis.<br>" +
+      (painel.link ? "Painel: convite criado e enviado ao cliente (escala inicial montada a partir do briefing)." : "Painel: convite NÃO criado (" + esc(painel.motivo) + "). Crie à mão: node painel/scripts/convite.mjs " + esc(p.email || "email") + " \"" + esc(p.nome) + "\"") + "</p>"),
     name: "Jornada 40h · pedidos"
   });
+}
+
+/* ---------- Painel (jornada40h.com.br/painel) ---------- */
+const PAINEL_URL = "https://jornada40h.com.br/painel";
+
+/** Há venda aprovada para este pedido (ou, sem pedido, para este e-mail) na aba Vendas? */
+function compraAprovada_(ss, pedido, email) {
+  const aba = ss.getSheetByName("Vendas");
+  if (!aba || aba.getLastRow() < 2) return false;
+  const cab = aba.getRange(1, 1, 1, aba.getLastColumn()).getValues()[0];
+  const iId = cab.indexOf("order_id"), iSt = cab.indexOf("status"), iEm = cab.indexOf("email");
+  const linhas = aba.getRange(2, 1, aba.getLastRow() - 1, aba.getLastColumn()).getValues();
+  const em = String(email || "").trim().toLowerCase();
+  return linhas.some(l => {
+    const st = String(l[iSt]).toLowerCase();
+    if (st !== "paid" && st !== "approved") return false;
+    if (pedido) return String(l[iId]) === String(pedido);
+    return em && String(l[iEm]).trim().toLowerCase() === em;
+  });
+}
+
+/** Converte o briefing de obrigado.html no estado do dashboard (mesmo formato de site/app/app.js). */
+function estadoDoBriefing_(p) {
+  const funcionamento = {};
+  DIAS_BRIEFING.forEach(d => {
+    funcionamento[d] = p["aberto_" + d] === "sim" && p["abre_" + d] && p["fecha_" + d]
+      ? { abre: String(p["abre_" + d]), fecha: String(p["fecha_" + d]), pessoas: Math.max(1, Math.round(Number(p["pessoas_" + d]) || 1)) }
+      : null;
+  });
+  // "Ana · atendente · não pode domingo": nome e função; a restrição fica para a revisão humana.
+  const equipe = String(p.equipe || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean).slice(0, 40).map((l, i) => {
+    const partes = l.split(/\s*[·•|;]\s*|\s+[-–—]\s+|\s*,\s*/).filter(Boolean);
+    return { id: "p" + i, nome: String(partes[0] || "Pessoa " + (i + 1)).slice(0, 40), funcao: String(partes[1] || "").slice(0, 40) };
+  });
+  return {
+    negocio: { nome: String(p.negocio || "").slice(0, 80), tipo: String(p.tipo || "").slice(0, 60) },
+    funcionamento: funcionamento,
+    equipe: equipe.length ? equipe : [{ id: "p0", nome: "Pessoa 1", funcao: "" }],
+    custos: { salario: Number(p.salario_medio) > 0 ? Number(p.salario_medio) : 1800, encargos: 1.7, he: 50 },
+    versao: "42", semana: "A"
+  };
+}
+
+/** Cria o convite no painel. Chave em Propriedades do script: PAINEL_ADMIN_KEY. */
+function criarConvitePainel_(email, nome, estado) {
+  const chave = PropertiesService.getScriptProperties().getProperty("PAINEL_ADMIN_KEY");
+  if (!chave) return { link: "", motivo: "propriedade PAINEL_ADMIN_KEY não configurada no Apps Script" };
+  try {
+    const r = UrlFetchApp.fetch(PAINEL_URL + "/api/admin/convites", {
+      method: "post", contentType: "application/json", muteHttpExceptions: true,
+      headers: { "x-admin-key": chave },
+      payload: JSON.stringify({ email: email, nome: nome, estado: estado })
+    });
+    const d = JSON.parse(r.getContentText() || "{}");
+    return r.getResponseCode() === 200 && d.link ? { link: d.link, motivo: "" } : { link: "", motivo: "painel respondeu " + r.getResponseCode() + " " + (d.erro || "") };
+  } catch (err) {
+    return { link: "", motivo: "erro ao chamar o painel: " + err };
+  }
+}
+
+/** Rode pelo editor depois de configurar PAINEL_ADMIN_KEY: confere a chave sem criar convite. */
+function testarPainel() {
+  const chave = PropertiesService.getScriptProperties().getProperty("PAINEL_ADMIN_KEY");
+  if (!chave) { Logger.log("Falta a propriedade PAINEL_ADMIN_KEY."); return; }
+  const r = UrlFetchApp.fetch(PAINEL_URL + "/api/admin/convites", { method: "get", headers: { "x-admin-key": chave }, muteHttpExceptions: true });
+  Logger.log(r.getResponseCode() === 200 ? "Painel OK: a chave confere." : "Painel respondeu " + r.getResponseCode() + ": confira a chave.");
 }
 
 /* ---------- Vendas (webhook da Kiwify) ---------- */
