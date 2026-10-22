@@ -343,6 +343,17 @@ a.lei { color: var(--gold-ink); text-decoration: underline; text-decoration-thic
 .ia-dica .txt { flex: 1 1 320px; }
 .ia-dica .bts { display: flex; gap: 6px; align-items: center; }
 
+/* Dúvida sobre os dados: o dono responde e a IA corrige */
+.duvida { border: 1px solid var(--gold); background: var(--gold-soft); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; font-size: 13.5px; }
+.duvida h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 14.5px; }
+.duvida h3 .ic { color: var(--gold-ink); }
+.duvida p { margin: 0 0 10px; line-height: 1.5; }
+.duvida textarea { display: block; width: 100%; resize: vertical; min-height: 64px; background: var(--card); color: var(--text); border: 1px solid var(--line-2); border-radius: 10px; padding: 9px 12px; font: 500 14px/1.5 var(--sans); }
+.duvida textarea:focus { outline: 2px solid var(--gold); border-color: transparent; }
+.duvida .ia-chips { margin: 0 0 10px; }
+.duvida .bts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+.duvida .cont { font-size: 12px; color: var(--muted); margin-right: auto; align-self: center; }
+
 /* Diálogo da IA */
 dialog.dlg-ia { width: min(620px, calc(100vw - 32px)); }
 .dlg-ia h3 { display: flex; align-items: center; gap: 8px; }
@@ -481,7 +492,7 @@ dialog h3 { margin: 0 0 14px; text-transform: none; letter-spacing: -.01em; colo
 @page { size: A4 landscape; margin: 10mm; }
 @media print {
   body { background: var(--card); font-size: 11px; }
-  .side, .backdrop, .top, .filters, .grid-foot .legend, .pend, .dia-b b .ic, .card-acts, .ia-dica, .pp-chip.add, .explica summary::before, .cfg, .legend, .acao, #btnAddPessoa, .custo-in, .card-h p, .toast, dialog { display: none !important; }
+  .side, .backdrop, .top, .filters, .grid-foot .legend, .pend, .dia-b b .ic, .card-acts, .ia-dica, .duvida, .pp-chip.add, .explica summary::before, .cfg, .legend, .acao, #btnAddPessoa, .custo-in, .card-h p, .toast, dialog { display: none !important; }
   .shell, .main { display: block; }
   .wrap { padding: 0; max-width: none; }
   .page-h { margin-bottom: 10px; }

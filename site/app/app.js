@@ -616,6 +616,7 @@
     atualizarPerfil();
     renderCustos(cus);
     renderAlertas(calc, cus);
+    renderDuvidas();
   }
 
   function kpi(cls, icone, rot, val, sub) {
@@ -1422,6 +1423,60 @@
     $("#iaActs").innerHTML = acts[qual];
   }
 
+  // Dados do briefing que parecem lidos errado: o dono confirma no card e a resposta vai para a IA,
+  // que devolve a proposta corrigida (com antes e depois) para aplicar.
+  function duvidas(s) {
+    var ok = s.duvidasOk || {}, n = s.equipe.length, lista = [];
+    var abertos = DIAS.filter(function (d) { return s.funcionamento[d]; });
+    var maxP = abertos.reduce(function (m, d) { return Math.max(m, Number(s.funcionamento[d].pessoas) || 1); }, 0);
+    if (n >= 2 && maxP >= n) {
+      var dias = abertos.filter(function (d) { return (Number(s.funcionamento[d].pessoas) || 1) >= n; });
+      lista.push({
+        k: "pessoas:" + maxP + ":" + n,
+        txt: "Você pediu <b>" + maxP + " pessoas trabalhando ao mesmo tempo</b> (" + dias.map(function (d) { return NOME_DIA_CURTO[d].toLowerCase(); }).join(", ") + ") e a equipe tem " + n + ". Com 2 folgas por semana para cada um, isso nunca fecha: é por isso que sobram horas sem cobertura. " + maxP + " é o total da equipe ou quantas precisam estar na loja juntas?",
+        ex: "Ex.: são " + n + " no total. Normalmente ficam " + Math.max(1, Math.round(n / 2)) + " ao mesmo tempo, e no domingo 2.",
+        pre: "Correção do número de pessoas ao mesmo tempo. O painel perguntou: \"Você pediu " + maxP + " pessoas trabalhando ao mesmo tempo e a equipe tem " + n + ". É o total da equipe ou quantas precisam estar juntas?\" Minha resposta: ",
+        chips: []
+      });
+    }
+    var juntos = s.equipe.filter(function (p) { return !p.funcao && /\S\s+\S/.test(p.nome); });
+    if (n >= 2 && juntos.length >= Math.ceil(n / 2)) {
+      lista.push({
+        k: "funcao:" + juntos.length,
+        txt: "A função parece ter vindo junto do nome (ex.: <b>" + esc(juntos[0].nome) + "</b>). Separando, a escala mostra quem cobre cada setor.",
+        ex: "Ex.: separe nome e função de todos. Caixa e açougue precisam de alguém o dia todo.",
+        pre: "",
+        chips: ["Separe o nome e a função de cada pessoa da equipe, sem mudar mais nada"]
+      });
+    }
+    return lista.filter(function (x) { return !ok[x.k]; });
+  }
+
+  function renderDuvidas() {
+    var box = $("#duvidas");
+    var l = PAINEL && PAINEL.ia ? duvidas(state) : [];
+    if (!l.length) { box.hidden = true; box.innerHTML = ""; return; }
+    var d = l[0];
+    if (box.dataset.k === d.k && !box.hidden) return; // não apaga o que o dono está digitando
+    box.dataset.k = d.k;
+    box.innerHTML = '<h3><svg class="ic"><use href="#i-spark"/></svg>Confirme um ponto com a IA</h3>' +
+      "<p>" + d.txt + "</p>" +
+      (d.chips.length ? '<div class="ia-chips">' + d.chips.map(function (c) { return '<button type="button" data-duv-chip="' + esc(c) + '">' + esc(c) + "</button>"; }).join("") + "</div>" : "") +
+      '<textarea id="duvTxt" rows="2" maxlength="600" placeholder="' + esc(d.ex) + '"></textarea>' +
+      '<div class="bts">' + (l.length > 1 ? '<span class="cont">1 de ' + l.length + " pontos</span>" : "") +
+      '<button type="button" class="b ghost sm" data-duv="ok">Está certo assim</button>' +
+      '<button type="button" class="b sm" data-duv="enviar"><svg class="ic"><use href="#i-spark"/></svg>Corrigir com a IA</button></div>';
+    box.hidden = false;
+  }
+
+  function responderDuvida(texto) {
+    var d = duvidas(state)[0]; if (!d) return;
+    texto = String(texto || "").trim();
+    if (!texto) { toast("Escreva a resposta para a IA."); $("#duvTxt").focus(); return; }
+    abrirIA(d.pre + texto);
+    enviarIA();
+  }
+
   function abrirIA(pedido) {
     ia = { pedido: pedido || "", resultado: null, previa: null, anterior: null };
     $("#iaPedido").value = ia.pedido;
@@ -1505,6 +1560,16 @@
   }
 
   function ligarEdicao() {
+    $("#duvidas").addEventListener("click", function (e) {
+      var c = e.target.closest("[data-duv-chip]"); if (c) return responderDuvida(c.dataset.duvChip);
+      var b = e.target.closest("[data-duv]"); if (!b) return;
+      if (b.dataset.duv === "enviar") responderDuvida($("#duvTxt").value);
+      else {
+        var d = duvidas(state)[0]; if (!d) return;
+        state.duvidasOk = state.duvidasOk || {}; state.duvidasOk[d.k] = true;
+        salvar(); renderDuvidas();
+      }
+    });
     $("#iaDica").addEventListener("click", function (e) {
       var b = e.target.closest("[data-dica]"); if (!b) return;
       if (b.dataset.dica === "desfazer") desfazer();
@@ -1697,5 +1762,5 @@
   }
 
   // Usado pelo teste automatizado.
-  window.__j40h = { get state() { return state; }, calcular: calcular, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, aplicarProposta: aplicarProposta, metricas: metricas };
+  window.__j40h = { get state() { return state; }, calcular: calcular, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, aplicarProposta: aplicarProposta, metricas: metricas, render: function () { render(); } };
 })();

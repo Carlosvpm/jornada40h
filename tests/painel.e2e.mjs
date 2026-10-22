@@ -109,6 +109,20 @@ try {
   ok(eq[0].naoPode.includes("sab") && JSON.stringify(eq) !== antesIA, "aplicar grava a proposta");
   await page.click('#iaDica [data-dica="desfazer"]');
   ok(await page.evaluate(() => JSON.stringify(window.__j40h.state.equipe)) === antesIA, "desfazer volta ao que era");
+
+  console.log("3c. card de dúvida: o dono responde e a IA corrige");
+  ok(await page.isHidden("#duvidas"), "sem dado estranho, sem card");
+  await page.evaluate(() => { const s = window.__j40h.state; s.funcionamento.seg.pessoas = 4; window.__j40h.render(); });
+  ok(/4 pessoas trabalhando ao mesmo tempo/.test(await page.textContent("#duvidas")), "4 ao mesmo tempo com equipe de 4 vira pergunta");
+  await page.fill("#duvTxt", "São 4 no total, ficam 2 ao mesmo tempo");
+  await page.click('#duvidas [data-duv="enviar"]');
+  await page.waitForSelector("#iaResultado:not([hidden]) .ia-comp", { timeout: 15000 });
+  ok(/Minha resposta: São 4 no total/.test(await page.inputValue("#iaPedido")), "resposta vai para a IA com a pergunta junto");
+  await page.click('#iaActs [value="cancel"]');
+  await page.click('#duvidas [data-duv="ok"]');
+  ok(await page.isHidden("#duvidas") && await page.evaluate(() => !!window.__j40h.state.duvidasOk["pessoas:4:4"]), "\"Está certo assim\" some com o card e fica gravado");
+  await page.evaluate(() => { const s = window.__j40h.state; s.funcionamento.seg.pessoas = 2; delete s.duvidasOk; window.__j40h.render(); });
+
   const semLogin = await fetch(BASE + "/painel/api/ia", { method: "POST", body: "{}" });
   ok(semLogin.status === 401, "IA sem login → 401");
 
