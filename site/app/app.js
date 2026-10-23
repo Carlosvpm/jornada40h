@@ -889,9 +889,7 @@
     calc.avisos.forEach(function (a) { li.push("<li>" + esc(a) + "</li>"); });
     // Domingo: no comércio, o descanso precisa cair no domingo ao menos 1 vez a cada 3 semanas.
     if (state.funcionamento.dom) {
-      var semDomingo = state.equipe.filter(function (p) {
-        return SEMANAS.every(function (s) { return celula(state, state.versao, s, p.id, "dom").tipo === "turno"; });
-      }).map(function (p) { return p.nome; });
+      var semDomingo = trabalhaTodoDomingo(state);
       if (semDomingo.length) li.push("<li>" + esc(semDomingo.join(", ")) + (semDomingo.length === 1 ? " trabalha" : " trabalham") + " no domingo nas semanas A e B. No comércio, a folga precisa cair no domingo pelo menos 1 vez a cada 3 semanas" + esc(lei("domingo")) + ": ajuste numa das semanas.</li>");
     }
     if (calc.sobra > 0.01) li.push("<li>Há " + horas(calc.sobra) + " por semana com gente a mais que o necessário: serve de reserva para faltas, férias e atestados.</li>");
@@ -1317,16 +1315,25 @@
     try { $("#iaDica").scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
   }
 
+  // Quem trabalha no domingo nas semanas A e B (nunca folga no domingo no rodízio).
+  function trabalhaTodoDomingo(s) {
+    if (!s.funcionamento.dom) return [];
+    return s.equipe.filter(function (p) {
+      return SEMANAS.every(function (w) { return celula(s, s.versao, w, p.id, "dom").tipo === "turno"; });
+    }).map(function (p) { return p.nome; });
+  }
+
   function metricas(s) {
     var c = calcular(s, s.versao, s.semana), k = custos(s, s.versao, c);
     var best = k.ops.filter(function (o) { return o.best; })[0];
-    return { falta: c.falta, erros: c.erros.length, custo: best ? best.custo : 0, folha: k.folha, calc: c, cus: k };
+    return { falta: c.falta, erros: c.erros.length, domingo: trabalhaTodoDomingo(s).length, custo: best ? best.custo : 0, folha: k.folha, calc: c, cus: k };
   }
 
   function problemas(a, b) {
     var p = [];
     if (b.falta > a.falta + 0.01) p.push("mais " + horas(b.falta - a.falta) + " sem cobertura por semana");
     if (b.erros > a.erros) p.push((b.erros - a.erros) + (b.erros - a.erros === 1 ? " ponto novo fora da lei" : " pontos novos fora da lei"));
+    if (b.domingo > a.domingo) p.push((b.domingo - a.domingo) + (b.domingo - a.domingo === 1 ? " pessoa a mais" : " pessoas a mais") + " sem nenhuma folga no domingo nas semanas A e B (Lei 10.101/2000, art. 6º)");
     if (b.custo > a.custo + 1) p.push("custo extra sobe " + brl(b.custo - a.custo) + "/mês");
     return p;
   }
@@ -1376,7 +1383,7 @@
       metricas: {
         horasSemCobertura: c.falta,
         ondeFalta: DIAS.filter(function (d) { return c.dias[d].aberto && c.dias[d].falta; }).map(function (d) { return NOME_DIA[d] + ": " + textoFaixa(c.dias[d].faixas); }),
-        pontosForaDaLei: c.erros, avisos: c.avisos,
+        pontosForaDaLei: c.erros, avisos: c.avisos, trabalhamDomingoNasSemanasAeB: trabalhaTodoDomingo(s),
         folhaMes: Math.round(m.folha),
         opcoesDeCusto: m.cus.ops.map(function (o) { return { titulo: o.titulo, custoMes: Math.round(o.custo), resolve: o.viavel, maisBarata: !!o.best, detalhe: o.txt }; })
       }
@@ -1399,7 +1406,7 @@
         pontosForaDaLei: c.erros
       };
       return o;
-    }, {});
+    }, { trabalhamDomingoNasSemanasAeB: trabalhaTodoDomingo(s) });
   }
 
   var HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -1823,5 +1830,5 @@
   }
 
   // Usado pelo teste automatizado.
-  window.__j40h = { get state() { return state; }, calcular: calcular, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, aplicarProposta: aplicarProposta, metricas: metricas, render: function () { render(); } };
+  window.__j40h = { get state() { return state; }, calcular: calcular, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, render: function () { render(); } };
 })();

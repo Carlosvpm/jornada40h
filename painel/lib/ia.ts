@@ -117,6 +117,7 @@ Conferência (quando receber "Escala que o painel montou com a sua proposta"):
 - Se algo não foi cumprido, corrija com celulas (semana "A" ou "B") sobre essa grade, respeitando 2 folgas por semana, 11 h entre jornadas e a jornada da versão. Nesta etapa só valem as celulas: equipe, funcionamento, custos e remontar são ignorados (repita os dados recebidos e use remontar: false).
 - resumo e mudancas descrevem o resultado final (grade recebida + suas celulas), nunca a intenção. Não diga que algo ficou resolvido sem conferir na grade. O que não deu para cumprir vai em avisos, dizendo o motivo.
 - Não piore a cobertura para cumprir o pedido sem dizer em avisos quantas horas a mais ficam sem cobertura.
+- Domingo: quem aparece em trabalhamDomingoNasSemanasAeB nunca folga no domingo no rodízio, e a lei pede folga no domingo pelo menos 1 vez a cada 3 semanas no comércio (Lei 10.101/2000, art. 6º). Não crie esse problema; se ele já existia ou não deu para evitar, diga em avisos com o nome da pessoa. Afirme como fica o domingo de alguém só depois de olhar o dia "dom" das semanas A e B.
 
 Fundamento legal:
 - Quando um aviso, mudança ou resumo tocar numa regra da lei (jornada, hora extra, descanso entre jornadas, folga semanal, intervalo, domingo), explique a regra em palavras simples e cite o artigo entre parênteses, no formato "(CLT, art. 66)". Use só os trechos abaixo; não cite artigo que não esteja aqui nem invente número de lei.
