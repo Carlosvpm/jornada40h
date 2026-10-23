@@ -482,16 +482,18 @@
     return { total: total, porDia: porDia, pessoas: Math.ceil(total / 5) };
   }
 
-  // Monta a escala de novo com n pessoas a mais e mede o que ainda falta (memória por dados de entrada).
+  // Monta a escala de novo com n pessoas a mais (e 1 em meio período de h horas, se h > 0) e mede o que
+  // ainda falta. Vale a pior das semanas A e B: é isso que o dono vê depois de aplicar (memória por dados de entrada).
   var simCache = {};
-  function simularContratacao(s, v, sem, n) {
-    var k = JSON.stringify([s.funcionamento, s.equipe, v, sem, n]);
+  function simularContratacao(s, v, sem, n, h) {
+    var k = JSON.stringify([s.funcionamento, s.equipe, v, sem, n, h || 0]);
     if (simCache[k]) return simCache[k];
     var s2 = { negocio: s.negocio, funcionamento: s.funcionamento, custos: s.custos, equipe: s.equipe.slice(), escalas: {} };
     for (var i = 0; i < n; i++) s2.equipe.push({ id: "sim" + i, nome: "", funcao: "", naoPode: [] });
+    if (h > 0) s2.equipe.push({ id: "simP", nome: "", funcao: "", horas: h, naoPode: [] });
     s2.escalas[v] = {};
     SEMANAS.forEach(function (w) { s2.escalas[v][w] = gerar(s2, v, w); });
-    var c = calcular(s2, v, sem);
+    var c = SEMANAS.map(function (w) { return calcular(s2, v, w); }).sort(function (a, b) { return b.falta - a.falta; })[0];
     return (simCache[k] = { falta: c.falta, dias: DIAS.filter(function (d) { return c.dias[d].aberto && c.dias[d].falta; }), calc: c });
   }
 
@@ -543,19 +545,30 @@
       var sims = [{ falta: D, dias: DIAS.filter(function (d) { return calc.dias[d].aberto && calc.dias[d].falta; }) }];
       for (var n = 1; n <= 4 && sims[n - 1].falta > 0.01; n++) sims.push(simularContratacao(s, v, s.semana || "A", n));
       var nInt = sims.length - 1, cobre = sims[nInt].falta <= 0.01;
-      // Candidatas: k integrais + 1 meio período cobrindo o que ainda falta (até 30 h), ou só integrais.
+      // Candidatas: k integrais + 1 meio período (até 30 h), ou só integrais. O meio período é testado
+      // montando a escala de verdade: o encaixe pode não cobrir tudo (2 faltando na mesma hora, mais de 5 dias).
       var opcoesC = [];
       sims.forEach(function (sm, k) {
-        if (sm.falta <= 0.01) opcoesC.push({ n: k, h: 0, custo: k * sal * enc });
-        else if (sm.falta <= 30) opcoesC.push({ n: k, h: parcial(sm.falta), dias: sm.dias, custo: k * sal * enc + sal * (parcial(sm.falta) / J) * enc });
+        if (sm.falta <= 0.01) { opcoesC.push({ n: k, h: 0, falta: 0, custo: k * sal * enc }); return; }
+        if (sm.falta > 30) return;
+        var melhor = null;
+        for (var h = parcial(sm.falta); h <= 30 && h < J; h = h < 30 ? Math.min(30, h + 4) : 31) {
+          var t = simularContratacao(s, v, s.semana || "A", k, h);
+          if (!melhor || t.falta < melhor.falta - 0.01) melhor = { n: k, h: h, falta: t.falta, dias: sm.dias, custo: k * sal * enc + sal * (h / J) * enc };
+          if (t.falta <= 0.01) break;
+        }
+        if (melhor) opcoesC.push(melhor);
       });
-      var esc0 = opcoesC.sort(function (a, b) { return a.custo - b.custo; })[0];
+      // Primeiro o que cobre tudo; se nada cobre, o que deixa menos buraco.
+      opcoesC.sort(function (a, b) { return (a.falta > 0.01) - (b.falta > 0.01) || (a.falta > 0.01 ? a.falta - b.falta : 0) || a.custo - b.custo; });
+      var esc0 = opcoesC[0];
       var diasTxt = function (ds) { return (ds || []).map(function (d) { return NOME_DIA_CURTO[d].toLowerCase(); }).join(", "); };
       if (esc0) {
         custoContr = esc0.custo;
         txtContr = (esc0.n ? esc0.n + (esc0.n === 1 ? " pessoa" : " pessoas") + " em tempo integral (" + R.rotulo + ")" + (esc0.h ? " e " : "") : "") +
           (esc0.h ? (esc0.n ? "1 em" : "1 pessoa em") + " meio período de " + esc0.h + " h por semana, nos horários que faltam (" + diasTxt(esc0.dias) + ")" : "") +
           ", com salário de " + brl(sal) + (esc0.h ? " (proporcional no meio período)" : "") + " × " + String(enc).replace(".", ",") + " de encargos.";
+        if (esc0.falta > 0.01) txtContr += " Mesmo assim ainda ficam " + horas(esc0.falta) + " sem cobertura por semana: vale rever o horário ou o número de pessoas por dia.";
         if (esc0.h && sims[esc0.n + 1] && sims[esc0.n + 1].falta > 0.01) txtContr += " Mais 1 pessoa em tempo integral no lugar do meio período sairia mais caro e ainda deixaria " + horas(sims[esc0.n + 1].falta) + " sem cobertura: o que falta são turnos em dias específicos, não horas na semana.";
       } else {
         custoContr = nInt * sal * enc;
@@ -563,7 +576,7 @@
       }
       // Economia: o mesmo resultado só com gente em tempo integral (o que costuma ser feito) custaria mais.
       var kSo = -1; sims.forEach(function (sm, k) { if (kSo < 0 && k > 0 && sm.falta <= 0.01) kSo = k; });
-      var economia = esc0 && kSo > 0 && kSo * sal * enc - esc0.custo > 1 ? { valor: Math.round(kSo * sal * enc - esc0.custo), n: kSo, base: Math.round(kSo * sal * enc) } : null;
+      var economia = esc0 && esc0.falta <= 0.01 && kSo > 0 && kSo * sal * enc - esc0.custo > 1 ? { valor: Math.round(kSo * sal * enc - esc0.custo), n: kSo, base: Math.round(kSo * sal * enc) } : null;
       ops.push({ id: "contratar", titulo: "Contratar", custo: custoContr + extraGrade * SEM_POR_MES * valorHora * (1 + adic), viavel: !!esc0, txt: txtContr,
         plano: esc0 ? { n: esc0.n, h: esc0.h, dias: esc0.dias || [] } : null, economia: economia, acao: esc0 ? "Aplicar na escala" : "" });
 
@@ -1344,18 +1357,19 @@
     return true;
   }
 
-  function contextoIA() {
-    var R = VERSOES[state.versao], m = metricas(state), c = m.calc;
+  function contextoIA(s) {
+    s = s || state;
+    var R = VERSOES[s.versao], m = metricas(s), c = m.calc;
     return {
-      versao: state.versao, semana: state.semana,
+      versao: s.versao, semana: s.semana,
       regras: { jornadaSemanal: R.jornadaSemanal, jornadaDiariaMax: R.jornadaDiariaMax },
-      negocio: state.negocio,
-      funcionamento: DIAS.reduce(function (o, d) { var f = state.funcionamento[d]; o[d] = f ? { aberto: true, abre: f.abre, fecha: f.fecha, pessoas: Number(f.pessoas) || 1 } : { aberto: false, abre: "", fecha: "", pessoas: 0 }; return o; }, {}),
-      equipe: state.equipe.map(function (p) { return { id: p.id, nome: p.nome, funcao: p.funcao, salario: p.salario || 0, horas: parcial(p, state.versao) ? Number(p.horas) : 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [] }; }),
-      custos: state.custos,
-      grade: state.equipe.map(function (p, i) {
+      negocio: s.negocio,
+      funcionamento: DIAS.reduce(function (o, d) { var f = s.funcionamento[d]; o[d] = f ? { aberto: true, abre: f.abre, fecha: f.fecha, pessoas: Number(f.pessoas) || 1 } : { aberto: false, abre: "", fecha: "", pessoas: 0 }; return o; }, {}),
+      equipe: s.equipe.map(function (p) { return { id: p.id, nome: p.nome, funcao: p.funcao, salario: p.salario || 0, horas: parcial(p, s.versao) ? Number(p.horas) : 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [] }; }),
+      custos: s.custos,
+      grade: s.equipe.map(function (p, i) {
         return { pessoaId: p.id, nome: p.nome, horasSemana: c.pessoas[i].horas, dias: DIAS.reduce(function (o, d) {
-          var x = celula(state, state.versao, state.semana, p.id, d);
+          var x = celula(s, s.versao, s.semana, p.id, d);
           o[d] = x.tipo === "turno" ? x.inicio + "-" + x.fim : x.tipo === "livre" ? "reserva" : x.tipo; return o;
         }, {}) };
       }),
@@ -1369,11 +1383,31 @@
     };
   }
 
+  // Para a conferência da IA: a grade montada nas semanas A e B, com o que falta e os pontos fora da lei de cada uma.
+  function semanasIA(s) {
+    return SEMANAS.reduce(function (o, w) {
+      var c = calcular(s, s.versao, w);
+      o[w] = {
+        grade: s.equipe.map(function (p, i) {
+          return { pessoaId: p.id, nome: p.nome, horasSemana: c.pessoas[i].horas, dias: DIAS.reduce(function (q, d) {
+            var x = celula(s, s.versao, w, p.id, d);
+            q[d] = x.tipo === "turno" ? x.inicio + "-" + x.fim : x.tipo === "livre" ? "reserva" : x.tipo; return q;
+          }, {}) };
+        }),
+        horasSemCobertura: c.falta,
+        ondeFalta: DIAS.filter(function (d) { return c.dias[d].aberto && c.dias[d].falta; }).map(function (d) { return NOME_DIA[d] + ": " + textoFaixa(c.dias[d].faixas); }),
+        pontosForaDaLei: c.erros
+      };
+      return o;
+    }, {});
+  }
+
   var HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
   // Aplica a proposta numa cópia do estado (prévia). Nada é gravado até o cliente aceitar.
-  function aplicarProposta(prop) {
-    var s = JSON.parse(JSON.stringify(state));
+  function aplicarProposta(prop, base) {
+    base = base || state;
+    var s = JSON.parse(JSON.stringify(base));
     var antesEstr = JSON.stringify([s.funcionamento, s.equipe]);
     DIAS.forEach(function (d) {
       var f = prop.funcionamento && prop.funcionamento[d]; if (!f) return;
@@ -1383,7 +1417,7 @@
     if (Array.isArray(prop.equipe) && prop.equipe.length) {
       var usados = {};
       s.equipe = prop.equipe.slice(0, 60).map(function (p) {
-        var antigo = state.equipe.filter(function (x) { return x.id === p.id && !usados[x.id]; })[0];
+        var antigo = base.equipe.filter(function (x) { return x.id === p.id && !usados[x.id]; })[0];
         if (antigo) usados[antigo.id] = 1;
         return {
           id: antigo ? antigo.id : uid(), nome: String(p.nome || "").trim().slice(0, 40) || "Pessoa", funcao: String(p.funcao || "").trim().slice(0, 40),
@@ -1398,7 +1432,7 @@
     else if (JSON.stringify([s.funcionamento, s.equipe]) !== antesEstr) s.pendente = true;
     (prop.celulas || []).forEach(function (c) {
       if (DIAS.indexOf(c.dia) < 0 || !s.equipe.some(function (p) { return p.id === c.pessoaId; })) return;
-      var g = s.escalas[s.versao][s.semana]; g[c.pessoaId] = g[c.pessoaId] || {};
+      var g = s.escalas[s.versao][SEMANAS.indexOf(c.semana) >= 0 ? c.semana : s.semana]; g[c.pessoaId] = g[c.pessoaId] || {};
       if (c.tipo === "turno" && HORA_RE.test(c.inicio) && HORA_RE.test(c.fim) && c.inicio !== c.fim) g[c.pessoaId][c.dia] = { tipo: "turno", inicio: c.inicio, fim: c.fim, rotulo: "" };
       else if (c.tipo === "folga" || c.tipo === "livre") g[c.pessoaId][c.dia] = { tipo: c.tipo };
     });
@@ -1492,20 +1526,47 @@
     setTimeout(function () { $("#iaPedido").focus(); }, 50);
   }
 
+  function chamarIA(corpo) {
+    return fetch(PAINEL.ia, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); });
+  }
+
+  // 1ª chamada: a proposta. Se ela muda a grade, 2ª chamada: a IA confere a escala que o painel montou de
+  // verdade (semanas A e B) e corrige o que não ficou como o dono pediu. O texto mostrado é o da conferência.
   function enviarIA() {
     var pedido = $("#iaPedido").value.trim();
     if (!pedido) { toast("Escreva o que você quer mudar."); return; }
     ia.pedido = pedido;
+    iaCarregando("A IA está montando a proposta. Pode levar até 1 minuto…");
     iaPasso(2);
-    fetch(PAINEL.ia, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pedido: pedido, contexto: contextoIA(), anterior: ia.anterior || undefined }) })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); })
+    chamarIA({ pedido: pedido, contexto: contextoIA(), anterior: ia.anterior || undefined })
       .then(function (x) {
         if (x.status === 401) { location.href = PAINEL.login; return; }
         if (!x.ok || !x.j.resultado) { toast(x.j.erro || "A IA não respondeu. Tente de novo."); iaPasso(1); return; }
-        mostrarIA(x.j.resultado);
+        var r1 = x.j.resultado, p1 = r1.proposta || {};
+        if (r1.entendeu === false || (!p1.remontar && !(p1.celulas || []).length && !aplicarProposta(p1).pendente)) return mostrarIA(r1);
+        var previa1 = aplicarProposta(p1);
+        iaCarregando("Conferindo a escala montada com a proposta…");
+        return chamarIA({ pedido: pedido, contexto: contextoIA(), conferir: {
+          suaPropostaAnterior: { resumo: r1.resumo, mudancas: r1.mudancas, avisos: r1.avisos },
+          equipeDepois: previa1.equipe.map(function (p) { return { id: p.id, nome: p.nome, horas: parcial(p, previa1.versao) ? Number(p.horas) : 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [] }; }),
+          semanas: semanasIA(previa1)
+        } }).then(function (y) {
+          if (y.status === 401) { location.href = PAINEL.login; return; }
+          if (!y.ok || !y.j.resultado || y.j.resultado.entendeu === false) {
+            r1.avisos = (r1.avisos || []).concat(["Não deu para conferir a escala montada com a proposta. Confira a grade antes de aplicar."]);
+            return mostrarIA(r1);
+          }
+          var r2 = y.j.resultado, extra = ((r2.proposta || {}).celulas || []);
+          // A proposta final reproduz a prévia conferida: a 1ª (com remontar) e depois as células da conferência.
+          mostrarIA({ entendeu: true, resumo: r2.resumo, mudancas: (r2.mudancas || []).length ? r2.mudancas : r1.mudancas, avisos: r2.avisos || [],
+            proposta: Object.assign({}, p1, { celulas: (p1.celulas || []).concat(extra) }), conferida: true });
+        });
       })
       .catch(function () { toast("Sem conexão com a IA. Tente de novo."); iaPasso(1); });
   }
+
+  function iaCarregando(txt) { var el = $("#iaCarregando span:last-child"); if (el) el.textContent = txt; }
 
   function mostrarIA(r) {
     ia.resultado = r;

@@ -72,12 +72,16 @@ const SCHEMA = {
         remontar: { type: "boolean", description: "true para montar a escala de novo com os dados da proposta (perde mudanças feitas à mão)" },
         celulas: {
           type: "array",
-          description: "mudanças pontuais na grade da versão e semana em tela, aplicadas depois de remontar",
+          description: "mudanças pontuais na grade da versão em tela, aplicadas depois de remontar",
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["pessoaId", "dia", "tipo", "inicio", "fim"],
-            properties: { pessoaId: { type: "string" }, dia, tipo: { type: "string", enum: ["turno", "folga", "livre"] }, inicio: hora, fim: hora },
+            required: ["pessoaId", "semana", "dia", "tipo", "inicio", "fim"],
+            properties: {
+              pessoaId: { type: "string" },
+              semana: { type: "string", enum: ["", "A", "B"], description: "vazio = semana em tela" },
+              dia, tipo: { type: "string", enum: ["turno", "folga", "livre"] }, inicio: hora, fim: hora,
+            },
           },
         },
       },
@@ -107,6 +111,13 @@ Como decidir:
 - Não invente gente, salário ou horário que o dono não pediu. Para cobrir buraco, prefira primeiro redistribuir quem já existe; sugerir contratação só quando não houver outro jeito, e diga o custo.
 - Escreva para o dono do negócio, sem jargão técnico, em frases curtas.
 
+Conferência (quando receber "Escala que o painel montou com a sua proposta"):
+- O painel já aplicou a sua proposta e montou a escala. Você recebe a grade resultante das semanas A e B e as métricas reais. A grade é a verdade; a sua proposta anterior foi só a intenção.
+- Confira pessoa por pessoa e dia por dia, nas duas semanas, se cada parte do pedido foi cumprida de fato (ex.: quem não pode folgar junto, quem precisa estar em tal dia, horas sem cobertura).
+- Se algo não foi cumprido, corrija com celulas (semana "A" ou "B") sobre essa grade, respeitando 2 folgas por semana, 11 h entre jornadas e a jornada da versão. Nesta etapa só valem as celulas: equipe, funcionamento, custos e remontar são ignorados (repita os dados recebidos e use remontar: false).
+- resumo e mudancas descrevem o resultado final (grade recebida + suas celulas), nunca a intenção. Não diga que algo ficou resolvido sem conferir na grade. O que não deu para cumprir vai em avisos, dizendo o motivo.
+- Não piore a cobertura para cumprir o pedido sem dizer em avisos quantas horas a mais ficam sem cobertura.
+
 Fundamento legal:
 - Quando um aviso, mudança ou resumo tocar numa regra da lei (jornada, hora extra, descanso entre jornadas, folga semanal, intervalo, domingo), explique a regra em palavras simples e cite o artigo entre parênteses, no formato "(CLT, art. 66)". Use só os trechos abaixo; não cite artigo que não esteja aqui nem invente número de lei.
 - Se o dono perguntar algo de lei que os trechos não cobrem (feriado, piso da categoria, menor de idade, trabalho noturno), diga que a convenção coletiva ou o contador precisa confirmar, sem inventar.
@@ -115,7 +126,7 @@ Fundamento legal:
 Trechos de lei (compilação do Planalto, out/2026):
 ${BASE_LEGAL}`;
 
-export type PedidoIA = { pedido: string; contexto: unknown; anterior?: unknown; modelo?: Modelo };
+export type PedidoIA = { pedido: string; contexto: unknown; anterior?: unknown; conferir?: unknown; modelo?: Modelo };
 export type Uso = { modelo: Modelo; entrada: number; saida: number; cacheLido: number; cacheGravado: number };
 
 function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; folgaFixa: string; naoPode: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
@@ -129,7 +140,7 @@ function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salari
   };
 }
 
-export async function pedirAjuste({ pedido, contexto, anterior, modelo }: PedidoIA): Promise<{ resultado: unknown; uso: Uso | null }> {
+export async function pedirAjuste({ pedido, contexto, anterior, conferir, modelo }: PedidoIA): Promise<{ resultado: unknown; uso: Uso | null }> {
   if (process.env.IA_MOCK === "1" && !process.env.ANTHROPIC_API_KEY) return { resultado: mock(contexto as Parameters<typeof mock>[0]), uso: null };
   const m = modelo || modeloPadrao();
 
@@ -138,6 +149,7 @@ export async function pedirAjuste({ pedido, contexto, anterior, modelo }: Pedido
     `Dados e métricas atuais (JSON):\n${JSON.stringify(contexto)}`,
   ];
   if (anterior) partes.push(`Proposta anterior e o que deu errado nela (JSON):\n${JSON.stringify(anterior)}`);
+  if (conferir) partes.push(`Escala que o painel montou com a sua proposta (JSON). Confira e corrija conforme "Conferência":\n${JSON.stringify(conferir)}`);
 
   const client = new Anthropic();
   const resposta = await client.beta.messages.create({
