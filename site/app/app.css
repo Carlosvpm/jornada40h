@@ -538,3 +538,13 @@ dialog h3 { margin: 0 0 14px; text-transform: none; letter-spacing: -.01em; colo
 .op .eco b { color: var(--green); }
 .op.economia { border-color: var(--green); }
 .op.economia .v { color: var(--green); }
+
+/* Almoço na grade e modal da mudança do intervalo */
+.cell small.alm { display: block; color: var(--muted); font-size: 10px; font-weight: 500; }
+.pc .nm { flex: 1 1 auto; min-width: 3.5em; }
+.pc:has(small.alm) { flex-wrap: wrap; row-gap: 1px; }
+.pc small.alm { flex-basis: 100%; margin-left: 15px; font-weight: 500; }
+.dlg-alm { width: min(560px, calc(100vw - 32px)); }
+.dlg-alm p { margin: 0 0 10px; line-height: 1.45; }
+.dlg-alm .ia-comp { margin: 6px 0 10px; }
+#alertas .b.sm { margin-left: 6px; }

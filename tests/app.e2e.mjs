@@ -187,6 +187,12 @@ try {
 
   console.log("9c. arrastar pessoas no quadro");
   const arrasta = async (de, para) => {
+    // A grade é alta (cartões com almoço): centraliza a tela entre origem e destino para os dois caberem.
+    await page.evaluate(([de, para]) => {
+      const a = document.querySelector(de).getBoundingClientRect(), b = document.querySelector(para).getBoundingClientRect();
+      const meio = (Math.min(a.top, b.top) + Math.max(a.bottom, b.bottom)) / 2;
+      window.scrollTo({ top: window.scrollY + meio - innerHeight / 2 + 30, behavior: "instant" });
+    }, [de, para]);
     const a = await page.locator(de).first().boundingBox(), b = await page.locator(para).first().boundingBox();
     await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
     await page.mouse.down();

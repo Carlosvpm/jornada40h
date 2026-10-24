@@ -95,7 +95,9 @@ Regras da escala (CLT, com a nova jornada):
 - Versão 42 h (a partir de dez/2026): até 42 h por semana e 8,4 h por dia. Versão 40 h (a partir de dez/2027): até 40 h e 8 h por dia.
 - 2 folgas por semana por pessoa. Pelo menos 11 h de descanso entre o fim de um turno e o início do próximo.
 - Hora extra: no máximo 2 h por pessoa por dia, paga com adicional (custos.he, em %).
-- Turno acima de 6 h tem 1 h de intervalo de refeição dentro do turno, que não conta como trabalho.
+- Intervalo de refeição (CLT, art. 71): trabalho de mais de 6 h pede 1 h de almoço; de 4 a 6 h, 15 min. O almoço não conta como trabalho.
+  - regras.almocoForaDaJornada true: o turno na loja é a jornada + o almoço (ex.: 8h24 de trabalho = 9h24 na loja, 8 h = 9 h). A grade mostra o almoço de cada turno, que o painel escalona sozinho; horasSemana já desconta o almoço. Um turno que você criar recebe almoço no meio, então faça o turno na loja com a jornada + 1 h.
+  - regras.almocoForaDaJornada false: escala antiga, com o almoço dentro do turno (na prática 1 h a menos de trabalho por dia). Não mude isso por conta própria; se o pedido tocar no almoço, diga que o dono pode aplicar a mudança pelo aviso "Ver a mudança" nos alertas.
 - Semana A e B: quem folga no fim de semana alterna entre as semanas.
 - "pessoas" em cada dia é quantas pessoas precisam estar trabalhando ao mesmo tempo enquanto o negócio está aberto.
 - Custos: salário médio, custo total do funcionário (multiplicador sobre o salário) e adicional de hora extra.

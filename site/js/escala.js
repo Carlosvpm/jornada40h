@@ -26,6 +26,14 @@ var NOME_DIA_CURTO = { seg: "seg", ter: "ter", qua: "qua", qui: "qui", sex: "sex
 var FIM_DE_SEMANA = ["sab", "dom"];
 var BLOCO_MIN = 30; // granularidade da cobertura (minutos)
 
+/**
+ * Intervalo de refeição (minutos) de um turno com essa presença na loja (CLT, art. 71): trabalho de mais
+ * de 6 h pede 1 h; de 4 a 6 h, 15 min. O intervalo não conta como hora trabalhada.
+ */
+function intervaloDe(presencaMin) {
+  return presencaMin - 15 > 360 ? 60 : presencaMin > 240 ? 15 : 0;
+}
+
 /** "06:30" -> 390 (minutos desde 00:00). */
 function paraMinutos(hhmm) {
   if (typeof hhmm === "number") return hhmm;
@@ -137,6 +145,10 @@ function exemploEquipe(n, tipo) {
 function montarDias(funcionamento, regras) {
   var info = {};
   var maxMin = regras.jornadaDiariaMax * 60;
+  // intervaloFora: o almoço fica fora da jornada, então o turno na loja é a jornada + o intervalo
+  // (8 h de trabalho = 9 h na loja). Sem a regra, o intervalo fica dentro do turno (modelo antigo).
+  var fora = !!regras.intervaloFora;
+  if (fora) maxMin += maxMin > 360 ? 60 : maxMin > 240 ? 15 : 0;
   DIAS.forEach(function (d) {
     var f = funcionamento ? funcionamento[d] : null;
     if (!f || !f.abre || !f.fecha) { info[d] = { aberto: false }; return; }
@@ -158,11 +170,20 @@ function montarDias(funcionamento, regras) {
       turnos.push({ rotulo: "Meio", inicio: meioIni, fim: meioIni + maxMin });
       turnos.push({ rotulo: "Fechamento", inicio: fecha - maxMin, fim: fecha });
     }
+    // Com o almoço fora da jornada, cada pessoa no balcão sai 1 h para almoçar: o dia pede essas horas a
+    // mais e, para alguém cobrir os almoços, gente além da que fica ao mesmo tempo.
+    var almocoH = 0, extraAlmoco = 0;
+    if (fora) {
+      turnos.forEach(function (t) { if (intervaloDe(t.fim - t.inicio) >= 60) almocoH += pessoas; });
+      var maior = Math.max.apply(null, turnos.map(function (t) { return t.fim - t.inicio; }));
+      if (almocoH) extraAlmoco = Math.ceil(almocoH * 60 / Math.max(60, maior - 180));
+    }
     info[d] = {
       aberto: true, abre: abre, fecha: fecha, horas: horas, pessoas: pessoas,
-      demanda: horas * pessoas, turnos: turnos,
+      demanda: horas * pessoas + almocoH, turnos: turnos,
+      intervaloFora: fora,
       // quantas pessoas cobririam o dia inteiro sem buraco
-      pessoasParaCobrir: pessoas * turnos.length
+      pessoasParaCobrir: pessoas * turnos.length + extraAlmoco
     };
   });
   return info;
@@ -341,7 +362,8 @@ function escalarDia(dia, pessoasDisp, contagem, blocos) {
     porTurno[melhor]++;
     contagem[p.nome][t.rotulo] = (contagem[p.nome][t.rotulo] || 0) + 1;
     contagem[p.nome].total++;
-    resultado[p.nome] = { tipo: "turno", inicio: paraHora(t.inicio), fim: paraHora(t.fim), rotulo: t.rotulo, horas: (t.fim - t.inicio) / 60 };
+    var pres = t.fim - t.inicio;
+    resultado[p.nome] = { tipo: "turno", inicio: paraHora(t.inicio), fim: paraHora(t.fim), rotulo: t.rotulo, horas: (pres - (dia.intervaloFora ? intervaloDe(pres) : 0)) / 60 };
   });
   return resultado;
 }
@@ -663,4 +685,4 @@ function resumoEscala(saida) {
 /* Exportação (Node) — no Apps Script as funções ficam globais            */
 /* ===================================================================== */
 
-if (typeof module !== "undefined") module.exports = { gerarEscala, exemploEquipe, resumoEscala, DIAS, NOME_DIA, NOME_DIA_CURTO, fmtHoras, fmtReais };
+if (typeof module !== "undefined") module.exports = { gerarEscala, exemploEquipe, resumoEscala, intervaloDe, DIAS, NOME_DIA, NOME_DIA_CURTO, fmtHoras, fmtReais };
