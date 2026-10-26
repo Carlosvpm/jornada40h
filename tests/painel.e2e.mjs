@@ -203,6 +203,19 @@ try {
     await m.screenshot({ path: path.join(process.env.SHOTS, "painel-login-mobile.png") });
   }
 
+  console.log("11. funil da LP");
+  const ev = (corpo, ip = "7.7.7.7") => fetch(BASE + "/painel/api/ev", { method: "POST", headers: { "content-type": "text/plain", "x-real-ip": ip }, body: JSON.stringify(corpo) });
+  ok((await ev({ ev: "PageView", sid: "s1abc", variante: "a5", anuncio: "v4l-02" })).status === 204, "evento aceito (204)");
+  await ev({ ev: "InitiateCheckout", sid: "s1abc", variante: "a5", anuncio: "v4l-02" });
+  await ev({ ev: "PageView", sid: "s2abc", variante: "a5sp", anuncio: "v4l-01" });
+  await ev({ ev: "PageView", sid: "s2abc", variante: "a5sp", anuncio: "v4l-01" });
+  ok((await ev({ ev: "<script>", sid: "s1abc" })).status === 400, "nome de evento inválido → 400");
+  ok((await fetch(BASE + "/painel/api/admin/funil")).status === 401, "relatório do funil sem chave → 401");
+  const f = await (await fetch(BASE + "/painel/api/admin/funil?desde=2020-01-01", { headers: { "x-admin-key": ADMIN_KEY } })).json();
+  ok(f.funil.a5?.PageView === 1 && f.funil.a5?.InitiateCheckout === 1 && f.funil.a5sp?.PageView === 1, "funil conta visitas únicas por variante");
+  const fa = await (await fetch(BASE + "/painel/api/admin/funil?por=anuncio", { headers: { "x-admin-key": ADMIN_KEY } })).json();
+  ok(fa.funil["v4l-01"]?.PageView === 1, "funil por anúncio");
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
   db.close(); rw.close();
 } catch (e) {

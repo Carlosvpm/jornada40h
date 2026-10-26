@@ -113,7 +113,7 @@ try {
         ok(!!lead && (c.semWhats ? lead.whatsapp === "" : lead.whatsapp === "98999999999"), "campo whatsapp " + (c.semWhats ? "vazio (opcional)" : "enviado"));
         ok(!!lead && lead.checkout_url && lead.checkout_url.includes("xftQB3Y"), "lead leva o checkout novo");
         if (pagina === "/") {
-          ok(lead.variante === "a5", "variante a5");
+          ok(lead.variante === "a5" || lead.variante === "a5sp", "variante do teste A/B no lead (" + lead.variante + ")");
           ok(/diagnóstico foi para teste@exemplo.com/.test(await page.locator("#thanks").innerText()), "agradecimento com o e-mail");
           const best = await page.locator("#bestSlot").innerText();
           ok(/A mais barata para você:/.test(best) && /R\$\s?\d/.test(best) && await page.locator("#lkAlt").isHidden(), "cadastro libera a opção mais barata com valor (" + best.split("\n")[0] + ")");
@@ -152,6 +152,29 @@ try {
     const heroTxt = await page.locator(".hero").innerText();
     ok(/Sua escala 5x2 pronta/.test(heroTxt) && /R\$\s47,90/.test(heroTxt) && /R\$\s77/.test(heroTxt) && /garantia de 7 dias/i.test(heroTxt), "hero mostra o produto, R$ 47,90 (de R$ 77) e garantia");
     ok(await page.locator(".hero #card").count() === 0, "calculadora fora do hero");
+    await ctx.close();
+  }
+  // Teste A/B (a5 × a5sp): cada variante mostra ou tira a seção do painel, e os eventos vão para /painel/api/ev
+  for (const v of ["a5", "a5sp"]) {
+    console.log("/?v=" + v);
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await ctx.newPage();
+    const erros = [], eventos = [];
+    let checkout = null;
+    page.on("pageerror", e => erros.push(e.message));
+    await page.route("https://connect.facebook.net/**", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+    await page.route("**/painel/api/ev", async r => { eventos.push(JSON.parse(r.request().postData())); await r.fulfill({ status: 204 }); });
+    await page.route("https://pay.kiwify.com.br/**", async r => { checkout = r.request().url(); await r.fulfill({ status: 200, body: "checkout" }); });
+    await page.goto(BASE + "/?v=" + v + "&utm_content=e2e&utm_term=lp-a5");
+    ok((await page.locator("#painel").count()) === (v === "a5" ? 1 : 0), v === "a5" ? "seção do painel aparece" : "sem seção do painel");
+    ok(v === "a5" || (await page.locator('a[href="#painel"]').count()) === 0, "nenhum link para #painel quebrado");
+    await page.locator("#offerMain .checkout, #oferta .checkout").first().click();
+    await page.waitForTimeout(500);
+    const pv = eventos.find(e => e.ev === "PageView"), ic = eventos.find(e => e.ev === "InitiateCheckout");
+    ok(!!pv && pv.variante === v && pv.anuncio === "e2e" && pv.termo === "lp-a5" && !!pv.sid, "PageView vai ao funil com variante, anúncio e termo");
+    ok(!!ic && ic.sid === pv.sid, "InitiateCheckout vai ao funil na mesma visita");
+    ok(!!checkout && checkout.includes("sck=" + v), "checkout leva a variante (sck)");
+    ok(erros.length === 0, "sem erros de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
     await ctx.close();
   }
   // Guia do fim da escala 6x1: carrega, sem rolagem horizontal em 360px, CTA para a calculadora, JSON-LD válido

@@ -786,7 +786,24 @@ const CONFIG = {
   semanasPorMes: 4.33,
   limiteHoraExtraDia: 2
 };
-const VARIANTE = "a5"; // LP A: como a a4 (checkout direto de R$ 47,90), e o cadastro libera na hora a opção mais barata
+// Teste A/B (26/10): a5 = página atual; a5sp = mesma página sem a seção com as telas do painel (como a a4,
+// que teve 6 checkouts e 2 vendas em 187 visitas, contra 2 checkouts em 175 depois da seção).
+// A variante fica guardada no aparelho para a mesma pessoa ver sempre a mesma página; ?v= força uma.
+const VARIANTE = (() => {
+  const pedida = new URLSearchParams(location.search).get("v");
+  if (pedida === "a5" || pedida === "a5sp") return pedida;
+  try {
+    const salva = localStorage.getItem("j40h_v");
+    if (salva === "a5" || salva === "a5sp") return salva;
+    const nova = Math.random() < 0.5 ? "a5" : "a5sp";
+    localStorage.setItem("j40h_v", nova);
+    return nova;
+  } catch (e) { return Math.random() < 0.5 ? "a5" : "a5sp"; }
+})();
+if (VARIANTE === "a5sp") {
+  document.getElementById("painel").remove();
+  document.querySelectorAll('a[href="#painel"]').forEach(a => a.remove());
+}
 
 /* Simulações exibidas na seção de casos (calculadas com a mesma conta) */
 const SIMULACOES = [
@@ -822,7 +839,14 @@ const preco = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL
 const num1 = v => v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 1 });
 const toHours = t => { if (!t) return NaN; const [h, m] = t.split(":").map(Number); return h + m / 60; };
 const span = (a, f) => { const ha = toHours(a), hf = toHours(f); if (isNaN(ha) || isNaN(hf) || ha === hf) return 0; return hf > ha ? hf - ha : hf + 24 - ha; };
-const track = (ev, data, custom) => { try { if (window.fbq) custom ? fbq("trackCustom", ev, data || {}) : fbq("track", ev, data || {}); } catch (e) {} };
+// Cada evento do Pixel também vai para o funil do painel (/painel/api/ev), que dá para ler por variante e anúncio.
+const SID = (() => { let s = ""; try { s = sessionStorage.getItem("j40h_sid") || ""; } catch (e) {} if (!s) { s = Math.random().toString(36).slice(2, 12) + Date.now().toString(36); try { sessionStorage.setItem("j40h_sid", s); } catch (e) {} } return s; })();
+const funil = ev => { try {
+  const q = new URLSearchParams(location.search);
+  const corpo = JSON.stringify({ ev, sid: SID, variante: VARIANTE, anuncio: q.get("utm_content") || "", termo: q.get("utm_term") || "" });
+  if (!(navigator.sendBeacon && navigator.sendBeacon("/painel/api/ev", new Blob([corpo], { type: "text/plain" })))) fetch("/painel/api/ev", { method: "POST", body: corpo, keepalive: true });
+} catch (e) {} };
+const track = (ev, data, custom) => { funil(ev); try { if (window.fbq) custom ? fbq("trackCustom", ev, data || {}) : fbq("track", ev, data || {}); } catch (e) {} };
 const smooth = el => el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 
 /* ---------- conta central (usada pela calculadora e pelas simulações) ---------- */
@@ -919,6 +943,7 @@ if (CONFIG.metaPixelId) {
   fbq("init", CONFIG.metaPixelId);
   fbq("track", "PageView");
 }
+funil("PageView");
 
 /* ---------- UTMs e setor ---------- */
 const params = new URLSearchParams(location.search);
@@ -971,6 +996,7 @@ function goCheckout(e) {
   if (!CONFIG.checkoutUrl) { e.preventDefault(); alert("Configure o link de pagamento em CONFIG.checkoutUrl."); return; }
   const url = new URL(CONFIG.checkoutUrl);
   Object.entries(utm).forEach(([k, v]) => url.searchParams.set(k, v));
+  url.searchParams.set("sck", VARIANTE); // aparece na venda da Kiwify: qual variante vendeu
   if (lastEmail) url.searchParams.set("email", lastEmail);
   if (lastNome) url.searchParams.set("name", lastNome);
   e.currentTarget.href = url.toString();

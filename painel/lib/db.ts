@@ -36,6 +36,16 @@ CREATE TABLE IF NOT EXISTS escalas (
   estado TEXT NOT NULL,
   atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS eventos (
+  id INTEGER PRIMARY KEY,
+  criado_em INTEGER NOT NULL,
+  sid TEXT NOT NULL,
+  ev TEXT NOT NULL,
+  variante TEXT NOT NULL DEFAULT '',
+  anuncio TEXT NOT NULL DEFAULT '',
+  termo TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS eventos_criado ON eventos(criado_em);
 `;
 
 let db: Database.Database | null = null;
