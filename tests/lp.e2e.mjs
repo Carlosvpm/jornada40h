@@ -85,7 +85,7 @@ try {
         const valores = ((await page.locator("#card").innerHTML()).match(/R\$(\s|&nbsp;)?\d[\d.,]*/g) || []).map(v => v.replace(/R\$(\s|&nbsp;)?/, ""));
         const heVal = (await page.locator("#heVal").innerText()).replace(/R\$\s?|\/mês/g, "");
         ok(/R\$\s?\d/.test(await page.locator("#heVal").innerText()) && await page.locator("#heVal").isVisible(), "metade aberta: hora extra com valor real (" + heVal + ")");
-        ok(valores.every(v => v === "47,90" || v === "77" || v === heVal), "valores em R$ no card: só o preço e a hora extra (" + [...new Set(valores)].join(", ") + ")");
+        ok(valores.every(v => v === "47,90" || v === "77,90" || v === heVal), "valores em R$ no card: só o preço e a hora extra (" + [...new Set(valores)].join(", ") + ")");
         const lockedTxt = await page.locator("#locked").innerText();
         ok(/Contratar/.test(lockedTxt) && /Reduzir o horário/.test(lockedTxt) && /mais barata/.test(lockedTxt) && await page.locator("#locked h4", { hasText: "Contratar" }).evaluate(e => getComputedStyle(e).filter === "none"), "nomes das 3 saídas e da mais barata visíveis");
         ok(!/grátis|gratuit/i.test(await page.locator("body").innerText()), "sem a palavra grátis/gratuito na página");
@@ -174,6 +174,40 @@ try {
     ok(!!pv && pv.variante === v && pv.anuncio === "e2e" && pv.termo === "lp-a5" && !!pv.sid, "PageView vai ao funil com variante, anúncio e termo");
     ok(!!ic && ic.sid === pv.sid, "InitiateCheckout vai ao funil na mesma visita");
     ok(!!checkout && checkout.includes("sck=" + v), "checkout leva a variante (sck)");
+    ok(erros.length === 0, "sem erros de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
+    await ctx.close();
+  }
+  // Teste de preço (27/10): /4790/ e /7790/ são geradas de / por scripts/lp-precos.mjs; cada uma com seu preço,
+  // âncora e checkout, variante fixa e os arquivos da raiz carregando a partir da pasta.
+  for (const pg of [
+    { url: "/4790/", preco: "R$ 47,90", ancora: true, checkout: "xftQB3Y", v: "p4790" },
+    { url: "/7790/", preco: "R$ 77,90", ancora: false, checkout: "yy3LT4h", v: "p7790" }
+  ]) {
+    console.log(pg.url);
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await ctx.newPage();
+    const erros = [], quebrados = [], eventos = [];
+    let checkout = null;
+    page.on("pageerror", e => erros.push(e.message));
+    page.on("response", r => { if (r.url().startsWith(BASE) && r.status() >= 400) quebrados.push(r.url()); });
+    await page.route("https://connect.facebook.net/**", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+    await page.route("**/painel/api/ev", async r => { eventos.push(JSON.parse(r.request().postData())); await r.fulfill({ status: 204 }); });
+    await page.route("https://pay.kiwify.com.br/**", async r => { checkout = r.request().url(); await r.fulfill({ status: 200, body: "checkout" }); });
+    await page.goto(BASE + pg.url + "?v=a5sp&utm_content=e2e");
+    await page.locator("#painel img").first().scrollIntoViewIfNeeded();
+    await page.waitForTimeout(400);
+    const hero = await page.locator(".hero").innerText(), faq = await page.locator("#faq").textContent();
+    const tem = t => t.replace(/\s/g, " ").includes(pg.preco);
+    ok(tem(hero) && tem(faq), "hero e FAQ mostram " + pg.preco);
+    ok(pg.ancora ? /de\s+R\$\s77,90/.test(hero) : await page.locator(".de, .precoCheio").count() === 0, pg.ancora ? "âncora de R$ 77,90" : "sem âncora");
+    ok(!/31\/10/.test(await page.locator("body").innerText()), "sem prazo de lançamento");
+    ok(await page.locator("#painel").count() === 1, "variante fixa ignora ?v= (seção do painel aparece)");
+    ok(await page.getAttribute('meta[name="robots"]', "content") === "noindex, follow", "noindex (a página principal é a /)");
+    await page.locator("#offerMain .checkout").first().click();
+    await page.waitForTimeout(500);
+    ok(!!checkout && checkout.includes(pg.checkout) && checkout.includes("sck=" + pg.v), "checkout " + pg.checkout + " com sck=" + pg.v);
+    ok(eventos.some(e => e.ev === "PageView" && e.variante === pg.v), "funil recebe a variante " + pg.v);
+    ok(quebrados.length === 0, "nenhum arquivo do site com erro" + (quebrados.length ? ": " + quebrados.join(" | ") : ""));
     ok(erros.length === 0, "sem erros de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
     await ctx.close();
   }

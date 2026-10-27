@@ -691,7 +691,7 @@
           <li><svg><use href="#i-check"/></svg><div><b>Painel online da sua escala, com Ajuste com IA</b><span>Arraste pessoas entre turnos, veja custos e alertas da lei na hora e peça mudanças à IA em português. <a href="#painel">Veja as telas</a>.</span></div></li>
         </ul>
         <div class="price"><span class="de">de <s class="precoCheio"></s></span><strong class="precoFundador"></strong><span>pagamento único</span></div>
-        <p class="compare">Preço de lançamento até <b>31/10</b>. Menos do que um dia de trabalho de um funcionário.</p>
+        <p class="compare"><span class="prazo">Preço de lançamento até <b class="prazoTxt"></b>. </span>Menos do que um dia de trabalho de um funcionário.</p>
         <a class="btn checkout" href="#" rel="noopener">Quero minha escala pronta por <span class="precoFundador"></span><small>Pix ou cartão · garantia de 7 dias</small></a>
         <a class="wa whatsapp" href="#" target="_blank" rel="noopener" hidden><svg><use href="#i-wa"/></svg>Tirar uma dúvida no WhatsApp</a>
         <a class="pdf-link" href="exemplo/escala-5x2-exemplo.pdf" target="_blank" rel="noopener"><svg><use href="#i-doc"/></svg>Ver um exemplo de escala pronta (PDF)</a>
@@ -735,9 +735,9 @@
       <details><summary>Como e quando eu recebo?</summary><p>Depois do pagamento você recebe o formulário. Em até 48 horas depois de respondê-lo, as escalas de 42h e de 40h chegam por e-mail e WhatsApp, em PDF e planilha.</p></details>
       <details><summary>O que é o painel online?</summary><p>É onde a sua escala fica depois da compra. Você entra com o seu e-mail, sem senha (chega um código de acesso), vê as escalas de 42h e de 40h, arrasta pessoas entre turnos e dias e muda horário e equipe. O painel recalcula na hora as horas sem cobertura, o custo de cada saída e os alertas da lei, e você baixa o PDF e a planilha atualizados. <a href="#painel">Veja as telas</a>.</p></details>
       <details><summary>O que a IA faz?</summary><p>No painel, o botão "Ajuste com IA" recebe o que mudou, escrito do seu jeito: "a Bia não pode mais aos sábados" ou "contratei mais uma pessoa para a tarde". A IA monta uma proposta de escala, mostra o antes e depois (horas sem cobertura, custo e alertas) e só salva se você aceitar. Quando a mudança toca numa regra da lei, ela explica e cita o artigo. Para decisões jurídicas, confirme sempre com o seu contador.</p></details>
-      <details><summary>Quanto custa?</summary><p>R$ 47,90, pagamento único, por Pix ou cartão (de R$ 77, preço de lançamento até 31/10). Inclui as escalas de 42h e de 40h em PDF e planilha, o acesso ao painel online da sua escala (com Ajuste com IA) e a garantia de 7 dias.</p></details>
+      <details><summary>Quanto custa?</summary><p><span class="precoFundador"></span>, pagamento único, por Pix ou cartão<span class="de"> (de <span class="precoCheio"></span><span class="prazo">, preço de lançamento até <span class="prazoTxt"></span></span>)</span>. Inclui as escalas de 42h e de 40h em PDF e planilha, o acesso ao painel online da sua escala (com Ajuste com IA) e a garantia de 7 dias.</p></details>
       <details><summary>Posso ver um exemplo antes de comprar?</summary><p>Sim. Depois do diagnóstico você vê o resultado principal, o custo da hora extra e a primeira linha da escala do seu negócio, e aqui está um <a href="exemplo/escala-5x2-exemplo.pdf" target="_blank" rel="noopener">exemplo de escala pronta em PDF</a>, com nomes fictícios.</p></details>
-      <details><summary>Preciso pagar mensalidade?</summary><p>Não. É pagamento único de R$ 47,90.</p></details>
+      <details><summary>Preciso pagar mensalidade?</summary><p>Não. É pagamento único de <span class="precoFundador"></span>.</p></details>
     </div>
   </div>
 </section>
@@ -771,8 +771,10 @@ const CONFIG = {
   whatsappUrl: "", // ex.: "https://wa.me/5598999999999". Vazio esconde o botão de WhatsApp
   privacyUrl: "privacidade.html",
   metaPixelId: "111763000796120", // Pixel da conta de anúncios 237236181356571
-  precoCheio: 77,      // âncora "de R$ 77"
-  precoFundador: 47.9, // preço de lançamento até 31/10
+  precoCheio: 77.9,    // âncora "de R$ 77,90" (preço cheio na Kiwify); 0 tira a âncora
+  precoFundador: 47.9, // preço cobrado no checkoutUrl
+  prazoLancamento: "31/10", // "Preço de lançamento até …"; vazio tira o prazo
+  variante: "",        // fixa a variante (páginas de preço geradas por scripts/lp-precos.mjs); vazio = teste A/B
   // Custo total de um funcionário dividido pelo salário (encargos + benefícios).
   // VALOR PROVISÓRIO: confirme com um contador.
   fatorCustoFuncionario: 1.7,
@@ -790,6 +792,7 @@ const CONFIG = {
 // que teve 6 checkouts e 2 vendas em 187 visitas, contra 2 checkouts em 175 depois da seção).
 // A variante fica guardada no aparelho para a mesma pessoa ver sempre a mesma página; ?v= força uma.
 const VARIANTE = (() => {
+  if (CONFIG.variante) return CONFIG.variante;
   const pedida = new URLSearchParams(location.search).get("v");
   if (pedida === "a5" || pedida === "a5sp") return pedida;
   try {
@@ -983,6 +986,9 @@ $("cases").innerHTML = SIMULACOES.map(s => {
 /* ---------- preços, links ---------- */
 document.querySelectorAll(".precoCheio").forEach(e => e.textContent = preco(CONFIG.precoCheio));
 document.querySelectorAll(".precoFundador").forEach(e => e.textContent = preco(CONFIG.precoFundador));
+if (!CONFIG.precoCheio) document.querySelectorAll(".de").forEach(e => e.remove());
+if (CONFIG.prazoLancamento) document.querySelectorAll(".prazoTxt").forEach(e => e.textContent = CONFIG.prazoLancamento);
+else document.querySelectorAll(".prazo").forEach(e => e.remove());
 if (CONFIG.privacyUrl) $("privacyLink").href = CONFIG.privacyUrl;
 if (CONFIG.whatsappUrl) document.querySelectorAll(".whatsapp").forEach(a => {
   a.href = CONFIG.whatsappUrl; a.hidden = false;
