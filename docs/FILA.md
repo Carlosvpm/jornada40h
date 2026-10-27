@@ -16,7 +16,7 @@ Legendas: fonte é `remotion/data/posts.json` — campo `legenda` + `hashtags` (
 | 2026-10-24 | 2 | Carrossel | create_carousel_post | setor-farmacia-slide-01..06.jpg | A conta para uma farmácia com 7 funcionários | pendente |
 | 2026-10-25 | 2 | Story | create_story | hora-extra-limite.mp4 | (sem legenda) | pendente |
 | 2026-10-26 | 2 | Carrossel | create_carousel_post | setor-loja-slide-01..06.jpg | A conta para uma loja com 3 funcionários | pendente |
-| 2026-10-27 | 2 | Reel | create_video_post | escala-oficina.mp4 · capa escala-oficina-cena-01.jpg | Oficina aberta 10 horas por dia: a escala 5x2 fecha? | pendente |
+| 2026-10-27 | 2 | Reel | create_video_post | escala-oficina.mp4 · capa escala-oficina-cena-01.jpg | Oficina aberta 10 horas por dia: a escala 5x2 fecha? | publicado (media_id 18084653879350629) 2026-10-27 10:40, legenda corrigida |
 | 2026-10-28 | 2 | Carrossel | create_carousel_post | setor-salao-slide-01..06.jpg | A conta para um salão com 4 funcionários | pendente |
 | 2026-10-29 | 2 | Story | create_story | resultado-clinica.mp4 | (sem legenda) | pendente |
 
