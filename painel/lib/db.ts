@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   id INTEGER PRIMARY KEY,
   email TEXT NOT NULL UNIQUE,
   nome TEXT NOT NULL DEFAULT '',
-  criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+  criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+  caso TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS sessoes (
   token_hash TEXT PRIMARY KEY,
@@ -46,6 +47,15 @@ CREATE TABLE IF NOT EXISTS eventos (
   termo TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS eventos_criado ON eventos(criado_em);
+CREATE TABLE IF NOT EXISTS pedidos_ia (
+  id INTEGER PRIMARY KEY,
+  usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+  pedido TEXT NOT NULL,
+  resumo TEXT NOT NULL DEFAULT '',
+  aplicado INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS pedidos_ia_usuario ON pedidos_ia(usuario_id, id);
 `;
 
 let db: Database.Database | null = null;
@@ -78,6 +88,9 @@ function migrar(d: Database.Database) {
     })();
     d.pragma("foreign_keys = ON");
   }
+  // caso: o que se sabe do negócio fora dos campos da escala (observações do briefing, notas do suporte).
+  const colsAgora = (d.prepare("PRAGMA table_info(usuarios)").all() as { name: string }[]).map(c => c.name);
+  if (!colsAgora.includes("caso")) d.exec("ALTER TABLE usuarios ADD COLUMN caso TEXT NOT NULL DEFAULT ''");
   const temConvites = d.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='convites'").get();
   if (temConvites) {
     const pendentes = d.prepare("SELECT email, nome, estado FROM convites WHERE usado_em IS NULL").all() as { email: string; nome: string; estado: string | null }[];

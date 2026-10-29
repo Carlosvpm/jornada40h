@@ -128,6 +128,18 @@ try {
   ok(await page.isHidden("#duvidas") && await page.evaluate(() => !!window.__j40h.state.duvidasOk["pessoas:4:4"]), "\"Está certo assim\" some com o card e fica gravado");
   await page.evaluate(() => { const s = window.__j40h.state; s.funcionamento.seg.pessoas = 2; delete s.duvidasOk; window.__j40h.render(); });
 
+  console.log("3c2. memória do caso para a IA");
+  const pedidosIA = () => db.prepare("SELECT p.pedido, p.resumo, p.aplicado FROM pedidos_ia p JOIN usuarios u ON u.id = p.usuario_id WHERE u.email = 'cliente@exemplo.com' ORDER BY p.id").all();
+  await espera(() => pedidosIA()[0]?.aplicado === 1);
+  const mem = pedidosIA();
+  ok(mem.length === 2 && /não pode trabalhar aos sábados/.test(mem[0].pedido) && mem[0].resumo, "cada pedido à IA fica guardado com o resumo (a conferência não duplica)");
+  ok(mem[0].aplicado === 1 && mem[1].aplicado === 0, "fica marcado o que foi aplicado e o que foi descartado");
+  ok(db.prepare("SELECT caso FROM usuarios WHERE email = 'cliente@exemplo.com'").get().caso === "Ana não trabalha aos sábados.", "a IA atualiza o briefing (memória do negócio) quando o dono conta algo novo");
+  ok((await liberar("cliente@exemplo.com", { caso: "Observações: a Ana estuda à noite." })).ok, "admin grava o que se sabe do negócio");
+  const adm = await (await fetch(BASE + "/painel/api/admin/escala?email=cliente@exemplo.com", { headers: { "x-admin-key": ADMIN_KEY } })).json();
+  ok(adm.memoria?.sobreONegocio === "Observações: a Ana estuda à noite." && adm.memoria.pedidosAnteriores.length === 2 && adm.memoria.pedidosAnteriores[0].aplicado === true, "admin lê a memória do caso junto com a escala");
+  ok((await post("/painel/api/ia/aplicado", { id: 1 })).status === 401, "marcar aplicado sem login → 401");
+
   console.log("3d. revisão ao entrar: ponto fora da lei explicado, aplicar (com desfazer) e pular");
   const original = await page.evaluate(() => window.__j40h.state);
   const quebrada = await page.evaluate(() => {

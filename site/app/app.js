@@ -1743,7 +1743,7 @@
   }
 
   function abrirIA(pedido) {
-    ia = { pedido: pedido || "", resultado: null, previa: null, anterior: null };
+    ia = { pedido: pedido || "", resultado: null, previa: null, anterior: null, historico: null, anotou: false };
     $("#iaPedido").value = ia.pedido;
     var m = metricas(state), sug = [];
     if (m.falta > 0.01) sug.push("Cobrir os horários descobertos sem contratar ninguém");
@@ -1775,10 +1775,11 @@
         if (x.status === 401) { location.href = PAINEL.login; return; }
         if (!x.ok || !x.j.resultado) { toast(x.j.erro || "A IA não respondeu. Tente de novo."); iaPasso(1); return; }
         var r1 = x.j.resultado, p1 = r1.proposta || {};
+        ia.historico = x.j.historico; ia.anotou = !!x.j.anotou;
         if (r1.entendeu === false || (!p1.remontar && !(p1.celulas || []).length && !aplicarProposta(p1).pendente)) return mostrarIA(r1);
         var previa1 = aplicarProposta(p1);
         iaCarregando("Conferindo a escala montada com a proposta…");
-        return chamarIA({ pedido: pedido, contexto: contextoIA(), conferir: {
+        return chamarIA({ pedido: pedido, contexto: contextoIA(), historico: ia.historico, conferir: {
           suaPropostaAnterior: { resumo: r1.resumo, mudancas: r1.mudancas, avisos: r1.avisos },
           equipeDepois: previa1.equipe.map(function (p) { return { id: p.id, nome: p.nome, horas: parcial(p, previa1.versao) ? Number(p.horas) : 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [] }; }),
           semanas: semanasIA(previa1)
@@ -1821,6 +1822,7 @@
     var avisos = (r.avisos || []).concat(auto.length ? ["A proposta deixa " + auto.join(", ") + "."] : []);
     if (avisos.length) h += '<div class="ia-avisos"><b>Atenção</b><ul>' + avisos.map(function (x) { return "<li>" + citar(esc(x)) + "</li>"; }).join("") + "</ul></div>";
     if (ia.previa.pendente) h += '<p class="muted sm">A grade atual fica como está; depois de aplicar, use “Montar a escala de novo” para redistribuir os turnos.</p>';
+    if (ia.anotou) h += '<p class="muted sm" id="iaAnotou">A IA guardou o que você contou sobre o negócio para os próximos pedidos.</p>';
     $("#iaResultado").innerHTML = h;
     iaPasso(3);
   }
@@ -1846,6 +1848,8 @@
         state = ia.previa;
         salvar(); renderCfg(); render();
         $("#dlgIA").close();
+        // Memória do caso: a IA fica sabendo, nos próximos pedidos, que esta proposta foi aplicada.
+        if (ia.historico) fetch(PAINEL.ia + "/aplicado", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: ia.historico }) }).catch(function () {});
         dica("<b>Proposta da IA aplicada.</b> " + esc(ia.resultado.resumo || ""), '<button type="button" class="b ghost sm" data-dica="desfazer">Desfazer</button>');
       }
     });

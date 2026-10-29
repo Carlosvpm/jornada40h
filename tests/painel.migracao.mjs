@@ -32,6 +32,15 @@ INSERT INTO usuarios (id, email, nome, criado_em) SELECT id, email, nome, criado
 DROP TABLE usuarios_antigos;
 `;
 
+// Banco em produção até 29/10/2026: sem usuarios.caso nem pedidos_ia (memória da IA).
+const SCHEMA_SEM_MEMORIA = `
+CREATE TABLE usuarios (id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE, nome TEXT NOT NULL DEFAULT '', criado_em TEXT NOT NULL DEFAULT (datetime('now')));
+CREATE TABLE sessoes (token_hash TEXT PRIMARY KEY, usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE, expira_em INTEGER NOT NULL);
+CREATE TABLE escalas (usuario_id INTEGER PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE, estado TEXT NOT NULL, atualizado_em TEXT NOT NULL DEFAULT (datetime('now')));
+INSERT INTO usuarios (email) VALUES ('a@x.com'), ('andre@x.com');
+INSERT INTO escalas (usuario_id, estado) VALUES (1, '{"a":1}'), (2, '{"b":2}');
+`;
+
 let falhas = 0;
 const ok = (cond, msg) => { console.log(`  ${cond ? "ok  " : "FALHOU"} ${msg}`); if (!cond) falhas++; };
 
@@ -49,6 +58,7 @@ async function cenario(nome, sql) {
   ok(db.prepare("SELECT COUNT(*) n FROM escalas").get().n === 2, "escalas mantidas (inclusive a do convite)");
   ok(!db.prepare("SELECT 1 FROM sqlite_master WHERE sql LIKE '%usuarios_antigos%' OR name IN ('convites', 'usuarios_nova')").get(), "sem tabela velha nem FK pendurada");
   ok(db.pragma("foreign_key_check").length === 0, "foreign_key_check limpo");
+  ok(db.prepare("PRAGMA table_info(usuarios)").all().some(c => c.name === "caso") && db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'pedidos_ia'").get(), "memória da IA: usuarios.caso e pedidos_ia");
   db.prepare("INSERT INTO sessoes VALUES ('s', 1, 9e12)").run();
   db.prepare("DELETE FROM usuarios WHERE id = 1").run();
   ok(!db.prepare("SELECT 1 FROM sessoes").get() && !db.prepare("SELECT 1 FROM escalas WHERE usuario_id = 1").get(), "apagar conta apaga sessão e escala (cascade)");
@@ -58,6 +68,7 @@ async function cenario(nome, sql) {
 
 await cenario("1. banco com senha e convites", SCHEMA_SENHA);
 await cenario("2. banco deixado quebrado pela migração anterior", SCHEMA_SENHA + QUEBRADO);
+await cenario("3. banco sem a memória da IA", SCHEMA_SEM_MEMORIA);
 
 console.log(falhas ? `\n${falhas} falha(s)` : "\nTudo ok");
 process.exit(falhas ? 1 : 0);
