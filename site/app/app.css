@@ -548,3 +548,9 @@ dialog h3 { margin: 0 0 14px; text-transform: none; letter-spacing: -.01em; colo
 .dlg-alm p { margin: 0 0 10px; line-height: 1.45; }
 .dlg-alm .ia-comp { margin: 6px 0 10px; }
 #alertas .b.sm { margin-left: 6px; }
+.dlg-rev { max-height: calc(100vh - 32px); overflow-y: auto; }
+.dlg-rev .rev-tit { margin: 14px 0 4px; }
+.dlg-rev .rev-lista { margin: 0 0 10px; padding-left: 18px; font-size: 13.5px; line-height: 1.45; }
+.dlg-rev .rev-lista li { margin-bottom: 3px; }
+.dlg-rev .rev-plano { align-items: flex-start; line-height: 1.45; }
+.dlg-rev .rev-plano input { margin-top: 3px; flex: none; }

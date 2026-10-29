@@ -94,6 +94,11 @@ try {
   await page.reload();
   await page.waitForSelector("#grid button.cell");
   ok(await page.locator("#grid .cell.folga").count() === folgas, "edição continua depois de recarregar");
+  // Tirar um turno abre buraco: ao entrar de novo, a revisão mostra e oferece a contratação.
+  await page.waitForSelector("#dlgRev[open]");
+  ok(/sem cobertura/.test(await page.textContent("#revCorpo")) && await page.isChecked("#revPlano"), "revisão ao entrar explica o buraco e propõe contratar");
+  await page.click('#dlgRev [value="pular"]');
+  await page.waitForFunction(() => sessionStorage.getItem("j40h:revisao-pulada"));
 
   console.log("3b. ajuste com IA (resposta simulada)");
   ok(await page.isVisible("#btnIA"), "botão Ajuste com IA aparece no painel");
@@ -102,7 +107,7 @@ try {
   await page.click('[data-ia="enviar"]');
   await page.waitForSelector("#iaResultado:not([hidden]) .ia-comp", { timeout: 15000 });
   ok(/sábado/.test(await page.textContent("#iaResultado")), "proposta mostra resumo e o que muda");
-  ok(await page.locator(".ia-comp tbody tr").count() === 4, "comparação antes e depois");
+  ok(await page.locator("#iaResultado .ia-comp tbody tr").count() === 4, "comparação antes e depois");
   const antesIA = await page.evaluate(() => JSON.stringify(window.__j40h.state.equipe));
   await page.click('[data-ia="aplicar"]');
   const eq = await page.evaluate(() => window.__j40h.state.equipe);
@@ -122,6 +127,38 @@ try {
   await page.click('#duvidas [data-duv="ok"]');
   ok(await page.isHidden("#duvidas") && await page.evaluate(() => !!window.__j40h.state.duvidasOk["pessoas:4:4"]), "\"Está certo assim\" some com o card e fica gravado");
   await page.evaluate(() => { const s = window.__j40h.state; s.funcionamento.seg.pessoas = 2; delete s.duvidasOk; window.__j40h.render(); });
+
+  console.log("3d. revisão ao entrar: ponto fora da lei explicado, aplicar (com desfazer) e pular");
+  const original = await page.evaluate(() => window.__j40h.state);
+  const quebrada = await page.evaluate(() => {
+    const s = JSON.parse(JSON.stringify(window.__j40h.state)), g = s.escalas["42"].A, id = s.equipe[0].id;
+    for (const d of ["seg", "ter", "qua", "qui", "sex", "sab"]) g[id][d] = { tipo: "turno", inicio: "06:00", fim: "15:24", rotulo: "Abertura", almoco: "10:00" };
+    return s;
+  });
+  await page.evaluate(e => fetch("/painel/api/escala", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ estado: e }) }), quebrada);
+  await page.evaluate(() => sessionStorage.clear());
+  await page.reload();
+  await page.waitForSelector("#dlgRev[open]");
+  const rev = await page.textContent("#revCorpo");
+  ok(/fora da lei/.test(rev) && /42 h, semana A: Ana/.test(rev) && /só 1 folga/.test(rev), "revisão lista o ponto fora da lei com a semana");
+  ok(/monta de novo só a semana com problema \(42 h, semana A\)/.test(rev), "explica o ajuste");
+  await page.click("#revOk");
+  await page.waitForSelector("#iaDica:not([hidden])");
+  await page.waitForFunction(() => document.querySelector("#tSalvo").textContent === "salvo na sua conta", null, { timeout: 5000 });
+  const depoisRev = await page.evaluate(() => ({ e: window.__j40h.calcular(window.__j40h.state, "42", "A").erros.length, b: JSON.stringify(window.__j40h.state.escalas["42"].B) }));
+  ok(depoisRev.e === 0 && depoisRev.b === JSON.stringify(quebrada.escalas["42"].B), "aplicar refaz só a semana com problema");
+  await page.click('#iaDica [data-dica="desfazer"]');
+  ok(await page.evaluate(() => window.__j40h.calcular(window.__j40h.state, "42", "A").erros.length) > 0, "desfazer volta a escala de antes");
+  await page.waitForFunction(() => document.querySelector("#tSalvo").textContent === "salvo na sua conta", null, { timeout: 5000 });
+  await page.reload();
+  await page.waitForSelector("#dlgRev[open]");
+  await page.click('#dlgRev [value="pular"]');
+  await page.waitForFunction(() => sessionStorage.getItem("j40h:revisao-pulada"));
+  await page.reload();
+  await page.waitForSelector("#grid [data-p]");
+  await page.waitForTimeout(600);
+  ok(await page.isHidden("#dlgRev"), "pular: não volta na mesma sessão do navegador");
+  await page.evaluate(e => fetch("/painel/api/escala", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ estado: e }) }), original);
 
   const semLogin = await fetch(BASE + "/painel/api/ia", { method: "POST", body: "{}" });
   ok(semLogin.status === 401, "IA sem login → 401");

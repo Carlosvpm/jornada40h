@@ -1411,19 +1411,30 @@
 
   // Um clique: coloca na escala a saída mais barata de contratar (tempo integral + meio período nos
   // horários que faltam), remonta e mostra o antes e depois em horas e em reais, com Desfazer.
-  function aplicarPlano() {
-    var antes = metricas(state);
-    var op = antes.cus.ops.filter(function (o) { return o.id === "contratar"; })[0];
-    if (!op || !op.plano) return;
-    var snap = JSON.stringify(state), P = op.plano, R = VERSOES[state.versao], novos = [];
-    for (var i = 0; i < P.n; i++) novos.push("Contratação " + (i + 1));
-    novos.forEach(function (nome) { state.equipe.push({ id: uid(), nome: nome, funcao: "a contratar", salario: null, horas: null, folgaFixa: "", naoPode: [] }); });
-    if (P.h) state.equipe.push({ id: uid(), nome: "Meio período", funcao: "a contratar", salario: null, horas: P.h, folgaFixa: "", naoPode: [] });
-    gerarTudo(state); state.pendente = false;
-    var depois = metricas(state);
+  // A saída "Contratar" (custos) aplicada numa cópia de s: entra a gente a contratar e a escala é montada de novo.
+  function comPlano(s, op) {
+    var antes = metricas(s), P = op.plano, R = VERSOES[s.versao], novo = clone(s);
+    for (var i = 0; i < P.n; i++) novo.equipe.push({ id: uid(), nome: "Contratação " + (i + 1), funcao: "a contratar", salario: null, horas: null, folgaFixa: "", naoPode: [] });
+    if (P.h) novo.equipe.push({ id: uid(), nome: "Meio período", funcao: "a contratar", salario: null, horas: P.h, folgaFixa: "", naoPode: [] });
+    gerarTudo(novo); novo.pendente = false;
+    var depois = metricas(novo);
     var txt = (P.n ? P.n + (P.n === 1 ? " pessoa" : " pessoas") + " em tempo integral" + (P.h ? " e " : "") : "") + (P.h ? "1 em meio período de " + P.h + " h por semana" : "") +
       ", na versão de " + R.rotulo + ": folha de " + brl(antes.folha) + " para " + brl(depois.folha) + " por mês.";
-    state.plano = op.economia ? { data: new Date().toLocaleDateString("pt-BR"), versao: state.versao, txt: txt, economia: Math.round(op.economia.valor), base: Math.round(op.economia.base), baseN: op.economia.n } : null;
+    novo.plano = op.economia ? { data: new Date().toLocaleDateString("pt-BR"), versao: s.versao, txt: txt, economia: Math.round(op.economia.valor), base: Math.round(op.economia.base), baseN: op.economia.n } : null;
+    return novo;
+  }
+
+  function opContratar(s) {
+    var op = metricas(s).cus.ops.filter(function (o) { return o.id === "contratar"; })[0];
+    return op && op.plano ? op : null;
+  }
+
+  function aplicarPlano() {
+    var antes = metricas(state), op = opContratar(state);
+    if (!op) return;
+    var snap = JSON.stringify(state);
+    state = comPlano(state, op);
+    var depois = metricas(state);
     salvar(); renderCfg(); render();
     desfazerSnap = snap;
     dica("<b>Saída aplicada.</b> Horas sem cobertura: " + horas(antes.falta) + " → <b>" + horas(depois.falta) + "</b> por semana. Folha: " + brl(antes.folha) + " → <b>" + brl(depois.folha) + "/mês</b> (+" + brl(depois.folha - antes.folha) + ")." +
@@ -1435,10 +1446,11 @@
   }
 
   // Quem trabalha no domingo nas semanas A e B (nunca folga no domingo no rodízio).
-  function trabalhaTodoDomingo(s) {
+  function trabalhaTodoDomingo(s, v) {
     if (!s.funcionamento.dom) return [];
+    v = v || s.versao;
     return s.equipe.filter(function (p) {
-      return SEMANAS.every(function (w) { return celula(s, s.versao, w, p.id, "dom").tipo === "turno"; });
+      return SEMANAS.every(function (w) { return celula(s, v, w, p.id, "dom").tipo === "turno"; });
     }).map(function (p) { return p.nome; });
   }
 
@@ -1965,12 +1977,115 @@
     dlg.showModal();
   }
 
+  // Revisão a cada entrada no painel: pontos fora da lei (todas as grades) e horas sem cobertura, explicados,
+  // com o ajuste proposto e o antes/depois. Aplicar (com Desfazer) ou Pular, que só vale até fechar o navegador.
+  var REV_KEY = "j40h:revisao-pulada";
+
+  function problemasLei(s, v) {
+    var l = [];
+    SEMANAS.forEach(function (w) { calcular(s, v, w).erros.forEach(function (e) { l.push({ w: w, txt: e }); }); });
+    var dom = trabalhaTodoDomingo(s, v);
+    if (dom.length) l.push({ w: "", txt: dom.join(", ") + (dom.length === 1 ? " trabalha" : " trabalham") + " no domingo nas semanas A e B; no comércio, a folga precisa cair no domingo pelo menos 1 vez a cada 3 semanas" + lei("domingo") + "." });
+    return l;
+  }
+
+  // Monta de novo só as grades com problema, com os mesmos dados; fica com a nova só se ela tiver menos problemas.
+  function corrigirLei(s) {
+    var novo = clone(s), refeitas = [];
+    Object.keys(VERSOES).forEach(function (v) {
+      var antes = problemasLei(novo, v);
+      if (!antes.length) return;
+      var ruins = trabalhaTodoDomingo(novo, v).length ? SEMANAS : SEMANAS.filter(function (w) { return antes.some(function (x) { return x.w === w; }); });
+      var guarda = clone(novo.escalas[v]);
+      ruins.forEach(function (w) { novo.escalas[v][w] = gerar(novo, v, w); });
+      if (problemasLei(novo, v).length < antes.length) ruins.forEach(function (w) { refeitas.push(VERSOES[v].rotulo + ", semana " + w); });
+      else novo.escalas[v] = guarda;
+    });
+    return refeitas.length ? { s: novo, refeitas: refeitas } : null;
+  }
+
+  function piorSemana(s, v) {
+    return SEMANAS.map(function (w) { return calcular(s, v, w); }).sort(function (a, b) { return b.falta - a.falta; })[0];
+  }
+
+  function totalProblemas(s) {
+    return Object.keys(VERSOES).reduce(function (t, v) { return t + problemasLei(s, v).length; }, 0);
+  }
+
+  function abrirRevisao() {
+    var v = state.versao, R = VERSOES[v];
+    var lei_ = Object.keys(VERSOES).reduce(function (l, x) { return l.concat(problemasLei(state, x).map(function (p) { return VERSOES[x].rotulo + (p.w ? ", semana " + p.w : "") + ": " + p.txt; })); }, []);
+    var corr = lei_.length ? corrigirLei(state) : null;
+    var pior = piorSemana(state, v), op = pior.falta > 0.01 ? opContratar(state) : null;
+    if (!lei_.length && !op) return;
+    try { if (sessionStorage.getItem(REV_KEY)) return; } catch (e) {}
+
+    var h = "<p>Conferimos a sua escala de novo, como fazemos a cada vez que você entra.</p>";
+    if (lei_.length) {
+      h += '<p class="rev-tit"><b>' + lei_.length + (lei_.length === 1 ? " ponto fora da lei" : " pontos fora da lei") + "</b></p><ul class=\"rev-lista\">" +
+        lei_.slice(0, 6).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + (lei_.length > 6 ? "<li>e mais " + (lei_.length - 6) + ".</li>" : "") + "</ul>";
+      h += corr
+        ? "<p>Costuma acontecer depois de mudar a grade à mão. <b>O ajuste</b> monta de novo só " + (corr.refeitas.length === 1 ? "a semana com problema" : "as semanas com problema") + " (" + corr.refeitas.join("; ") + "), com a mesma equipe, horário e folgas fixas. As outras semanas ficam como estão.</p>"
+        : "<p>Montar a escala de novo não resolve esses pontos com os dados atuais. Ajuste a grade à mão ou use o Ajuste com IA.</p>";
+    }
+    if (pior.falta > 0.01) {
+      var pede = 0;
+      DIAS.forEach(function (d) { var f = state.funcionamento[d]; if (f) pede += dur({ inicio: f.abre, fim: f.fecha }) * Math.max(1, Number(f.pessoas) || 1); });
+      var capac = pior.pessoas.reduce(function (t, p) { return t + p.limite; }, 0);
+      var dias = DIAS.filter(function (d) { return pior.dias[d].aberto && pior.dias[d].falta; });
+      h += '<p class="rev-tit"><b>' + horas(pior.falta) + " por semana sem cobertura</b> (" + R.rotulo + ")</p><ul class=\"rev-lista\">" +
+        dias.slice(0, 4).map(function (d) { return "<li>" + NOME_DIA[d] + ": " + esc(textoFaixa(pior.dias[d].faixas)) + ".</li>"; }).join("") + (dias.length > 4 ? "<li>e mais " + (dias.length - 4) + (dias.length - 4 === 1 ? " dia" : " dias") + ".</li>" : "") + "</ul>" +
+        "<p>" + (pede > capac + 0.01
+          ? "O horário pede cerca de " + horas(pede) + " de trabalho por semana e a equipe, com 2 folgas por pessoa, dá até " + horas(capac) + ". Nenhuma arrumação da grade fecha essa conta: falta gente, ou dá para pedir menos pessoas ao mesmo tempo nos horários de pouco movimento."
+          : "As horas da equipe dariam, mas faltam turnos em dias específicos: cada pessoa faz no máximo 5 por semana.") + "</p>";
+      if (op) h += '<label class="chk rev-plano"><input type="checkbox" id="revPlano"' + (lei_.length ? "" : " checked disabled") + "> <span><b>" + (lei_.length ? "Incluir a contratação sugerida" : "Ajuste") + ":</b> " + esc(op.txt) + " Custo: " + brl(op.custo) + "/mês. A escala é montada de novo com essa gente (troque os nomes quando contratar).</span></label>";
+    }
+    h += '<div id="revComp"></div><p class="muted sm">Pular deixa tudo como está; a revisão volta na próxima vez que você entrar. Depois de aplicar, dá para desfazer.</p>';
+    $("#revCorpo").innerHTML = citar(h);
+
+    var proposta = function () {
+      var comContr = op && $("#revPlano") && $("#revPlano").checked;
+      return comContr ? comPlano(state, op) : corr ? corr.s : null;
+    };
+    var comparar = function () {
+      var novo = proposta(), a = metricas(state), b = novo ? metricas(novo) : null;
+      $("#revOk").disabled = !novo;
+      if (!novo) { $("#revComp").innerHTML = ""; return; }
+      var linha = function (rot, va, vb, fmt) {
+        var cls = Math.abs(vb - va) < 0.01 ? "" : vb < va ? "melhor" : "pior";
+        return "<tr><td>" + rot + "</td><td>" + fmt(va) + '</td><td class="' + cls + '">' + fmt(vb) + "</td></tr>";
+      };
+      $("#revComp").innerHTML = '<table class="ia-comp"><thead><tr><th></th><th>Como está</th><th>Com o ajuste</th></tr></thead><tbody>' +
+        linha("Pontos fora da lei (42 h e 40 h)", totalProblemas(state), totalProblemas(novo), String) +
+        linha("Horas sem cobertura/semana (" + R.rotulo + ", pior semana)", piorSemana(state, v).falta, piorSemana(novo, v).falta, horas) +
+        "<tr><td>Folha da equipe (mês)</td><td>" + brl(a.folha) + "</td><td" + (b.folha > a.folha + 1 ? ' class="pior"' : "") + ">" + brl(b.folha) + "</td></tr></tbody></table>";
+    };
+    comparar();
+    if ($("#revPlano")) $("#revPlano").addEventListener("change", comparar);
+
+    var dlg = $("#dlgRev");
+    dlg.onclose = function () {
+      if (dlg.returnValue !== "aplicar") { try { sessionStorage.setItem(REV_KEY, "1"); } catch (e) {} return; }
+      var novo = proposta(); if (!novo) return;
+      var antesP = totalProblemas(state), antesF = piorSemana(state, v).falta, snap = JSON.stringify(state);
+      state = novo;
+      salvar(); renderCfg(); render();
+      desfazerSnap = snap;
+      var depoisP = totalProblemas(state), depoisF = piorSemana(state, v).falta;
+      dica("<b>Ajuste aplicado.</b> Pontos fora da lei: " + antesP + " → <b>" + depoisP + "</b>. Horas sem cobertura (" + R.rotulo + "): " + horas(antesF) + " → <b>" + horas(depoisF) + "</b> por semana.",
+        '<button type="button" class="b ghost sm" data-dica="desfazer">Desfazer</button>');
+    };
+    dlg.returnValue = "";
+    dlg.showModal();
+  }
+
   function iniciar(s, novo) {
     state = s;
     ligar();
     renderCfg();
     render();
     if (!state.intervalo) setTimeout(abrirAlmoco, 300);
+    else if (PAINEL && !novo) setTimeout(abrirRevisao, 300);
     if (novo || !PAINEL) salvar();
     else $("#tSalvo").textContent = "salvo na sua conta";
     if (novo) { $("#cfg").open = true; toast("Exemplo carregado. Troque pelos dados do seu negócio no fim da página."); }
