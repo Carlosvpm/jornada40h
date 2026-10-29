@@ -123,7 +123,7 @@ function registrarPedido(ss, p) {
   let painel = { link: "", motivo: "" };
   if (!p.email) painel.motivo = "briefing sem e-mail";
   else if (!compraAprovada_(ss, p.pedido_kiwify, p.email)) painel.motivo = "compra aprovada não encontrada na aba Vendas (pedido " + (p.pedido_kiwify || "—") + ")";
-  else painel = criarConvitePainel_(p.email, String(p.nome || "").trim(), estadoDoBriefing_(p));
+  else painel = criarConvitePainel_(p.email, String(p.nome || "").trim(), estadoDoBriefing_(p), casoDoBriefing_(p));
 
   const esc = s => String(s || "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;" }[c]));
   const nomeDia = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado", dom: "Domingo" };
@@ -226,8 +226,19 @@ function estadoDoBriefing_(p) {
   };
 }
 
+/** O que o briefing diz e a escala não guarda (restrições da equipe, pico, preferência, observações): vai para a memória da IA do painel. */
+function casoDoBriefing_(p) {
+  const linhas = [];
+  if (p.tipo || p.cidade) linhas.push("Negócio: " + [p.tipo, p.cidade].filter(Boolean).join(", "));
+  if (p.equipe) linhas.push("Equipe como o dono escreveu:\n" + String(p.equipe).trim());
+  if (p.pico) linhas.push("Horário de pico: " + String(p.pico).trim());
+  if (p.preferencia) linhas.push("Preferência: " + String(p.preferencia).trim());
+  if (p.observacoes) linhas.push("Observações: " + String(p.observacoes).trim());
+  return linhas.join("\n").slice(0, 2000);
+}
+
 /** Libera o acesso no painel (cria a conta com a escala inicial). Chave em Propriedades do script: PAINEL_ADMIN_KEY. */
-function criarConvitePainel_(email, nome, estado) {
+function criarConvitePainel_(email, nome, estado, caso) {
   const chave = PropertiesService.getScriptProperties().getProperty("PAINEL_ADMIN_KEY");
   if (!chave) return { link: "", motivo: "propriedade PAINEL_ADMIN_KEY não configurada no Apps Script" };
   try {
@@ -235,7 +246,7 @@ function criarConvitePainel_(email, nome, estado) {
       method: "post", contentType: "application/json", muteHttpExceptions: true,
       headers: { "x-admin-key": chave },
       // enviarEmail: o painel manda o e-mail de "acesso liberado" (link, como entrar com o código, notas).
-      payload: JSON.stringify({ email: email, nome: nome, estado: estado, enviarEmail: true, notas: [
+      payload: JSON.stringify({ email: email, nome: nome, estado: estado, caso: caso || "", enviarEmail: true, notas: [
         "Esta é a primeira versão, montada a partir do seu briefing. Uma pessoa da equipe revisa e te chama no WhatsApp em até 48 horas úteis com os ajustes."
       ] })
     });
