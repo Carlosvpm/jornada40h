@@ -235,6 +235,28 @@ try {
   await p2.waitForSelector("#grid [data-p]");
   ok(await p2.evaluate(() => document.querySelector("#cfg").open), "exemplo abre com a configuração aberta");
 
+  console.log("12. virada do rodízio (domingo da B → segunda da A)");
+  const virada = await p2.evaluate(() => {
+    const J = window.__j40h, D = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
+    const T = { tipo: "turno", inicio: "08:00", fim: "17:00" }, F = { tipo: "folga" };
+    // Mercado fictício: 9 pessoas, 4 ao mesmo tempo, 7 dias (o motor sem o reparo deixava alguém 8 dias seguidos).
+    const f = {};
+    D.forEach(d => { f[d] = { abre: d === "qui" || d === "sex" || d === "dom" ? "07:00" : "07:30", fecha: d === "dom" ? "12:00" : d === "sex" ? "19:00" : "20:00", pessoas: 4 }; });
+    const s = { negocio: { nome: "Mercado Exemplo", tipo: "Mercado" }, funcionamento: f, custos: { salario: 1621, encargos: 1.7, he: 50 }, versao: "42", semana: "A", intervalo: "fora",
+      equipe: Array.from({ length: 9 }, (_, i) => ({ id: "p" + i, nome: "Pessoa " + (i + 1), funcao: "" })) };
+    J.gerarTudo(s);
+    const erros = s2 => ["40", "42"].flatMap(v => ["A", "B"].flatMap(w => J.calcular(s2, v, w).erros));
+    const montada = erros(s);
+    // Grade à mão: folga seg/ter na A e sáb/dom na B. Da quarta da A ao domingo da B são 10 dias seguidos.
+    const g = { A: { p0: {} }, B: { p0: {} } };
+    D.forEach(d => { g.A.p0[d] = d === "seg" || d === "ter" ? F : T; g.B.p0[d] = d === "sab" || d === "dom" ? F : T; });
+    const m = { negocio: s.negocio, funcionamento: f, custos: s.custos, versao: "42", semana: "B", intervalo: "fora",
+      equipe: [{ id: "p0", nome: "Ana", funcao: "" }], escalas: { 42: g, 40: g } };
+    return { montada, manual: J.calcular(m, "42", "B").erros.concat(J.calcular(m, "42", "A").erros) };
+  });
+  ok(!virada.montada.some(e => /dias seguidos|semana [AB]/.test(e)), "escala montada sem mais de 6 dias seguidos na virada" + (virada.montada.length ? ": " + virada.montada[0] : ""));
+  ok(virada.manual.some(e => /Ana trabalha 10 dias seguidos, de quarta da semana A a sexta da semana B/.test(e)), "alerta de dias seguidos na virada A → B");
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();

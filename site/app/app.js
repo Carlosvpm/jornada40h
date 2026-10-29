@@ -510,7 +510,87 @@
     Object.keys(VERSOES).forEach(function (v) {
       s.escalas[v] = {};
       SEMANAS.forEach(function (sem) { s.escalas[v][sem] = gerar(s, v, sem); });
+      repararVirada(s, v);
     });
+  }
+
+  // A semana anterior no rodízio (A e B se alternam: antes da A vem a B, antes da B vem a A).
+  function semanaAntes(sem) { return SEMANAS[(SEMANAS.indexOf(sem) + SEMANAS.length - 1) % SEMANAS.length]; }
+
+  // O motor monta A e B separadas. Na virada (domingo de uma, segunda da outra) alguém pode ficar mais de
+  // 6 dias seguidos sem folga, ou sem as 11 h de descanso. Troca entre duas pessoas os turnos de 1 ou 2 dias
+  // da mesma semana (o dia continua com os mesmos turnos, a cobertura não muda) enquanto os problemas diminuírem.
+  function repararVirada(s, v) {
+    var E = s.escalas[v];
+    if (!SEMANAS.every(function (w) { return E[w]; })) return;
+    var ids = s.equipe.filter(function (p) { return !parcial(p, v) && SEMANAS.every(function (w) { return E[w][p.id]; }); }).map(function (p) { return p.id; });
+    var pessoa = {};
+    s.equipe.forEach(function (p) { pessoa[p.id] = p; });
+    var turno = function (w, id, d) { return celula(s, v, w, id, d).tipo === "turno"; };
+
+    // Problemas de uma pessoa no ciclo A, B, A…: dias seguidos além de 6, descanso < 11 h (inclusive na virada),
+    // horas acima do limite, nenhum domingo de folga e turno em dia que ela não pode.
+    function nota(id) {
+      var p = pessoa[id], n = 0, seq = [], lim = limiteSemana(p, v);
+      var proib = (p.naoPode || []).concat(p.folgaFixa ? [p.folgaFixa] : []).map(function (d) { return String(d).toLowerCase().slice(0, 3); });
+      SEMANAS.forEach(function (w) {
+        var h = 0;
+        DIAS.forEach(function (d) {
+          var c = celula(s, v, w, id, d);
+          seq.push(c);
+          if (c.tipo === "turno") { h += trab(c, s); if (proib.indexOf(d) >= 0) n += 100; }
+        });
+        if (h > lim + 1e-9) n += 10;
+      });
+      if (s.funcionamento.dom && SEMANAS.every(function (w) { return turno(w, id, "dom"); })) n += 10;
+      var L = seq.length, ini = -1;
+      for (var i = 0; i < L; i++) if (seq[i].tipo !== "turno") { ini = i; break; }
+      if (ini < 0) return n + 1000;
+      for (var k = 1, run = 0; k <= L; k++) {
+        var c = seq[(ini + k) % L];
+        if (c.tipo === "turno") { run++; if (run > 6) n += 10; } else run = 0;
+        if (descanso(c, seq[(ini + k + 1) % L]) < INTERJORNADA_MIN) n += 10;
+      }
+      return n;
+    }
+
+    var notas = {};
+    ids.forEach(function (id) { notas[id] = nota(id); });
+    for (var volta = 0; volta < 100; volta++) {
+      if (!ids.some(function (id) { return notas[id] > 0; })) return;
+      var melhor = null;
+      SEMANAS.forEach(function (w) {
+        // Trocas possíveis: 1 dia em que as duas trabalham em horários diferentes, ou 2 dias em que uma
+        // trabalha e a outra folga (as duas mantêm o mesmo número de folgas na semana).
+        var opcoes = [];
+        DIAS.forEach(function (d, i) {
+          opcoes.push([d]);
+          for (var j = i + 1; j < DIAS.length; j++) opcoes.push([d, DIAS[j]]);
+        });
+        ids.forEach(function (a, ia) {
+          ids.forEach(function (b, ib) {
+            if (ib <= ia || notas[a] + notas[b] === 0) return;
+            opcoes.forEach(function (ds) {
+              if (ds.length === 1) {
+                var ca = E[w][a][ds[0]], cb = E[w][b][ds[0]];
+                if (!turno(w, a, ds[0]) || !turno(w, b, ds[0]) || (ca.inicio === cb.inicio && ca.fim === cb.fim)) return;
+              } else {
+                var x = turno(w, a, ds[0]), y = turno(w, a, ds[1]);
+                if (x === y || turno(w, b, ds[0]) === x || turno(w, b, ds[1]) === y) return;
+              }
+              var troca = function () { ds.forEach(function (d) { var t = E[w][a][d]; E[w][a][d] = E[w][b][d]; E[w][b][d] = t; }); };
+              troca();
+              var na = nota(a), nb = nota(b), ganho = notas[a] + notas[b] - na - nb;
+              troca();
+              if (ganho > 0 && (!melhor || ganho > melhor.ganho)) melhor = { ganho: ganho, w: w, a: a, b: b, ds: ds, na: na, nb: nb };
+            });
+          });
+        });
+      });
+      if (!melhor) return;
+      melhor.ds.forEach(function (d) { var t = E[melhor.w][melhor.a][d]; E[melhor.w][melhor.a][d] = E[melhor.w][melhor.b][d]; E[melhor.w][melhor.b][d] = t; });
+      notas[melhor.a] = melhor.na; notas[melhor.b] = melhor.nb;
+    }
   }
 
   function celula(s, v, sem, id, d) {
@@ -571,6 +651,19 @@
           }
         }
       });
+      // Virada do rodízio: o fim da semana anterior (a outra, A ou B) emenda com o começo desta.
+      var ant = semanaAntes(sem);
+      if (s.escalas[v][ant]) {
+        var seq = 0, k = 0;
+        for (var j = DIAS.length - 1; j >= 0 && celula(s, v, ant, p.id, DIAS[j]).tipo === "turno"; j--) seq++;
+        while (k < DIAS.length && celula(s, v, sem, p.id, DIAS[k]).tipo === "turno") k++;
+        if (seq && k && seq + k > 6) {
+          erros[DIAS[k - 1]] = 1;
+          res.erros.push(nome + " trabalha " + (seq + k) + " dias seguidos, de " + NOME_DIA[DIAS[DIAS.length - seq]].toLowerCase() + " da semana " + ant + " a " + NOME_DIA[DIAS[k - 1]].toLowerCase() + " da semana " + sem + ": o descanso semanal de 24 h precisa vir até o 7º dia" + lei("dsr") + ".");
+        }
+        var dAnt = descanso(celula(s, v, ant, p.id, DIAS[DIAS.length - 1]), celula(s, v, sem, p.id, DIAS[0]));
+        if (dAnt < INTERJORNADA_MIN) { erros[DIAS[0]] = 1; res.erros.push(nome + " descansa só " + horas(dAnt / 60) + " entre o domingo da semana " + ant + " e a segunda da semana " + sem + " (mínimo de 11 h entre um dia e outro)" + lei("interjornada") + "."); }
+      }
       var lim = limiteSemana(p, v);
       if (h > lim + 1e-9) res.erros.push(nome + " soma " + horas(h) + " na semana, " + horas(h - lim) + " acima " + (lim < R.jornadaSemanal ? "das " + horas(lim) + " do contrato de meio período" : "da jornada de " + R.rotulo) + " (vira hora extra)" + lei("jornada") + ".");
       if (folgas < 2) res.erros.push(nome + " tem " + (folgas === 1 ? "só 1 folga" : "nenhuma folga") + " na semana. Na escala 5x2 são 2; a lei exige pelo menos 1 descanso de 24 h" + lei("dsr") + ".");
@@ -1998,6 +2091,7 @@
       var ruins = trabalhaTodoDomingo(novo, v).length ? SEMANAS : SEMANAS.filter(function (w) { return antes.some(function (x) { return x.w === w; }); });
       var guarda = clone(novo.escalas[v]);
       ruins.forEach(function (w) { novo.escalas[v][w] = gerar(novo, v, w); });
+      repararVirada(novo, v);
       if (problemasLei(novo, v).length < antes.length) ruins.forEach(function (w) { refeitas.push(VERSOES[v].rotulo + ", semana " + w); });
       else novo.escalas[v] = guarda;
     });
@@ -2105,5 +2199,5 @@
   }
 
   // Usado pelo teste automatizado.
-  window.__j40h = { get state() { return state; }, calcular: calcular, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, render: function () { render(); } };
+  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, render: function () { render(); } };
 })();
