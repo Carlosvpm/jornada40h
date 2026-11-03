@@ -154,7 +154,11 @@ function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salari
 }
 
 export async function pedirAjuste({ pedido, contexto, anterior, conferir, memoria, modelo }: PedidoIA): Promise<{ resultado: unknown; uso: Uso | null }> {
-  if (process.env.IA_MOCK === "1" && !process.env.ANTHROPIC_API_KEY) return { resultado: mock(contexto as Parameters<typeof mock>[0]), uso: null };
+  if (process.env.IA_MOCK === "1" && !process.env.ANTHROPIC_API_KEY) {
+    // Teste: um pedido com [falha] simula a IA que não entrega nada (para conferir o estorno).
+    if (pedido.includes("[falha]")) throw new ErroIA("A IA não conseguiu responder a esse pedido. Tente escrever de outro jeito.");
+    return { resultado: mock(contexto as Parameters<typeof mock>[0]), uso: null };
+  }
   const m = modelo || modeloPadrao();
 
   const partes: string[] = [];

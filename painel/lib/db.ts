@@ -57,6 +57,22 @@ CREATE TABLE IF NOT EXISTS pedidos_ia (
   aplicado INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS pedidos_ia_usuario ON pedidos_ia(usuario_id, id);
+CREATE TABLE IF NOT EXISTS uso_ia (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+  pedido_id INTEGER,
+  etapa TEXT NOT NULL,
+  modelo TEXT NOT NULL DEFAULT '',
+  entrada INTEGER NOT NULL DEFAULT 0,
+  saida INTEGER NOT NULL DEFAULT 0,
+  cache_lido INTEGER NOT NULL DEFAULT 0,
+  cache_gravado INTEGER NOT NULL DEFAULT 0,
+  ms INTEGER NOT NULL DEFAULT 0,
+  ok INTEGER NOT NULL DEFAULT 0,
+  conferida INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS uso_ia_usuario ON uso_ia(usuario_id, id);
 CREATE TABLE IF NOT EXISTS creditos_mov (
   id INTEGER PRIMARY KEY,
   usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -119,6 +135,9 @@ function migrar(d: Database.Database) {
       d.exec("DROP TABLE convites");
     })();
   }
+  // melhorias: quantas vezes o dono já pediu para melhorar esta proposta (a 1ª é grátis).
+  const colsPedidos = (d.prepare("PRAGMA table_info(pedidos_ia)").all() as { name: string }[]).map(c => c.name);
+  if (!colsPedidos.includes("melhorias")) d.exec("ALTER TABLE pedidos_ia ADD COLUMN melhorias INTEGER NOT NULL DEFAULT 0");
   // Toda conta já existente ganha os créditos inclusos (a ref única impede duplicar).
   d.prepare("INSERT OR IGNORE INTO creditos_mov (usuario_id, delta, tipo, ref) SELECT id, ?, 'inclusos', 'conta:' || id FROM usuarios").run(INCLUSOS);
 }

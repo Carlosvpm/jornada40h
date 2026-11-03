@@ -166,6 +166,80 @@ try {
   ok(saldoEmail("novo@exemplo.com") === 20, "ao liberar a conta: 10 inclusos + 10 pendentes");
   ok(db.prepare("SELECT COUNT(*) AS n FROM creditos_pendentes WHERE email = 'novo@exemplo.com'").get().n === 0, "a pendência some depois de aplicada");
 
+  console.log("3c4. cobrança de 1 crédito por pedido à IA, rodadas e saldo");
+  const entrarApi = async (email, ip) => {
+    await liberar(email);
+    const antes = ultimoCodigo(email);
+    await post("/painel/api/codigo", { email }, ip);
+    await espera(() => ultimoCodigo(email) && ultimoCodigo(email) !== antes);
+    const r = await post("/painel/api/entrar", { email, codigo: ultimoCodigo(email) }, ip);
+    return r.headers.getSetCookie().map(c => c.split(";")[0]).join("; ");
+  };
+  const cookieA = await entrarApi("cobra-a@exemplo.com", "10.0.0.1");
+  const cookieB = await entrarApi("cobra-b@exemplo.com", "10.0.0.2");
+  const ia = (cookie, corpo) => post("/painel/api/ia", { contexto: estado, pedido: "A primeira pessoa não pode trabalhar aos sábados", ...corpo }, "10.0.0.1", { cookie });
+  const uso = email => db.prepare("SELECT s.* FROM uso_ia s JOIN usuarios u ON u.id = s.usuario_id WHERE u.email = ? ORDER BY s.id").all(email);
+  const livro = (email, tipo) => db.prepare("SELECT m.ref, m.delta FROM creditos_mov m JOIN usuarios u ON u.id = m.usuario_id WHERE u.email = ? AND m.tipo = ? ORDER BY m.id").all(email, tipo);
+  const dbw = new Database(path.join(DATA_DIR, "jornada40h.db")); // o db acima é só leitura
+  const limpaLimites = () => dbw.prepare("DELETE FROM limites WHERE chave LIKE 'ia:%'").run();
+  const A = "cobra-a@exemplo.com", B = "cobra-b@exemplo.com";
+
+  ok((await fetch(BASE + "/painel/api/ia/saldo")).status === 401, "saldo sem sessão → 401");
+  const sd0 = await (await fetch(BASE + "/painel/api/ia/saldo", { headers: { cookie: cookieA } })).json();
+  ok(sd0.saldo === 10 && sd0.recarga === "", "saldo com sessão: 10 inclusos e recarga (sem RECARGA_URL) vazia");
+
+  const p1 = await ia(cookieA, {});
+  const j1 = await p1.json();
+  ok(p1.status === 200 && Number.isInteger(j1.rodada) && j1.saldo === 9 && saldoEmail(A) === 9, "proposta → 200 com rodada e saldo 9 (−1)");
+  ok(uso(A).length === 1 && uso(A)[0].id === j1.rodada && uso(A)[0].ok === 1 && uso(A)[0].etapa === "proposta" && uso(A)[0].pedido_id === j1.historico, "uso_ia guarda a rodada com ok = 1, etapa e pedido");
+  ok(livro(A, "uso").some(m => m.ref === "ia:r" + j1.rodada && m.delta === -1), "livro-razão: uso com ref ia:r<rodada>");
+
+  const c1 = await ia(cookieA, { conferir: { grade: 1 }, rodada: j1.rodada, historico: j1.historico });
+  const cj1 = await c1.json();
+  ok(c1.status === 200 && cj1.saldo === 9 && saldoEmail(A) === 9, "conferência da rodada → 200 e saldo igual");
+  ok((await ia(cookieA, { conferir: { grade: 1 }, rodada: j1.rodada })).status === 409, "mesma conferência de novo → 409");
+  const pB = await (await ia(cookieB, {})).json();
+  ok((await ia(cookieA, { conferir: { grade: 1 }, rodada: pB.rodada })).status === 409, "rodada de outra conta → 409");
+  ok((await ia(cookieA, { conferir: { grade: 1 } })).status === 409 && (await ia(cookieA, { conferir: { grade: 1 }, rodada: 99999 })).status === 409, "conferência sem rodada ou com rodada inexistente → 409");
+  const p2 = await (await ia(cookieA, {})).json();
+  dbw.prepare("UPDATE uso_ia SET criado_em = datetime('now','-16 minutes') WHERE id = ?").run(p2.rodada);
+  ok((await ia(cookieA, { conferir: { grade: 1 }, rodada: p2.rodada })).status === 409, "rodada com mais de 15 minutos → 409");
+  ok(saldoEmail(A) === 8, "conferências recusadas não cobram (2 propostas = 8)");
+
+  limpaLimites();
+  const m1 = await (await ia(cookieA, { anterior: { x: 1 }, historico: j1.historico })).json();
+  ok(m1.saldo === 8 && saldoEmail(A) === 8 && uso(A).at(-1).etapa === "melhorar", "1ª melhoria do pedido é grátis");
+  const m2 = await (await ia(cookieA, { anterior: { x: 1 }, historico: j1.historico })).json();
+  ok(m2.saldo === 7 && saldoEmail(A) === 7, "2ª melhoria do mesmo pedido custa 1");
+  ok(db.prepare("SELECT COUNT(*) AS n FROM pedidos_ia p JOIN usuarios u ON u.id = p.usuario_id WHERE u.email = ?").get(A).n === 2, "melhorar não cria pedido novo (só os 2 das propostas)");
+  const cm = await ia(cookieA, { conferir: { grade: 1 }, rodada: m1.rodada, historico: j1.historico });
+  ok(cm.status === 200 && saldoEmail(A) === 7, "melhoria grátis também pode ser conferida, sem custo");
+
+  const antesF = saldoEmail(A);
+  const fal = await ia(cookieA, { pedido: "quero [falha] agora" });
+  ok(fal.status === 422 && saldoEmail(A) === antesF, "IA que falha → 422 e saldo igual ao de antes");
+  const rf = uso(A).at(-1);
+  ok(rf.ok === 0 && livro(A, "uso").some(m => m.ref === "ia:r" + rf.id) && livro(A, "estorno").some(m => m.ref === "ia:r" + rf.id && m.delta === 1), "falha deixa uso + estorno no livro-razão");
+
+  // Saldo zero → 402 e nenhuma linha nova em uso_ia.
+  limpaLimites();
+  const sA = saldoEmail(A);
+  ok((await credAdm({ email: A, delta: -sA, tipo: "ajuste", ref: "zera-a" })).ok && saldoEmail(A) === 0, "admin zera o saldo (ajuste)");
+  const nUso = uso(A).length;
+  const z = await ia(cookieA, {});
+  const zj = await z.json();
+  ok(z.status === 402 && zj.semCredito === true && zj.saldo === 0 && typeof zj.erro === "string" && "recarga" in zj, "sem saldo → 402 com semCredito, saldo e recarga");
+  ok(uso(A).length === nUso, "402 não cria linha em uso_ia");
+  const cz = await ia(cookieA, { conferir: { grade: 1 }, rodada: p1.rodada });
+  ok(cz.status === 409, "sem saldo a conferência já usada segue 409 (não 402)");
+
+  // Duas abas com saldo 1 → só uma passa.
+  limpaLimites();
+  await credAdm({ email: A, delta: 1, tipo: "ajuste", ref: "um-a" });
+  const par = await Promise.all([ia(cookieA, {}), ia(cookieA, {})]);
+  const st = par.map(r => r.status).sort();
+  ok(st[0] === 200 && st[1] === 402 && saldoEmail(A) === 0, "duas propostas em paralelo com saldo 1 → uma 200 e uma 402");
+
   console.log("3d. revisão ao entrar: ponto fora da lei explicado, aplicar (com desfazer) e pular");
   const original = await page.evaluate(() => window.__j40h.state);
   const quebrada = await page.evaluate(() => {
