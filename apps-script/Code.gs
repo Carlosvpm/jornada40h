@@ -272,7 +272,7 @@ function testarPainel() {
 const COLUNAS_VENDA = ["data", "order_id", "status", "evento", "nome", "email", "whatsapp", "produto", "valor", "metodo", "utm_source", "utm_medium", "utm_campaign", "utm_content", "briefing_enviado"];
 
 /** ID do produto "Recarga de créditos da IA" na Kiwify (Carlos preenche). Vazio = nenhum produto é tratado como recarga. */
-const PRODUTO_RECARGA_ID = "";
+const PRODUTO_RECARGA_ID = "89cea930-d794-11f1-aa7a-638fab8a0fdb"; // "+10 pedidos ao assistente de IA" (R$ 19,90), criado em 03/11; checkout https://pay.kiwify.com.br/CiSjPda
 const CREDITOS_POR_RECARGA = 10;
 
 /*
