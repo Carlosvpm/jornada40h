@@ -183,7 +183,7 @@ function registrarPedido(ss, p) {
 /* ---------- Painel (jornada40h.com.br/painel) ---------- */
 const PAINEL_URL = "https://jornada40h.com.br/painel";
 
-/** Há venda aprovada para este pedido (ou, sem pedido, para este e-mail) na aba Vendas? */
+/** Há venda aprovada (do produto principal; linhas de recarga têm status "recarga:...") para este pedido (ou, sem pedido, para este e-mail) na aba Vendas? */
 function compraAprovada_(ss, pedido, email) {
   const aba = ss.getSheetByName("Vendas");
   if (!aba || aba.getLastRow() < 2) return false;
@@ -291,7 +291,7 @@ function assinaturaKiwifyOk_(e) {
     if (!token) return false;
     const recebida = String((e.parameter && e.parameter.signature) || "").toLowerCase();
     if (!recebida || !e.postData) return false;
-    const bytes = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_1, e.postData.contents, token);
+    const bytes = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_1, e.postData.contents, token, Utilities.Charset.UTF_8);
     const esperada = bytes.map(b => ("0" + (b & 0xff).toString(16)).slice(-2)).join("");
     if (recebida.length !== esperada.length) return false;
     let dif = 0;
@@ -338,6 +338,8 @@ function registrarVendaKiwify(ss, w) {
 
   // Recarga de créditos da IA: credita/estorna no painel, avisa o Carlos e não manda briefing.
   if (PRODUTO_RECARGA_ID && String(prod.product_id) === PRODUTO_RECARGA_ID) {
+    // Status gravado com prefixo "recarga:" para que compraAprovada_ (que só aceita "paid"/"approved") nunca trate recarga como compra do produto principal.
+    venda.status = "recarga:" + status;
     const aprovada = status === "paid" || status === "approved";
     const estorno = status === "refunded" || status === "chargedback";
     if ((aprovada || estorno) && venda.email) {
