@@ -33,7 +33,7 @@ function doPost(e) {
 
     if (lead.tipo_registro === "pedido") { registrarPedido(ss, lead); return resposta({ ok: true, tipo: "pedido" }); }
     if (lead.order_id && lead.order_status) {
-      if (!assinaturaKiwifyOk_(e)) { Logger.log("Webhook Kiwify recusado: assinatura ausente, inválida ou KIWIFY_TOKEN não configurado."); return resposta({ ok: false }); }
+      if (!assinaturaKiwifyOk_(e)) { Logger.log("Webhook Kiwify recusado: assinatura ausente, inválida ou KIWIFY_TOKEN não configurado."); alertarWebhookRecusado_(); return resposta({ ok: false }); }
       registrarVendaKiwify(ss, lead); return resposta({ ok: true, tipo: "kiwify" });
     }
 
@@ -282,23 +282,50 @@ const CREDITOS_POR_RECARGA = 10;
  * minúsculo (40 caracteres), do corpo da requisição exatamente como chegou, com o `token` cadastrado no
  * webhook como chave. O token não é enviado e não há outros headers de autenticação.
  * Sem token configurado a assinatura seria de chave vazia e não prova nada, então recusamos.
- * Chave em Propriedades do script: KIWIFY_TOKEN (token do webhook na Kiwify).
- * Ao trocar o token na Kiwify, a doc recomenda aceitar o antigo e o novo por pelo menos um dia.
+ * Chave em Propriedades do script: KIWIFY_TOKEN (token do webhook na Kiwify). Aceita uma lista separada
+ * por vírgula (espaços em volta e itens vazios são ignorados): a assinatura vale se bater com qualquer um.
+ * Ao trocar o token na Kiwify, a doc recomenda aceitar o antigo e o novo por pelo menos um dia: deixe
+ * "antigo,novo" por esse tempo e depois só "novo".
+ * Webhook recusado: avisa EMAIL_CONTATO (no máximo 1 e-mail por hora, sem dados do pedido nem do cliente).
  */
+function tokensKiwify_() {
+  return String(PropertiesService.getScriptProperties().getProperty("KIWIFY_TOKEN") || "").split(",").map(t => t.trim()).filter(Boolean);
+}
+
 function assinaturaKiwifyOk_(e) {
   try {
-    const token = PropertiesService.getScriptProperties().getProperty("KIWIFY_TOKEN");
-    if (!token) return false;
+    const tokens = tokensKiwify_();
+    if (!tokens.length) return false;
     const recebida = String((e.parameter && e.parameter.signature) || "").toLowerCase();
     if (!recebida || !e.postData) return false;
-    const bytes = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_1, e.postData.contents, token, Utilities.Charset.UTF_8);
-    const esperada = bytes.map(b => ("0" + (b & 0xff).toString(16)).slice(-2)).join("");
-    if (recebida.length !== esperada.length) return false;
-    let dif = 0;
-    for (let i = 0; i < esperada.length; i++) dif |= recebida.charCodeAt(i) ^ esperada.charCodeAt(i);
-    return dif === 0;
+    let ok = false;
+    for (const token of tokens) {
+      const bytes = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_1, e.postData.contents, token, Utilities.Charset.UTF_8);
+      const esperada = bytes.map(b => ("0" + (b & 0xff).toString(16)).slice(-2)).join("");
+      if (recebida.length !== esperada.length) continue;
+      let dif = 0;
+      for (let i = 0; i < esperada.length; i++) dif |= recebida.charCodeAt(i) ^ esperada.charCodeAt(i);
+      if (dif === 0) ok = true;
+    }
+    return ok;
   } catch (err) {
     return false;
+  }
+}
+
+/** Avisa o Carlos que um webhook da Kiwify foi recusado. No máximo 1 por hora (CacheService); sem payload nem dados do cliente. */
+function alertarWebhookRecusado_() {
+  try {
+    const cache = CacheService.getScriptCache();
+    if (cache.get("alerta_webhook_recusado")) return;
+    cache.put("alerta_webhook_recusado", "1", 3600);
+    const motivo = tokensKiwify_().length ? "assinatura ausente ou inválida" : "KIWIFY_TOKEN não configurado nas Propriedades do script";
+    MailApp.sendEmail({ to: EMAIL_CONTATO, subject: "Webhook da Kiwify recusado",
+      body: "Um webhook da Kiwify foi recusado (" + motivo + ") e a venda não foi registrada.\n" +
+        "Se foi uma venda de verdade, confira o token do webhook na Kiwify e a propriedade KIWIFY_TOKEN no Apps Script, e reenvie o webhook pela Kiwify.\n" +
+        "Este aviso sai no máximo 1 vez por hora.", name: "Jornada 40h · vendas" });
+  } catch (err) {
+    Logger.log("Falha ao avisar webhook recusado: " + err);
   }
 }
 
@@ -328,7 +355,7 @@ function registrarVendaKiwify(ss, w) {
   const venda = {
     data: new Date(), order_id: w.order_id, status, evento,
     nome: c.full_name || c.first_name || "", email: c.email || "", whatsapp: c.mobile || "",
-    produto: prod.product_name || "", valor, metodo: w.payment_method || "",
+    produto: prod.product_name || "", produto_id: String(prod.product_id || ""), valor, metodo: w.payment_method || "",
     utm_source: utm.utm_source || "", utm_medium: utm.utm_medium || "", utm_campaign: utm.utm_campaign || "", utm_content: utm.utm_content || "",
     briefing_enviado: ""
   };
@@ -354,6 +381,11 @@ function registrarVendaKiwify(ss, w) {
       MailApp.sendEmail({ to: EMAIL_CONTATO, subject: (aprovada ? "Recarga: " : "Reembolso de recarga: ") + venda.email + " · " + sinal,
         body: (aprovada ? "Recarga: " : "Reembolso de recarga: ") + venda.email + " · " + sinal + " · " + msg + "\nPedido " + w.order_id, name: "Jornada 40h · vendas" });
       venda.briefing_enviado = r.ok ? "recarga " + sinal : "recarga FALHOU";
+    } else if (aprovada) {
+      // Recarga paga sem e-mail do cliente: não dá para creditar sozinho. Só o pedido no aviso.
+      MailApp.sendEmail({ to: EMAIL_CONTATO, subject: "Recarga paga sem e-mail · pedido " + w.order_id + " · creditar à mão",
+        body: "Recarga paga sem e-mail · pedido " + w.order_id + " · creditar à mão", name: "Jornada 40h · vendas" });
+      venda.briefing_enviado = "recarga SEM E-MAIL";
     }
     aba.appendRow(COLUNAS_VENDA.map(k => venda[k] !== undefined ? venda[k] : ""));
     return;
@@ -394,7 +426,7 @@ function enviarLinkBriefing(v) {
     body: "Pagamento confirmado! Preencha o briefing da sua escala 5x2 em: " + link,
     name: NOME_REMETENTE, replyTo: EMAIL_CONTATO
   });
-  MailApp.sendEmail({ to: EMAIL_CONTATO, subject: "💰 Venda aprovada: " + (v.nome || v.email) + " · R$ " + v.valor, body: "Pedido " + v.order_id + "\n" + v.nome + " · " + v.email + " · " + v.whatsapp + "\nUTM: " + v.utm_source + " / " + v.utm_content + "\nLink do briefing enviado ao cliente.", name: "Jornada 40h · vendas" });
+  MailApp.sendEmail({ to: EMAIL_CONTATO, subject: "💰 Venda aprovada: " + (v.nome || v.email) + " · R$ " + v.valor, body: "Pedido " + v.order_id + "\n" + v.nome + " · " + v.email + " · " + v.whatsapp + "\nProduto: " + v.produto + " (product_id " + v.produto_id + ")" + "\nUTM: " + v.utm_source + " / " + v.utm_content + "\nLink do briefing enviado ao cliente.\nSe era uma recarga de créditos da IA, ela caiu aqui por engano: confira PRODUTO_RECARGA_ID e credite à mão.", name: "Jornada 40h · vendas" });
 }
 
 function resposta(obj) {
