@@ -16,7 +16,8 @@ const { chromium } = require(process.env.PW || "playwright-core");
 const PAINEL = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "painel");
 const Database = require(path.join(PAINEL, "node_modules", "better-sqlite3"));
 const STANDALONE = path.join(PAINEL, ".next", "standalone");
-const PORTA = 3900 + Math.floor(Math.random() * 90);
+// PORTA + 100 sobe um 2º servidor; 4045 é porta que o Chromium bloqueia (ERR_UNSAFE_PORT), então pula 3945.
+const PORTA = (p => (p === 3945 ? 3946 : p))(3900 + Math.floor(Math.random() * 90));
 const BASE = `http://127.0.0.1:${PORTA}`;
 const ADMIN_KEY = "teste-" + "x".repeat(30);
 const DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "j40h-painel-"));
@@ -219,6 +220,41 @@ try {
   ok(db.prepare("SELECT COUNT(*) AS n FROM pedidos_ia p JOIN usuarios u ON u.id = p.usuario_id WHERE u.email = ?").get(A).n === 2, "melhorar não cria pedido novo (só os 2 das propostas)");
   const cm = await ia(cookieA, { conferir: { grade: 1 }, rodada: m1.rodada, historico: j1.historico });
   ok(cm.status === 200 && saldoEmail(A) === 7, "melhoria grátis também pode ser conferida, sem custo");
+
+  // Conferência e melhoria usam o texto do pedido gravado, não o "pedido" do corpo. O IA_MOCK falha (422) quando o
+  // texto do pedido tem [falha]: com [falha] só no corpo a chamada passa; com [falha] no texto gravado ela falha.
+  limpaLimites();
+  const pedidoDe = id => db.prepare("SELECT pedido, resumo, melhorias FROM pedidos_ia WHERE id = ?").get(id);
+  const pb1 = await (await ia(cookieB, {})).json();
+  const pb2 = await (await ia(cookieB, { pedido: "Outro pedido da B" })).json();
+  dbw.prepare("UPDATE pedidos_ia SET resumo = 'velho' WHERE id IN (?, ?)").run(pb1.historico, pb2.historico);
+  const cb1 = await ia(cookieB, { pedido: "texto forjado [falha]", conferir: { grade: 1 }, rodada: pb1.rodada, historico: pb2.historico });
+  ok(cb1.status === 200, "conferência com outro \"pedido\" no corpo usa o texto gravado (o [falha] do corpo é ignorado)");
+  ok(pedidoDe(pb1.historico).resumo !== "velho" && pedidoDe(pb2.historico).resumo === "velho", "a conferência atualiza o resumo do pedido da rodada, não o do \"historico\" do corpo");
+  const saldoB = saldoEmail(B);
+  const mb1 = await ia(cookieB, { pedido: "texto forjado [falha]", anterior: { x: 1 }, historico: pb1.historico });
+  const mbj1 = await mb1.json();
+  ok(mb1.status === 200 && mbj1.historico === pb1.historico && saldoEmail(B) === saldoB, "melhoria com outro \"pedido\" no corpo usa o texto gravado (grátis, 200)");
+  ok(pedidoDe(pb1.historico).pedido === "A primeira pessoa não pode trabalhar aos sábados", "o texto gravado do pedido não muda com a melhoria");
+  const mb2 = await ia(cookieB, { pedido: "texto forjado [falha]", anterior: { x: 1 }, historico: pb1.historico });
+  ok(mb2.status === 200 && saldoEmail(B) === saldoB - 1, "melhoria paga também usa o texto gravado (cobra 1, 200)");
+
+  // Compensação: IA que falha na conferência devolve a reserva; na melhoria grátis, a próxima segue grátis.
+  limpaLimites();
+  const pb3 = await (await ia(cookieB, { pedido: "Pedido que vai falhar depois" })).json();
+  dbw.prepare("UPDATE pedidos_ia SET pedido = 'Pedido gravado [falha]' WHERE id = ?").run(pb3.historico);
+  const cf1 = await ia(cookieB, { pedido: "texto limpo", conferir: { grade: 1 }, rodada: pb3.rodada });
+  ok(cf1.status === 422 && uso(B).find(r => r.id === pb3.rodada).conferida === 0, "conferência com [falha] no pedido gravado → 422 e a reserva volta (conferida = 0)");
+  const saldoB3 = saldoEmail(B);
+  const mf1 = await ia(cookieB, { pedido: "texto limpo", anterior: { x: 1 }, historico: pb3.historico });
+  ok(mf1.status === 422 && saldoEmail(B) === saldoB3 && pedidoDe(pb3.historico).melhorias === 0, "melhoria grátis com [falha] no pedido gravado → 422, saldo igual e a grátis não é gasta");
+  dbw.prepare("UPDATE pedidos_ia SET pedido = 'Pedido gravado' WHERE id = ?").run(pb3.historico);
+  const cf2 = await ia(cookieB, { conferir: { grade: 1 }, rodada: pb3.rodada });
+  ok(cf2.status === 200 && saldoEmail(B) === saldoB3, "depois da falha a mesma conferência pode ser usada (200, sem custo)");
+  const mf2 = await ia(cookieB, { anterior: { x: 1 }, historico: pb3.historico });
+  ok(mf2.status === 200 && saldoEmail(B) === saldoB3 && pedidoDe(pb3.historico).melhorias === 1, "depois da falha a próxima melhoria segue grátis");
+  const mf3 = await ia(cookieB, { anterior: { x: 1 }, historico: pb3.historico });
+  ok(mf3.status === 200 && saldoEmail(B) === saldoB3 - 1, "e a seguinte cobra 1");
 
   const antesF = saldoEmail(A);
   const fal = await ia(cookieA, { pedido: "quero [falha] agora" });

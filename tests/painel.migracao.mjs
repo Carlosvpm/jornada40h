@@ -52,13 +52,21 @@ async function cenario(nome, sql) {
   d0.close();
   process.env.DATA_DIR = dir;
   // Módulo novo a cada cenário (getDb guarda a conexão).
-  const db = (await import(path.join(PAINEL, "lib", "db.ts") + "?" + nome)).getDb();
+  let db = (await import(path.join(PAINEL, "lib", "db.ts") + "?" + nome)).getDb();
   const emails = db.prepare("SELECT email FROM usuarios ORDER BY id").all().map(r => r.email);
   ok(emails.join() === "a@x.com,andre@x.com", "contas mantidas e convite pendente vira conta");
   ok(db.prepare("SELECT COUNT(*) n FROM escalas").get().n === 2, "escalas mantidas (inclusive a do convite)");
   ok(!db.prepare("SELECT 1 FROM sqlite_master WHERE sql LIKE '%usuarios_antigos%' OR name IN ('convites', 'usuarios_nova')").get(), "sem tabela velha nem FK pendurada");
   ok(db.pragma("foreign_key_check").length === 0, "foreign_key_check limpo");
   ok(db.prepare("PRAGMA table_info(usuarios)").all().some(c => c.name === "caso") && db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'pedidos_ia'").get(), "memória da IA: usuarios.caso e pedidos_ia");
+  // Créditos inclusos: toda conta que existia antes das tabelas de créditos ganha exatamente um lançamento +10.
+  const inclusos = () => db.prepare("SELECT u.id, COUNT(m.id) n, COALESCE(SUM(m.delta), 0) s, MIN(m.ref) ref FROM usuarios u LEFT JOIN creditos_mov m ON m.usuario_id = u.id AND m.tipo = 'inclusos' GROUP BY u.id ORDER BY u.id").all();
+  ok(inclusos().every(r => r.n === 1 && r.s === 10 && r.ref === "conta:" + r.id), "cada conta existente ganha um único 'inclusos' +10 (ref conta:<id>)");
+  // Rodar a migração de novo (nova conexão, novo módulo) não duplica.
+  db.close();
+  db = (await import(path.join(PAINEL, "lib", "db.ts") + "?" + nome + "-de-novo")).getDb();
+  ok(inclusos().length === 2 && inclusos().every(r => r.n === 1 && r.s === 10), "rodar a migração de novo não duplica os inclusos");
+  ok(db.prepare("SELECT COUNT(*) n FROM creditos_mov").get().n === 2, "livro-razão só com os 2 lançamentos de inclusos");
   db.prepare("INSERT INTO sessoes VALUES ('s', 1, 9e12)").run();
   db.prepare("DELETE FROM usuarios WHERE id = 1").run();
   ok(!db.prepare("SELECT 1 FROM sessoes").get() && !db.prepare("SELECT 1 FROM escalas WHERE usuario_id = 1").get(), "apagar conta apaga sessão e escala (cascade)");

@@ -15,7 +15,8 @@ const LIMITE = 120_000; // bytes do corpo (pedido + dados da escala)
 // Cada pedido do dono custa 1 crédito (lib/creditos.ts); a conferência é grátis, uma por rodada.
 // Cada pedido do dono faz até 2 chamadas: a proposta e a conferência sobre a escala montada.
 // A 1ª leva a memória do caso, grava o pedido (devolve historico, o id) e o que a IA anotou sobre o negócio;
-// a conferência atualiza o resumo desse id.
+// a conferência atualiza o resumo desse id. Conferência e melhoria usam o texto gravado desse pedido (o "pedido" do corpo
+// só vale na proposta nova).
 export async function POST(req: Request) {
   const u = await usuarioAtual();
   if (!u) return NextResponse.json({ erro: "Entre de novo." }, { status: 401 });
@@ -32,8 +33,7 @@ export async function POST(req: Request) {
   if (texto.length > LIMITE) return NextResponse.json({ erro: "Escala grande demais para a IA." }, { status: 413 });
   let corpo: { pedido?: unknown; contexto?: unknown; anterior?: unknown; conferir?: unknown; historico?: unknown; rodada?: unknown };
   try { corpo = JSON.parse(texto); } catch { return NextResponse.json({ erro: "JSON inválido." }, { status: 400 }); }
-  const pedido = typeof corpo.pedido === "string" ? corpo.pedido.trim().slice(0, 1000) : "";
-  if (!pedido) return NextResponse.json({ erro: "Escreva o que você quer mudar." }, { status: 400 });
+  const pedidoCorpo = typeof corpo.pedido === "string" ? corpo.pedido.trim().slice(0, 1000) : "";
   if (!corpo.contexto || typeof corpo.contexto !== "object") return NextResponse.json({ erro: "Escala inválida." }, { status: 400 });
 
   const conferir = !!corpo.conferir;
@@ -42,23 +42,36 @@ export async function POST(req: Request) {
 
   // Conferência: grátis, 1 por rodada entregue ao próprio usuário nos últimos 15 min. Não chama a IA se não valer.
   // Proposta/melhoria: abre a rodada (checa o saldo e cobra 1 crédito na mesma transação). Melhoria: a 1ª de cada pedido é grátis.
+  // As chamadas grátis (conferência, 1ª melhoria) e a melhoria paga usam o texto do pedido gravado no banco,
+  // nunca o "pedido" do corpo: um crédito compra um pedido, não várias chamadas com textos à escolha do navegador.
+  let pedido = pedidoCorpo;
+  let pedidoId = 0; // o pedido gravado (pedidos_ia) a que esta chamada pertence, quando já existe
   let rodada: number; // a rodada que o navegador recebe de volta (na conferência, a da proposta conferida)
   let rodadaUso: number; // a linha de uso_ia desta chamada (telemetria)
   let etapa: Etapa = "proposta";
   let melhoriaGratis = false;
+  let conferirCorpo: unknown = corpo.conferir;
   if (conferir) {
-    if (!rodadaPedida || !reservarConferencia(u.id, rodadaPedida)) return NextResponse.json({ erro: "Conferência inválida." }, { status: 409 });
+    const gravado = rodadaPedida
+      ? (getDb().prepare("SELECT p.id, p.pedido, p.resumo FROM uso_ia r JOIN pedidos_ia p ON p.id = r.pedido_id AND p.usuario_id = r.usuario_id WHERE r.id = ? AND r.usuario_id = ?").get(rodadaPedida, u.id) as { id: number; pedido: string; resumo: string } | undefined)
+      : undefined;
+    if (!gravado || !reservarConferencia(u.id, rodadaPedida)) return NextResponse.json({ erro: "Conferência inválida." }, { status: 409 });
+    pedido = gravado.pedido;
+    pedidoId = gravado.id;
+    conferirCorpo = conferirDoServidor(corpo.conferir, gravado.resumo);
     rodada = rodadaPedida;
     etapa = "conferencia";
     rodadaUso = (abrirRodada(u.id, "conferencia", false) as { rodada: number }).rodada;
   } else {
     // "anterior" sem um pedido válido do próprio usuário cobra como proposta nova.
     const pedidoAnterior = corpo.anterior && historicoPedido
-      ? getDb().prepare("SELECT id FROM pedidos_ia WHERE id = ? AND usuario_id = ?").get(historicoPedido, u.id)
+      ? (getDb().prepare("SELECT id, pedido FROM pedidos_ia WHERE id = ? AND usuario_id = ?").get(historicoPedido, u.id) as { id: number; pedido: string } | undefined)
       : undefined;
     const melhorar = !!pedidoAnterior;
+    if (pedidoAnterior) { pedido = pedidoAnterior.pedido; pedidoId = pedidoAnterior.id; }
+    if (!pedido) return NextResponse.json({ erro: "Escreva o que você quer mudar." }, { status: 400 });
     etapa = melhorar ? "melhorar" : "proposta";
-    melhoriaGratis = melhorar && usarMelhoriaGratis(u.id, historicoPedido);
+    melhoriaGratis = melhorar && usarMelhoriaGratis(u.id, pedidoId);
     const aberta = abrirRodada(u.id, etapa, !melhoriaGratis);
     if ("semCredito" in aberta) {
       return NextResponse.json({ erro: "Seus pedidos à IA acabaram.", semCredito: true, saldo: aberta.saldo, recarga: RECARGA_URL }, { status: 402 });
@@ -69,13 +82,13 @@ export async function POST(req: Request) {
   const t0 = Date.now();
   try {
     const memoria = conferir ? undefined : memoriaDe(u.id);
-    const { resultado, uso } = await pedirAjuste({ pedido, contexto: corpo.contexto, anterior: corpo.anterior, conferir: corpo.conferir, memoria });
+    const { resultado, uso } = await pedirAjuste({ pedido, contexto: corpo.contexto, anterior: corpo.anterior, conferir: conferirCorpo, memoria });
     const resumo = String((resultado as { resumo?: unknown })?.resumo || "");
     let historico: number | undefined, anotou = false;
     if (conferir) {
-      if (historicoPedido) atualizarResumo(u.id, historicoPedido, resumo);
+      atualizarResumo(u.id, pedidoId, resumo); // o pedido da rodada conferida, não o "historico" do corpo
     } else if (etapa === "melhorar") {
-      historico = historicoPedido;
+      historico = pedidoId;
       atualizarResumo(u.id, historico, resumo);
       anotou = atualizarCaso(u.id, String((resultado as { sobreONegocio?: unknown })?.sobreONegocio || ""));
     } else {
@@ -87,7 +100,7 @@ export async function POST(req: Request) {
   } catch (e) {
     // A IA não entregou nada: devolve o crédito cobrado e não gasta a conferência nem a melhoria grátis.
     if (conferir) getDb().prepare("UPDATE uso_ia SET conferida = 0 WHERE id = ? AND usuario_id = ?").run(rodada, u.id);
-    else if (melhoriaGratis) getDb().prepare("UPDATE pedidos_ia SET melhorias = MAX(melhorias - 1, 0) WHERE id = ? AND usuario_id = ?").run(historicoPedido, u.id);
+    else if (melhoriaGratis) getDb().prepare("UPDATE pedidos_ia SET melhorias = MAX(melhorias - 1, 0) WHERE id = ? AND usuario_id = ?").run(pedidoId, u.id);
     else estornarRodada(u.id, rodada);
     if (e instanceof ErroIA) return NextResponse.json({ erro: e.message }, { status: 422 });
     if (e instanceof Anthropic.RateLimitError) return NextResponse.json({ erro: "A IA está ocupada agora. Tente de novo em 1 minuto." }, { status: 503 });
@@ -98,4 +111,15 @@ export async function POST(req: Request) {
     console.error("[ia]", e);
     return NextResponse.json({ erro: "Erro ao falar com a IA." }, { status: 500 });
   }
+}
+
+// O que a conferência leva do navegador: a escala montada (grade, equipe e métricas das semanas A e B), que é a
+// do próprio dono. O resumo da proposta conferida vem do banco; mudanças e avisos (eco da resposta da IA) só
+// como listas curtas de frases.
+function conferirDoServidor(conferir: unknown, resumoGravado: string): unknown {
+  if (!conferir || typeof conferir !== "object") return conferir;
+  const c = conferir as { suaPropostaAnterior?: { mudancas?: unknown; avisos?: unknown } };
+  const frases = (v: unknown) => (Array.isArray(v) ? v.filter(x => typeof x === "string").slice(0, 20).map(x => (x as string).slice(0, 300)) : []);
+  const ant = c.suaPropostaAnterior && typeof c.suaPropostaAnterior === "object" ? c.suaPropostaAnterior : {};
+  return { ...c, suaPropostaAnterior: { resumo: resumoGravado, mudancas: frases(ant.mudancas), avisos: frases(ant.avisos) } };
 }
