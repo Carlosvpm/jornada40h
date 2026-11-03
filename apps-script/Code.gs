@@ -32,7 +32,10 @@ function doPost(e) {
     const ss = PLANILHA_ID ? SpreadsheetApp.openById(PLANILHA_ID) : SpreadsheetApp.getActiveSpreadsheet();
 
     if (lead.tipo_registro === "pedido") { registrarPedido(ss, lead); return resposta({ ok: true, tipo: "pedido" }); }
-    if (lead.order_id && lead.order_status) { registrarVendaKiwify(ss, lead); return resposta({ ok: true, tipo: "kiwify" }); }
+    if (lead.order_id && lead.order_status) {
+      if (!assinaturaKiwifyOk_(e)) { Logger.log("Webhook Kiwify recusado: assinatura ausente, inválida ou KIWIFY_TOKEN não configurado."); return resposta({ ok: false }); }
+      registrarVendaKiwify(ss, lead); return resposta({ ok: true, tipo: "kiwify" });
+    }
 
     let aba = ss.getSheetByName("Leads");
     if (!aba) {
@@ -268,6 +271,55 @@ function testarPainel() {
 /* ---------- Vendas (webhook da Kiwify) ---------- */
 const COLUNAS_VENDA = ["data", "order_id", "status", "evento", "nome", "email", "whatsapp", "produto", "valor", "metodo", "utm_source", "utm_medium", "utm_campaign", "utm_content", "briefing_enviado"];
 
+/** ID do produto "Recarga de créditos da IA" na Kiwify (Carlos preenche). Vazio = nenhum produto é tratado como recarga. */
+const PRODUTO_RECARGA_ID = "";
+const CREDITOS_POR_RECARGA = 10;
+
+/*
+ * Autenticação do webhook da Kiwify.
+ * Fonte: https://docs.kiwify.com.br/api-reference/webhooks/receiving (confirmado em 03/11/2026).
+ * A Kiwify acrescenta à URL do webhook o parâmetro de query `signature` = HMAC-SHA1, em hexadecimal
+ * minúsculo (40 caracteres), do corpo da requisição exatamente como chegou, com o `token` cadastrado no
+ * webhook como chave. O token não é enviado e não há outros headers de autenticação.
+ * Sem token configurado a assinatura seria de chave vazia e não prova nada, então recusamos.
+ * Chave em Propriedades do script: KIWIFY_TOKEN (token do webhook na Kiwify).
+ * Ao trocar o token na Kiwify, a doc recomenda aceitar o antigo e o novo por pelo menos um dia.
+ */
+function assinaturaKiwifyOk_(e) {
+  try {
+    const token = PropertiesService.getScriptProperties().getProperty("KIWIFY_TOKEN");
+    if (!token) return false;
+    const recebida = String((e.parameter && e.parameter.signature) || "").toLowerCase();
+    if (!recebida || !e.postData) return false;
+    const bytes = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_1, e.postData.contents, token);
+    const esperada = bytes.map(b => ("0" + (b & 0xff).toString(16)).slice(-2)).join("");
+    if (recebida.length !== esperada.length) return false;
+    let dif = 0;
+    for (let i = 0; i < esperada.length; i++) dif |= recebida.charCodeAt(i) ^ esperada.charCodeAt(i);
+    return dif === 0;
+  } catch (err) {
+    return false;
+  }
+}
+
+/** Soma/subtrai créditos da IA no painel. Idempotente por (tipo, ref) no servidor. Retorna { ok, saldo, pendente, duplicado, motivo }. */
+function creditarPainel_(email, delta, tipo, ref) {
+  const chave = PropertiesService.getScriptProperties().getProperty("PAINEL_ADMIN_KEY");
+  if (!chave) return { ok: false, motivo: "propriedade PAINEL_ADMIN_KEY não configurada no Apps Script" };
+  try {
+    const r = UrlFetchApp.fetch(PAINEL_URL + "/api/admin/creditos", {
+      method: "post", contentType: "application/json", muteHttpExceptions: true,
+      headers: { "x-admin-key": chave },
+      payload: JSON.stringify({ email: String(email || "").trim().toLowerCase(), delta: delta, tipo: tipo, ref: String(ref).slice(0, 100) })
+    });
+    const d = JSON.parse(r.getContentText() || "{}");
+    if (r.getResponseCode() !== 200) return { ok: false, motivo: "painel respondeu " + r.getResponseCode() + " " + (d.erro || "") };
+    return { ok: true, saldo: d.saldo, pendente: !!d.pendente, duplicado: !!d.duplicado, motivo: "" };
+  } catch (err) {
+    return { ok: false, motivo: "erro ao chamar o painel: " + err };
+  }
+}
+
 function registrarVendaKiwify(ss, w) {
   const c = w.Customer || {}, prod = w.Product || {}, utm = w.TrackingParameters || {};
   const status = String(w.order_status || "").toLowerCase();
@@ -283,6 +335,27 @@ function registrarVendaKiwify(ss, w) {
 
   let aba = ss.getSheetByName("Vendas");
   if (!aba) { aba = ss.insertSheet("Vendas"); aba.appendRow(COLUNAS_VENDA); aba.setFrozenRows(1); }
+
+  // Recarga de créditos da IA: credita/estorna no painel, avisa o Carlos e não manda briefing.
+  if (PRODUTO_RECARGA_ID && String(prod.product_id) === PRODUTO_RECARGA_ID) {
+    const aprovada = status === "paid" || status === "approved";
+    const estorno = status === "refunded" || status === "chargedback";
+    if ((aprovada || estorno) && venda.email) {
+      const r = aprovada
+        ? creditarPainel_(venda.email, CREDITOS_POR_RECARGA, "recarga", w.order_id)
+        : creditarPainel_(venda.email, -CREDITOS_POR_RECARGA, "reembolso", w.order_id);
+      const sinal = aprovada ? "+" + CREDITOS_POR_RECARGA : "-" + CREDITOS_POR_RECARGA;
+      let msg;
+      if (!r.ok) msg = "FALHOU ao creditar no painel (" + r.motivo + "). Creditar à mão.";
+      else if (r.pendente) msg = "recarga sem conta, ficou pendente";
+      else msg = (r.duplicado ? "(repetido, já registrado) " : "") + "saldo " + r.saldo;
+      MailApp.sendEmail({ to: EMAIL_CONTATO, subject: (aprovada ? "Recarga: " : "Reembolso de recarga: ") + venda.email + " · " + sinal,
+        body: (aprovada ? "Recarga: " : "Reembolso de recarga: ") + venda.email + " · " + sinal + " · " + msg + "\nPedido " + w.order_id, name: "Jornada 40h · vendas" });
+      venda.briefing_enviado = r.ok ? "recarga " + sinal : "recarga FALHOU";
+    }
+    aba.appendRow(COLUNAS_VENDA.map(k => venda[k] !== undefined ? venda[k] : ""));
+    return;
+  }
 
   // Só manda o link do briefing em compra aprovada, e uma vez por pedido.
   const aprovado = status === "paid" || status === "approved";
