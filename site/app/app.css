@@ -118,6 +118,7 @@ a { color: inherit; }
 
 /* Botões */
 .b { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border: 1px solid transparent; border-radius: 9px; font: 600 13.5px/1.2 var(--sans); padding: 9px 14px; color: #1B1405; background: var(--gold); white-space: nowrap; box-shadow: var(--shadow); transition: filter .15s, background .15s; }
+.b[hidden] { display: none; }
 .b .ic { width: 16px; height: 16px; }
 .b:hover { filter: brightness(1.05); }
 .b.ghost { background: var(--card); color: var(--text); border-color: var(--line-2); }

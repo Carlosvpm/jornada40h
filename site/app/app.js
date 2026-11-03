@@ -1743,7 +1743,7 @@
   }
 
   function abrirIA(pedido) {
-    ia = { pedido: pedido || "", resultado: null, previa: null, anterior: null, historico: null, anotou: false };
+    ia = { pedido: pedido || "", resultado: null, previa: null, anterior: null, historico: null, anotou: false, rodada: null };
     $("#iaPedido").value = ia.pedido;
     var m = metricas(state), sug = [];
     if (m.falta > 0.01) sug.push("Cobrir os horários descobertos sem contratar ninguém");
@@ -1753,8 +1753,35 @@
     sug.push("Equilibrar quem folga no fim de semana");
     $("#iaChips").innerHTML = sug.map(function (x) { return '<button type="button" data-sug="' + esc(x) + '">' + esc(x) + "</button>"; }).join("");
     iaPasso(1);
+    $("#iaSaldo").hidden = true;
+    carregarSaldo();
     $("#dlgIA").showModal();
     setTimeout(function () { $("#iaPedido").focus(); }, 50);
+  }
+
+  // Saldo de pedidos à IA (só no painel com conta). O servidor é quem manda: aqui só se mostra.
+  var iaRecarga = "";
+  function mostrarSaldo(n, recarga) {
+    if (typeof recarga === "string") iaRecarga = recarga;
+    if (typeof n !== "number") return;
+    var q = Math.max(0, n), el = $("#iaSaldo");
+    el.innerHTML = q + (q === 1 ? " pedido restante" : " pedidos restantes") +
+      (q <= 2 && iaRecarga ? ' · <a href="' + esc(iaRecarga) + '" target="_blank" rel="noopener">Recarregar</a>' : "");
+    el.hidden = false;
+  }
+  function carregarSaldo() {
+    fetch(PAINEL.ia + "/saldo", { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j) mostrarSaldo(j.saldo, j.recarga); })
+      .catch(function () {});
+  }
+  function semCredito(j) {
+    mostrarSaldo(j.saldo, j.recarga);
+    var a = document.querySelector('#dlgSemCredito [data-sc="recarregar"]');
+    a.hidden = !iaRecarga;
+    if (iaRecarga) a.href = iaRecarga;
+    iaPasso(1);
+    $("#dlgSemCredito").showModal();
   }
 
   function chamarIA(corpo) {
@@ -1770,21 +1797,24 @@
     ia.pedido = pedido;
     iaCarregando("A IA está montando a proposta. Pode levar até 1 minuto…");
     iaPasso(2);
-    chamarIA({ pedido: pedido, contexto: contextoIA(), anterior: ia.anterior || undefined })
+    chamarIA({ pedido: pedido, contexto: contextoIA(), anterior: ia.anterior || undefined, historico: ia.anterior ? ia.historico || undefined : undefined })
       .then(function (x) {
         if (x.status === 401) { location.href = PAINEL.login; return; }
+        if (x.status === 402 && x.j.semCredito) return semCredito(x.j);
         if (!x.ok || !x.j.resultado) { toast(x.j.erro || "A IA não respondeu. Tente de novo."); iaPasso(1); return; }
         var r1 = x.j.resultado, p1 = r1.proposta || {};
-        ia.historico = x.j.historico; ia.anotou = !!x.j.anotou;
+        ia.historico = x.j.historico; ia.anotou = !!x.j.anotou; ia.rodada = x.j.rodada;
+        mostrarSaldo(x.j.saldo);
         if (r1.entendeu === false || (!p1.remontar && !(p1.celulas || []).length && !aplicarProposta(p1).pendente)) return mostrarIA(r1);
         var previa1 = aplicarProposta(p1);
         iaCarregando("Conferindo a escala montada com a proposta…");
-        return chamarIA({ pedido: pedido, contexto: contextoIA(), historico: ia.historico, conferir: {
+        return chamarIA({ pedido: pedido, contexto: contextoIA(), historico: ia.historico, rodada: ia.rodada, conferir: {
           suaPropostaAnterior: { resumo: r1.resumo, mudancas: r1.mudancas, avisos: r1.avisos },
           equipeDepois: previa1.equipe.map(function (p) { return { id: p.id, nome: p.nome, horas: parcial(p, previa1.versao) ? Number(p.horas) : 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [] }; }),
           semanas: semanasIA(previa1)
         } }).then(function (y) {
           if (y.status === 401) { location.href = PAINEL.login; return; }
+          mostrarSaldo(y.j && y.j.saldo);
           if (!y.ok || !y.j.resultado || y.j.resultado.entendeu === false) {
             r1.avisos = (r1.avisos || []).concat(["Não deu para conferir a escala montada com a proposta. Confira a grade antes de aplicar."]);
             return mostrarIA(r1);
@@ -1832,6 +1862,8 @@
     $("#btnIA").hidden = false;
     $("#btnIA").addEventListener("click", function () { abrirIA(""); });
     $("#iaChips").addEventListener("click", function (e) { var b = e.target.closest("[data-sug]"); if (b) { $("#iaPedido").value = b.dataset.sug; $("#iaPedido").focus(); } });
+    window.addEventListener("focus", function () { if ($("#dlgIA").open) carregarSaldo(); });
+    $("#dlgSemCredito").addEventListener("click", function (e) { if (e.target.closest('[data-sc="recarregar"]')) $("#dlgSemCredito").close(); });
     $("#iaPedido").addEventListener("keydown", function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) enviarIA(); });
     $("#iaActs").addEventListener("click", function (e) {
       var b = e.target.closest("[data-ia]"); if (!b) return;

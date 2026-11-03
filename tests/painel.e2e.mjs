@@ -103,9 +103,14 @@ try {
   console.log("3b. ajuste com IA (resposta simulada)");
   ok(await page.isVisible("#btnIA"), "botão Ajuste com IA aparece no painel");
   await page.click("#btnIA");
+  await page.waitForFunction(() => /^10 pedidos restantes/.test(document.querySelector("#iaSaldo").textContent), null, { timeout: 5000 });
+  ok(await page.isVisible("#iaSaldo"), "ao abrir o diálogo da IA aparece o saldo do banco (10 pedidos restantes)");
   await page.fill("#iaPedido", "A primeira pessoa não pode trabalhar aos sábados");
   await page.click('[data-ia="enviar"]');
   await page.waitForSelector("#iaResultado:not([hidden]) .ia-comp", { timeout: 15000 });
+  ok(await page.evaluate(() => document.querySelector("#iaSaldo").textContent) === "9 pedidos restantes", "depois de um pedido o saldo cai 1 (a conferência não desconta)");
+  const usoCli = db.prepare("SELECT s.etapa, s.ok FROM uso_ia s JOIN usuarios u ON u.id = s.usuario_id WHERE u.email = 'cliente@exemplo.com' ORDER BY s.id").all();
+  ok(usoCli.length === 2 && usoCli[1].etapa === "conferencia" && usoCli[1].ok === 1, "o navegador manda a rodada: a conferência passa (não dá 409)");
   ok(/sábado/.test(await page.textContent("#iaResultado")), "proposta mostra resumo e o que muda");
   ok(await page.locator("#iaResultado .ia-comp tbody tr").count() === 4, "comparação antes e depois");
   const antesIA = await page.evaluate(() => JSON.stringify(window.__j40h.state.equipe));
@@ -239,6 +244,68 @@ try {
   const par = await Promise.all([ia(cookieA, {}), ia(cookieA, {})]);
   const st = par.map(r => r.status).sort();
   ok(st[0] === 200 && st[1] === 402 && saldoEmail(A) === 0, "duas propostas em paralelo com saldo 1 → uma 200 e uma 402");
+
+  console.log("3b2. saldo zerado: modal de recarga, melhorar com histórico");
+  {
+    const cliente = "cliente@exemplo.com";
+    await page.evaluate(() => { window.__corpos = []; const f = window.fetch; window.fetch = (u, o) => { if (o && o.body && /\/api\/ia$/.test(String(u))) window.__corpos.push(JSON.parse(o.body)); return f(u, o); }; });
+    await page.click("#btnIA");
+    await page.fill("#iaPedido", "A primeira pessoa não pode trabalhar aos sábados");
+    limpaLimites();
+    await page.click('[data-ia="enviar"]');
+    await page.waitForSelector("#iaResultado:not([hidden]) .ia-comp", { timeout: 15000 });
+    await page.click('[data-ia="melhorar"]');
+    await page.waitForFunction(() => window.__corpos.some(c => c.anterior), null, { timeout: 15000 });
+    await page.waitForSelector("#iaResultado:not([hidden]) .ia-comp", { timeout: 15000 });
+    const cm = await page.evaluate(() => window.__corpos.find(c => c.anterior));
+    const ped = db.prepare("SELECT MAX(p.id) AS id FROM pedidos_ia p JOIN usuarios u ON u.id = p.usuario_id WHERE u.email = ?").get(cliente).id;
+    ok(cm.historico === ped, "melhorar manda o historico do pedido original");
+    const cf = await page.evaluate(() => window.__corpos.filter(c => c.conferir).map(c => c.rodada));
+    ok(cf.length >= 2 && cf.every(Number.isInteger), "conferências mandam a rodada");
+    await page.click('#iaActs [value="cancel"]');
+
+    await credAdm({ email: cliente, delta: -saldoEmail(cliente), tipo: "ajuste", ref: "zera-cliente" });
+    ok(saldoEmail(cliente) === 0, "admin zerou o saldo do cliente");
+    await page.click("#btnIA");
+    await page.waitForFunction(() => /^0 pedidos restantes/.test(document.querySelector("#iaSaldo").textContent), null, { timeout: 5000 });
+    ok(await page.locator("#iaSaldo a").count() === 0, "sem RECARGA_URL o saldo baixo não tem link de recarga");
+    await page.fill("#iaPedido", "Pedido que precisa ficar guardado");
+    limpaLimites();
+    await page.click('[data-ia="enviar"]');
+    await page.waitForSelector("#dlgSemCredito[open]", { timeout: 10000 });
+    ok(await page.textContent("#dlgSemCredito h3") === "Seus pedidos à IA acabaram", "modal sem crédito com o título exato");
+    ok(/^Você usou todos os pedidos de ajuste com IA\. Recarregue para continuar usando o assistente\. A sua escala e os ajustes à mão continuam funcionando normalmente\.$/.test((await page.textContent("#dlgSemCredito p")).trim()), "modal com o texto exato");
+    ok(await page.inputValue("#iaPedido") === "Pedido que precisa ficar guardado" && await page.isVisible("#iaPasso1"), "o texto do pedido continua no passo 1");
+    ok(await page.locator('#dlgSemCredito [data-sc="recarregar"]').isHidden(), "sem RECARGA_URL o botão de recarga fica escondido");
+    ok((await page.textContent('#dlgSemCredito [data-sc="fechar"]')).trim() === "Agora não", "botão secundário \"Agora não\"");
+    await page.click('#dlgSemCredito [data-sc="fechar"]');
+    ok(await page.isHidden("#dlgSemCredito") && await page.evaluate(() => document.querySelector("#dlgIA").open), "\"Agora não\" fecha só a modal");
+    await page.click('#iaActs [value="cancel"]');
+
+    // Servidor com RECARGA_URL: o botão aponta para ele (mesmo banco e mesma sessão).
+    const RECARGA = "https://pagamento.exemplo.com/recarga?x=1";
+    const PORTA2 = PORTA + 100;
+    const srv2 = spawn(process.execPath, ["server.js"], { cwd: STANDALONE, env: { ...process.env, PORT: String(PORTA2), HOSTNAME: "127.0.0.1", DATA_DIR, ADMIN_KEY, NODE_ENV: "production", EMAIL_DEV_LOG: "1", RESEND_API_KEY: "", ANTHROPIC_API_KEY: "", IA_MOCK: "1", RECARGA_URL: RECARGA }, stdio: "ignore" });
+    try {
+      for (let i = 0; i < 50; i++) { try { await fetch(`http://127.0.0.1:${PORTA2}/painel/login`); break; } catch { await new Promise(r => setTimeout(r, 200)); } }
+      await page.goto(`http://127.0.0.1:${PORTA2}/painel`);
+      await page.waitForSelector("#grid [data-p]", { timeout: 15000 });
+      ok(await page.evaluate(() => window.J40H_PAINEL.recarga) === RECARGA, "a config do painel leva recarga = RECARGA_URL");
+      await page.evaluate(() => sessionStorage.setItem("j40h:revisao-pulada", "1"));
+      await page.click("#btnIA");
+      await page.waitForFunction(() => /^0 pedidos restantes/.test(document.querySelector("#iaSaldo").textContent), null, { timeout: 5000 });
+      ok(await page.getAttribute("#iaSaldo a", "href") === RECARGA, "saldo baixo mostra o link Recarregar");
+      await page.fill("#iaPedido", "Outro pedido");
+      limpaLimites();
+      await page.click('[data-ia="enviar"]');
+      await page.waitForSelector("#dlgSemCredito[open]", { timeout: 10000 });
+      const bt = page.locator('#dlgSemCredito [data-sc="recarregar"]');
+      ok(await bt.isVisible() && await bt.getAttribute("href") === RECARGA && await bt.getAttribute("target") === "_blank" && (await bt.textContent()).trim() === "Recarregar +10 pedidos por R$ 19,90", "botão de recarga aponta para a RECARGA_URL e abre em outra aba");
+    } finally { srv2.kill(); }
+    await page.goto(BASE + "/painel");
+    await page.waitForSelector("#grid [data-p]", { timeout: 15000 });
+    await page.evaluate(() => sessionStorage.setItem("j40h:revisao-pulada", "1"));
+  }
 
   console.log("3d. revisão ao entrar: ponto fora da lei explicado, aplicar (com desfazer) e pular");
   const original = await page.evaluate(() => window.__j40h.state);

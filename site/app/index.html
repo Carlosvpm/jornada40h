@@ -254,10 +254,22 @@
       <p class="muted sm">Descreva o que você quer mudar, do seu jeito. A IA monta uma proposta, mostra o que muda no custo e na cobertura e só aplica se você aprovar.</p>
       <textarea id="iaPedido" rows="4" maxlength="1000" placeholder="Ex.: a Ana não pode mais trabalhar aos sábados. Quero abrir domingo até as 14h."></textarea>
       <div class="ia-chips" id="iaChips"></div>
+      <p class="muted sm" id="iaSaldo" hidden></p>
     </div>
     <div id="iaCarregando" class="ia-load" hidden><span class="spin"></span><span>A IA está montando a proposta. Pode levar até 1 minuto…</span></div>
     <div id="iaResultado" hidden></div>
     <div class="dlg-acts" id="iaActs"></div>
+  </form>
+</dialog>
+
+<dialog id="dlgSemCredito" class="dlg-alm">
+  <form method="dialog">
+    <h3>Seus pedidos à IA acabaram</h3>
+    <p>Você usou todos os pedidos de ajuste com IA. Recarregue para continuar usando o assistente. A sua escala e os ajustes à mão continuam funcionando normalmente.</p>
+    <div class="dlg-acts">
+      <button class="b ghost" value="fechar" type="submit" data-sc="fechar">Agora não</button>
+      <a class="b" data-sc="recarregar" target="_blank" rel="noopener" hidden>Recarregar +10 pedidos por R$ 19,90</a>
+    </div>
   </form>
 </dialog>
 
