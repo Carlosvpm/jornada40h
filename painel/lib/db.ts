@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import { INCLUSOS, lancar, aplicarPendentes } from "./creditos.ts";
 
 // SQLite num arquivo só, em DATA_DIR (no Dokploy, um volume montado em /data).
 const DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
@@ -56,6 +57,25 @@ CREATE TABLE IF NOT EXISTS pedidos_ia (
   aplicado INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS pedidos_ia_usuario ON pedidos_ia(usuario_id, id);
+CREATE TABLE IF NOT EXISTS creditos_mov (
+  id INTEGER PRIMARY KEY,
+  usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+  delta INTEGER NOT NULL,
+  tipo TEXT NOT NULL,
+  ref TEXT NOT NULL,
+  obs TEXT NOT NULL DEFAULT '',
+  UNIQUE(tipo, ref)
+);
+CREATE INDEX IF NOT EXISTS creditos_mov_usuario ON creditos_mov(usuario_id);
+CREATE TABLE IF NOT EXISTS creditos_pendentes (
+  email TEXT NOT NULL,
+  delta INTEGER NOT NULL,
+  tipo TEXT NOT NULL,
+  ref TEXT NOT NULL,
+  obs TEXT NOT NULL DEFAULT '',
+  UNIQUE(tipo, ref)
+);
 `;
 
 let db: Database.Database | null = null;
@@ -99,6 +119,8 @@ function migrar(d: Database.Database) {
       d.exec("DROP TABLE convites");
     })();
   }
+  // Toda conta já existente ganha os créditos inclusos (a ref única impede duplicar).
+  d.prepare("INSERT OR IGNORE INTO creditos_mov (usuario_id, delta, tipo, ref) SELECT id, ?, 'inclusos', 'conta:' || id FROM usuarios").run(INCLUSOS);
 }
 
 /** Cria a conta (se não existe) e grava a escala inicial (se ainda não há escala). Devolve o id. */
@@ -106,6 +128,8 @@ export function liberarAcesso(d: Database.Database, email: string, nome: string,
   d.prepare("INSERT INTO usuarios (email, nome) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET nome = CASE WHEN excluded.nome <> '' THEN excluded.nome ELSE usuarios.nome END").run(email, nome);
   const { id } = d.prepare("SELECT id FROM usuarios WHERE email = ?").get(email) as { id: number };
   if (estado) d.prepare("INSERT OR IGNORE INTO escalas (usuario_id, estado) VALUES (?, ?)").run(id, estado);
+  lancar(d, id, INCLUSOS, "inclusos", "conta:" + id);
+  aplicarPendentes(d, id, email);
   return id;
 }
 

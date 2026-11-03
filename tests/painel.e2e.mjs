@@ -140,6 +140,32 @@ try {
   ok(adm.memoria?.sobreONegocio === "Observações: a Ana estuda à noite." && adm.memoria.pedidosAnteriores.length === 2 && adm.memoria.pedidosAnteriores[0].aplicado === true, "admin lê a memória do caso junto com a escala");
   ok((await post("/painel/api/ia/aplicado", { id: 1 })).status === 401, "marcar aplicado sem login → 401");
 
+  console.log("3c3. créditos da IA: inclusos, recarga e pendentes");
+  const credAdm = (corpo, headers = { "x-admin-key": ADMIN_KEY }) => post("/painel/api/admin/creditos", corpo, "9.9.9.9", headers);
+  const saldoEmail = email => db.prepare("SELECT COALESCE(SUM(m.delta),0) AS s FROM usuarios u LEFT JOIN creditos_mov m ON m.usuario_id = u.id WHERE u.email = ?").get(email).s;
+  const inclusos = email => db.prepare("SELECT m.delta FROM creditos_mov m JOIN usuarios u ON u.id = m.usuario_id WHERE u.email = ? AND m.tipo = 'inclusos'").all(email);
+  ok(inclusos("cliente@exemplo.com").length === 1 && inclusos("cliente@exemplo.com")[0].delta === 10, "conta liberada tem 1 lançamento de 10 créditos inclusos");
+  await liberar("cliente@exemplo.com");
+  ok(inclusos("cliente@exemplo.com").length === 1, "liberar de novo não duplica os inclusos");
+  const saldoAntes = saldoEmail("cliente@exemplo.com");
+  ok((await credAdm({ email: "cliente@exemplo.com", delta: 10, tipo: "recarga", ref: "x" }, {})).status === 401, "créditos sem chave → 401");
+  ok((await credAdm({ email: "cliente@exemplo.com", delta: 3.5, tipo: "recarga", ref: "x" })).status === 400, "delta fracionado → 400");
+  ok((await credAdm({ email: "cliente@exemplo.com", delta: 51, tipo: "recarga", ref: "x" })).status === 400, "delta fora de -50..50 → 400");
+  ok((await credAdm({ email: "cliente@exemplo.com", delta: 0, tipo: "recarga", ref: "x" })).status === 400, "delta zero → 400");
+  ok((await credAdm({ email: "cliente@exemplo.com", delta: 5, tipo: "uso", ref: "x" })).status === 400, "tipo \"uso\" não vale pelo admin → 400");
+  ok((await credAdm({ email: "cliente@exemplo.com", delta: 5, tipo: "recarga" })).status === 400, "sem ref → 400");
+  ok((await credAdm({ email: "cliente@exemplo.com", delta: 5, tipo: "recarga", ref: "r".repeat(101) })).status === 400, "ref com mais de 100 caracteres → 400");
+  ok(saldoEmail("cliente@exemplo.com") === saldoAntes, "pedidos recusados não mexem no saldo");
+  const rc1 = await (await credAdm({ email: "Cliente@Exemplo.com", delta: 10, tipo: "recarga", ref: "kiwi-1" })).json();
+  ok(rc1.saldo === saldoAntes + 10 && rc1.duplicado === false && rc1.pendente === false, "recarga sobe o saldo em 10");
+  const rc2 = await (await credAdm({ email: "cliente@exemplo.com", delta: 10, tipo: "recarga", ref: "kiwi-1" })).json();
+  ok(rc2.duplicado === true && rc2.saldo === saldoAntes + 10, "repetir a mesma ref → duplicado, saldo igual");
+  const rp = await (await credAdm({ email: "novo@exemplo.com", delta: 10, tipo: "recarga", ref: "kiwi-2" })).json();
+  ok(rp.pendente === true && rp.saldo === null, "recarga para e-mail sem conta fica pendente");
+  await liberar("novo@exemplo.com");
+  ok(saldoEmail("novo@exemplo.com") === 20, "ao liberar a conta: 10 inclusos + 10 pendentes");
+  ok(db.prepare("SELECT COUNT(*) AS n FROM creditos_pendentes WHERE email = 'novo@exemplo.com'").get().n === 0, "a pendência some depois de aplicada");
+
   console.log("3d. revisão ao entrar: ponto fora da lei explicado, aplicar (com desfazer) e pular");
   const original = await page.evaluate(() => window.__j40h.state);
   const quebrada = await page.evaluate(() => {
