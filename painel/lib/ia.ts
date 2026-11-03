@@ -25,9 +25,11 @@ const dia = { type: "string", enum: [...DIAS] };
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["entendeu", "resumo", "mudancas", "avisos", "sobreONegocio", "proposta"],
+  required: ["entendeu", "resposta", "sugestao", "resumo", "mudancas", "avisos", "sobreONegocio", "proposta"],
   properties: {
     entendeu: { type: "boolean", description: "false se o pedido não é sobre a escala ou não dá para entender; aí a proposta repete os dados atuais" },
+    resposta: { type: "string", description: "preenchida só quando o dono pergunta (sem pedir mudança): a resposta, em até 2 parágrafos curtos (pode usar linhas com \"- \"); vazio quando é pedido de mudança" },
+    sugestao: { type: "string", description: "só junto com resposta: o pedido de mudança pronto, na voz do dono, quando a resposta aponta uma mudança que resolveria algo; senão vazio" },
     resumo: { type: "string", description: "1 a 3 frases para o dono do negócio, em português do Brasil" },
     mudancas: { type: "array", items: { type: "string" }, description: "o que muda, uma linha por mudança" },
     avisos: { type: "array", items: { type: "string" }, description: "riscos da proposta: buraco de cobertura, custo maior, ponto fora da lei (com o artigo, ex.: \"(CLT, art. 66)\"); vazio se não houver" },
@@ -106,6 +108,13 @@ Regras da escala (CLT, com a nova jornada):
 
 Você recebe o pedido do dono, os dados atuais e as métricas da escala que está na tela (horas sem cobertura, pontos fora da lei, custo das saídas). Devolva uma proposta completa: repita o que não muda e mude só o que o pedido pede.
 
+Pergunta ou pedido de mudança (campo resposta):
+- Pedido de mudança: o dono quer mudar algo na escala, na equipe, no horário ou nos custos. Siga "Como decidir" e deixe resposta e sugestao vazios.
+- Pergunta: o dono pergunta algo sobre a escala, a equipe, os custos ou a lei, sem pedir mudança (ex.: "por que faltam 9 h?", "quem trabalha no sábado?", "quanto custa a Ana por mês?", "posso dar folga a todos no domingo?"). Responda em resposta usando só os dados recebidos e os trechos de lei: direto ao ponto, com nomes, dias, horários e valores concretos, até 2 parágrafos curtos (até 1.200 caracteres); pode usar linhas começando com "- " para listas. Cite o artigo quando falar de lei. Na pergunta: resumo é uma frase curta do que você respondeu (fica na memória do caso), mudancas e avisos vazios, e proposta repete os dados atuais com remontar false e celulas vazias.
+- Se a resposta apontar uma mudança que resolveria algo, escreva em sugestao o pedido pronto, na voz do dono (ex.: "Colocar a Carla no fechamento de segunda"). O dono decide se quer montar. Senão, sugestao vazio.
+- Pergunta como "dá para…?" ou "e se…?" é pergunta: explique o efeito e ponha a mudança em sugestao. Só é pedido de mudança quando o dono pede a mudança.
+- Na conferência e quando receber proposta anterior, resposta e sugestao vão sempre vazios.
+
 Como decidir:
 - Mudança de equipe, folga fixa, dias que a pessoa não pode, horário de funcionamento ou número de pessoas por dia: atualize os dados e use remontar: true para o motor redistribuir turnos e folgas.
 - Troca pontual de turno ou folga de alguém num dia: use celulas e remontar: false, para não desfazer o que o dono já ajustou à mão.
@@ -141,9 +150,23 @@ ${BASE_LEGAL}`;
 export type PedidoIA = { pedido: string; contexto: unknown; anterior?: unknown; conferir?: unknown; memoria?: Memoria; modelo?: Modelo };
 export type Uso = { modelo: Modelo; entrada: number; saida: number; cacheLido: number; cacheGravado: number };
 
+// Pergunta simulada (IA_MOCK): termina com "?" ou começa com palavra de pergunta.
+const ehPerguntaMock = (p: string) => /\?\s*$/.test(p) || /^(por ?que|quem|quanto|quando|qual|quais|como|onde|posso|dá|da pra|tem|é)\b/i.test(p.trim());
+function mockResposta(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; folgaFixa: string; naoPode: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
+  const equipe = ctx.equipe || [];
+  return {
+    tipo: "resposta", entendeu: true,
+    resposta: `A sua equipe tem ${equipe.length} pessoas: ${equipe.map(p => p.nome).join(", ")}.\nNesta resposta de teste a IA não leu a escala de verdade. Com a IA ligada, ela responde com os dias, horários e valores da sua escala, por exemplo:\n- quem trabalha em cada dia\n- de onde vêm as horas sem cobertura\n- o que a lei diz sobre folga e descanso (CLT, art. 66)`,
+    sugestao: `${equipe[0]?.nome || "A primeira pessoa"} não pode trabalhar aos sábados`,
+    resumo: "Expliquei a equipe e a escala.", mudancas: [], avisos: [], sobreONegocio: "",
+    proposta: { funcionamento: ctx.funcionamento, equipe: equipe.map(p => ({ ...p, salario: p.salario || 0, horas: p.horas || 0 })), custos: ctx.custos, remontar: false, celulas: [] },
+  };
+}
+
 function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; folgaFixa: string; naoPode: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
   const equipe = (ctx.equipe || []).map((p, i) => ({ ...p, salario: p.salario || 0, horas: p.horas || 0, naoPode: i === 0 ? Array.from(new Set([...(p.naoPode || []), "sab"])) : p.naoPode || [] }));
   return {
+    tipo: "proposta", resposta: "", sugestao: "",
     entendeu: true,
     resumo: `Coloquei ${equipe[0]?.nome || "a primeira pessoa"} sem trabalhar no sábado e montei a escala de novo.`,
     mudancas: [`${equipe[0]?.nome || "Pessoa 1"} não trabalha mais no sábado`],
@@ -156,7 +179,10 @@ function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salari
 export async function pedirAjuste({ pedido, contexto, anterior, conferir, memoria, modelo }: PedidoIA): Promise<{ resultado: unknown; uso: Uso | null }> {
   if (process.env.IA_MOCK === "1" && !process.env.ANTHROPIC_API_KEY) {
     // Teste: um pedido com [falha] simula a IA que não entrega nada (para conferir o estorno).
+    // IA_MOCK_MS: espera simulada, para ver as etapas do chat andando.
+    await new Promise(r => setTimeout(r, Number(process.env.IA_MOCK_MS) || 0));
     if (pedido.includes("[falha]")) throw new ErroIA("A IA não conseguiu responder a esse pedido. Tente escrever de outro jeito.");
+    if (!conferir && !anterior && ehPerguntaMock(pedido)) return { resultado: mockResposta(contexto as Parameters<typeof mock>[0]), uso: null };
     return { resultado: mock(contexto as Parameters<typeof mock>[0]), uso: null };
   }
   const m = modelo || modeloPadrao();
@@ -187,7 +213,9 @@ export async function pedirAjuste({ pedido, contexto, anterior, conferir, memori
   const u = resposta.usage;
   const uso: Uso = { modelo: m, entrada: u.input_tokens, saida: u.output_tokens, cacheLido: u.cache_read_input_tokens || 0, cacheGravado: u.cache_creation_input_tokens || 0 };
   try {
-    return { resultado: JSON.parse(texto), uso };
+    const r = JSON.parse(texto);
+    // tipo é derivado (não vai no schema: a gramática da saída estruturada tem limite de tamanho).
+    return { resultado: { ...r, tipo: String(r.resposta || "").trim() ? "resposta" : "proposta" }, uso };
   } catch {
     throw new ErroIA("A IA devolveu uma resposta que não deu para ler. Tente de novo.");
   }

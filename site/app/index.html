@@ -35,6 +35,9 @@
     <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
     <symbol id="i-store" viewBox="0 0 24 24"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M2 7h20v3a2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-2-2z"/></symbol>
   </defs>
 </svg>
@@ -72,6 +75,7 @@
         <b id="tSaud">Olá</b>
         <small id="tData"></small>
       </div>
+      <button class="cred-chip" id="credChip" type="button" hidden aria-label="Pedidos à IA restantes"><svg class="ic"><use href="#i-zap"/></svg><span id="credChipN">–</span><span class="cred-chip-l">pedidos à IA</span></button>
       <div class="perfil">
         <button class="avatar" id="perfilBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Perfil e tema">J</button>
         <div class="perfil-menu" id="perfilMenu" role="menu" hidden>
@@ -81,6 +85,11 @@
             <button type="button" data-tema="light"><svg class="ic"><use href="#i-sun"/></svg>Claro</button>
             <button type="button" data-tema="dark"><svg class="ic"><use href="#i-moon"/></svg>Escuro</button>
             <button type="button" data-tema="system"><svg class="ic"><use href="#i-monitor"/></svg>Sistema</button>
+          </div>
+          <div class="pm-cred" id="pmCred" hidden>
+            <p class="rot">Ajuste com IA</p>
+            <div class="pm-cred-l"><span><b id="pmCredN">–</b> pedidos restantes</span><a id="pmCredRec" href="#" target="_blank" rel="noopener" hidden>Recarregar</a></div>
+            <div class="cred-barra"><i id="pmCredBarra"></i></div>
           </div>
           <button type="button" class="pm-i" id="pmLink" role="menuitem"><svg class="ic"><use href="#i-link"/></svg>Copiar meu link</button>
           <button type="button" class="pm-i sair" id="pmSair" role="menuitem" hidden><svg class="ic"><use href="#i-logout"/></svg>Sair da conta</button>
@@ -248,24 +257,32 @@
 </dialog>
 
 <dialog id="dlgIA" class="dlg-ia">
-  <form method="dialog" id="dlgIAForm" novalidate>
-    <h3><svg class="ic"><use href="#i-spark"/></svg>Ajuste com IA</h3>
-    <div id="iaPasso1">
-      <p class="muted sm">Descreva o que você quer mudar, do seu jeito. A IA monta uma proposta, mostra o que muda no custo e na cobertura e só aplica se você aprovar.</p>
-      <textarea id="iaPedido" rows="4" maxlength="1000" placeholder="Ex.: a Ana não pode mais trabalhar aos sábados. Quero abrir domingo até as 14h."></textarea>
-      <div class="ia-chips" id="iaChips"></div>
-      <p class="muted sm" id="iaSaldo" hidden></p>
-    </div>
-    <div id="iaCarregando" class="ia-load" hidden><span class="spin"></span><span>A IA está montando a proposta. Pode levar até 1 minuto…</span></div>
-    <div id="iaResultado" hidden></div>
-    <div class="dlg-acts" id="iaActs"></div>
-  </form>
+  <div class="chat">
+    <header class="chat-h">
+      <span class="chat-av"><svg class="ic"><use href="#i-spark"/></svg></span>
+      <div class="chat-tit"><b>Ajuste com IA</b><small>Tira dúvidas e monta mudanças na escala, que só valem se você aprovar</small></div>
+      <button class="b ghost sm" type="button" id="iaNova" hidden>Nova conversa</button>
+      <button class="chat-x" type="button" id="iaFechar" aria-label="Fechar"><svg class="ic"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="chat-fio" id="iaFio" aria-live="polite"></div>
+    <footer class="chat-pe">
+      <div class="chat-caixa">
+        <textarea id="iaPedido" rows="2" maxlength="1000" placeholder="Peça uma mudança ou pergunte sobre a sua escala…"></textarea>
+        <button class="chat-env" type="button" id="iaEnviar" aria-label="Enviar pedido"><svg class="ic"><use href="#i-send"/></svg></button>
+      </div>
+      <div class="chat-info">
+        <span class="cred" id="iaSaldo"><svg class="ic"><use href="#i-zap"/></svg><span id="iaSaldoTxt">Carregando saldo…</span></span>
+        <span class="muted" id="iaRegra">Mudança usa 1 pedido · perguntas grátis</span>
+      </div>
+    </footer>
+  </div>
 </dialog>
 
 <dialog id="dlgSemCredito" class="dlg-alm">
   <form method="dialog">
     <h3>Seus pedidos à IA acabaram</h3>
-    <p>Você usou todos os pedidos de ajuste com IA. Recarregue para continuar usando o assistente. A sua escala e os ajustes à mão continuam funcionando normalmente.</p>
+    <p>Você usou todos os pedidos de ajuste com IA. Recarregue para continuar pedindo mudanças à IA. A sua escala e os ajustes à mão continuam funcionando normalmente.</p>
+    <p class="muted sm">Perguntas sobre a escala continuam grátis, até 20 por dia.</p>
     <div class="dlg-acts">
       <button class="b ghost" value="fechar" type="submit" data-sc="fechar">Agora não</button>
       <a class="b" data-sc="recarregar" target="_blank" rel="noopener" hidden>Recarregar +10 pedidos por R$ 19,90</a>

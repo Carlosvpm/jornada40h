@@ -1565,6 +1565,7 @@
   var desfazerSnap = null;
   function desfazer() {
     if (!desfazerSnap) return;
+    ia.turnos.forEach(function (t) { if (t.estado === "aplicada" && t.snap === desfazerSnap) t.estado = "desfeita"; });
     state = normalizar(JSON.parse(desfazerSnap)); desfazerSnap = null;
     salvar(); renderCfg(); render();
     $("#iaDica").hidden = true;
@@ -1670,24 +1671,6 @@
     return s;
   }
 
-  var ia = { pedido: "", resultado: null, previa: null, anterior: null };
-
-  function iaPasso(qual) {
-    $("#iaPasso1").hidden = qual !== 1;
-    $("#iaCarregando").hidden = qual !== 2;
-    $("#iaResultado").hidden = qual !== 3;
-    var acts = { 1: '<button class="b ghost" value="cancel" type="submit">Cancelar</button><button class="b ia" type="button" data-ia="enviar"><svg class="ic"><use href="#i-spark"/></svg>Gerar proposta</button>', 2: "", 3: "" };
-    if (qual === 3) {
-      var r = ia.resultado;
-      acts[3] = r && r.entendeu === false
-        ? '<button class="b ghost" value="cancel" type="submit">Fechar</button><button class="b" type="button" data-ia="voltar">Escrever de novo</button>'
-        : '<button class="b ghost" value="cancel" type="submit">Descartar</button><button class="b ghost" type="button" data-ia="voltar">Mudar o pedido</button>' +
-          (ia.piorou ? '<button class="b ghost" type="button" data-ia="melhorar"><svg class="ic"><use href="#i-spark"/></svg>Pedir alternativa melhor</button>' : "") +
-          '<button class="b" type="button" data-ia="aplicar">Aplicar proposta</button>';
-    }
-    $("#iaActs").innerHTML = acts[qual];
-  }
-
   // Dados do briefing que parecem lidos errado: o dono confirma no card e a resposta vai para a IA,
   // que devolve a proposta corrigida (com antes e depois) para aplicar.
   function duvidas(s) {
@@ -1742,45 +1725,185 @@
     enviarIA();
   }
 
+  // Ajuste com IA em formato de conversa: cada pedido vira um turno com as etapas que a IA percorre
+  // (ler a escala, montar a proposta, conferir a grade montada, comparar) e o cartão da proposta.
+  // A conversa fica na memória enquanto a página está aberta.
+  var ia = { turnos: [], ocupado: false, saldo: null, perguntas: null, seq: 0, relogio: null };
+
   function abrirIA(pedido) {
-    ia = { pedido: pedido || "", resultado: null, previa: null, anterior: null, historico: null, anotou: false, rodada: null };
-    $("#iaPedido").value = ia.pedido;
+    if (pedido) $("#iaPedido").value = pedido;
+    renderFio();
+    carregarSaldo();
+    if (!$("#dlgIA").open) $("#dlgIA").showModal();
+    autoAltura();
+    setTimeout(function () { $("#iaPedido").focus(); rolarFim(); }, 50);
+  }
+
+  function sugestoesIA() {
     var m = metricas(state), sug = [];
     if (m.falta > 0.01) sug.push("Cobrir os horários descobertos sem contratar ninguém");
     if (m.erros) sug.push("Corrigir os pontos fora da lei");
     sug.push("Reduzir o custo da escala");
     if (state.equipe[0]) sug.push((state.equipe[0].nome || "Ana") + " não pode trabalhar aos sábados");
     sug.push("Equilibrar quem folga no fim de semana");
-    $("#iaChips").innerHTML = sug.map(function (x) { return '<button type="button" data-sug="' + esc(x) + '">' + esc(x) + "</button>"; }).join("");
-    iaPasso(1);
-    $("#iaSaldo").hidden = true;
-    carregarSaldo();
-    $("#dlgIA").showModal();
-    setTimeout(function () { $("#iaPedido").focus(); }, 50);
+    // Perguntas (grátis): a IA explica sem mudar nada.
+    if (m.falta > 0.01) sug.push("Por que faltam " + horas(m.falta) + " sem cobertura?");
+    sug.push("Quem trabalha no sábado?");
+    sug.push("Posso dar folga para todos no domingo?");
+    return sug;
   }
 
-  // Saldo de pedidos à IA (só no painel com conta). O servidor é quem manda: aqui só se mostra.
+  function tempo(ms) { var s = Math.max(1, Math.round(ms / 1000)); return s < 60 ? s + "s" : Math.floor(s / 60) + "min " + (s % 60) + "s"; }
+
+  function passo(t, k, tit, det, st) {
+    var p = t.passos.filter(function (x) { return x.k === k; })[0];
+    if (!p) { p = { k: k, t0: Date.now() }; t.passos.push(p); }
+    else if (p.st === "fila") p.t0 = Date.now(); // o tempo conta de quando a etapa começa, não de quando entrou na fila
+    p.tit = tit; p.det = det; p.st = st;
+    if (st !== "rodando" && !p.ms) p.ms = Date.now() - p.t0;
+    return p;
+  }
+
+  function htmlPassos(t) {
+    var rodando = t.estado === "rodando";
+    var feitos = t.passos.filter(function (p) { return p.st !== "fila"; }).length;
+    var tit = rodando
+      ? '<span class="spin" style="width:13px;height:13px;border-width:2px"></span>Trabalhando · <span data-rel="' + t.t0 + '">' + tempo(Date.now() - t.t0) + "</span>"
+      : '<svg class="ic" style="width:14px;height:14px"><use href="#i-check"/></svg>' + feitos + (feitos === 1 ? " etapa" : " etapas") + " · " + tempo(t.ms || 0);
+    var lis = t.passos.map(function (p) {
+      var ic = p.st === "ok" ? '<svg class="ic"><use href="#i-check"/></svg>' : p.st === "erro" ? '<svg class="ic"><use href="#i-x"/></svg>' : "";
+      var tt = p.st === "rodando" ? '<span class="t" data-rel="' + p.t0 + '">' + tempo(Date.now() - p.t0) + "</span>" : p.ms > 900 ? '<span class="t">' + tempo(p.ms) + "</span>" : "<span></span>";
+      return '<li class="passo ' + p.st + '"><span class="st">' + ic + "</span><div><b>" + esc(p.tit) + "</b>" + (p.det ? "<small>" + esc(p.det) + "</small>" : "") + "</div>" + tt + "</li>";
+    }).join("");
+    return '<details class="passos" data-turno="' + t.id + '"' + (t.aberto ? " open" : "") + "><summary>" + tit + "</summary><ol>" + lis + "</ol></details>";
+  }
+
+  function htmlCartao(t) {
+    var r = t.resultado, a = t.antes, b = t.depois, h = "";
+    if ((r.mudancas || []).length) h += '<p class="rot">O que muda</p><ul class="ia-mud">' + r.mudancas.map(function (x) { return "<li>" + citar(esc(x)) + "</li>"; }).join("") + "</ul>";
+    var linha = function (rot, va, vb, fmt, menorMelhor) {
+      var cls = Math.abs(vb - va) < 0.01 ? "" : (vb < va) === menorMelhor ? "melhor" : "pior";
+      return "<tr><td>" + rot + "</td><td>" + fmt(va) + '</td><td class="' + cls + '">' + fmt(vb) + "</td></tr>";
+    };
+    h += '<p class="rot">Antes e depois</p><table class="ia-comp"><thead><tr><th></th><th>Hoje</th><th>Com a proposta</th></tr></thead><tbody>' +
+      linha("Horas sem cobertura/semana", a.falta, b.falta, horas, true) +
+      linha("Pontos fora da lei", a.erros, b.erros, String, true) +
+      linha("Custo extra para cobrir (mês)", a.custo, b.custo, brl, true) +
+      linha("Folha da equipe (mês)", a.folha, b.folha, brl, true) + "</tbody></table>";
+    var avisos = (r.avisos || []).concat(t.problemas.length ? ["A proposta deixa " + t.problemas.join(", ") + "."] : []);
+    if (avisos.length) h += '<div class="ia-avisos"><b>Atenção</b><ul>' + avisos.map(function (x) { return "<li>" + citar(esc(x)) + "</li>"; }).join("") + "</ul></div>";
+    if (t.previa.pendente) h += '<p class="muted sm">A grade atual fica como está; depois de aplicar, use “Montar a escala de novo” para redistribuir os turnos.</p>';
+    var pe = "";
+    if (t.estado === "pendente") {
+      pe = '<div class="prop-acts">' + (ia.ocupado ? "" : '<button class="b ghost sm" type="button" data-ia="descartar" data-t="' + t.id + '">Descartar</button>' +
+        (t.piorou ? '<button class="b ghost sm" type="button" data-ia="melhorar" data-t="' + t.id + '"><svg class="ic"><use href="#i-spark"/></svg>Pedir alternativa melhor</button>' : "") +
+        '<button class="b sm" type="button" data-ia="aplicar" data-t="' + t.id + '"><svg class="ic"><use href="#i-check"/></svg>Aplicar na escala</button>') + "</div>";
+    } else if (t.estado === "aplicada") {
+      pe = '<div class="prop-est aplicada"><svg class="ic"><use href="#i-check"/></svg>Aplicada na escala' +
+        (desfazerSnap && desfazerSnap === t.snap ? '<button class="b ghost sm" type="button" data-ia="desfazer" data-t="' + t.id + '">Desfazer</button>' : "") + "</div>";
+    } else {
+      pe = '<div class="prop-est fora">' + ({ descartada: "Descartada", fora: "Substituída pelo pedido seguinte", desfeita: "Aplicada e depois desfeita" }[t.estado] || "") + "</div>";
+    }
+    return '<div class="prop"><div class="prop-c">' + h + "</div>" + pe + "</div>";
+  }
+
+  // Texto livre da IA: parágrafos por linha em branco ou quebra, e linhas com "- " viram lista.
+  function paragrafos(txt) {
+    var h = "", lista = [];
+    var fecha = function () { if (lista.length) { h += '<ul>' + lista.map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ul>"; lista = []; } };
+    String(txt).split(/\n+/).forEach(function (l) {
+      l = l.trim(); if (!l) return;
+      var item = /^[-•*]\s+/.test(l);
+      var html = citar(esc(l.replace(/^[-•*]\s+/, ""))).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+      if (item) lista.push(html); else { fecha(); h += "<p>" + html + "</p>"; }
+    });
+    fecha();
+    return h;
+  }
+
+  function htmlMeta(t) {
+    var p = [];
+    if (t.estado === "resposta") {
+      if (t.pergunta && t.pergunta.gratis) {
+        var livres = ia.perguntas ? Math.max(0, ia.perguntas.limite - ia.perguntas.usadas) : null;
+        p.push('<svg class="ic"><use href="#i-zap"/></svg><span class="gratis">Pergunta grátis</span>' + (livres !== null ? " · restam " + livres + " hoje" : ""));
+      } else if (t.gasto === 1) p.push('<svg class="ic"><use href="#i-zap"/></svg>Usou 1 pedido: as perguntas grátis de hoje acabaram');
+      if (t.anotou) p.push("· A IA guardou o que você contou sobre o negócio");
+      return p.length ? '<div class="msg-meta">' + p.join(" ") + "</div>" : "";
+    }
+    if (t.gasto === 1) p.push('<svg class="ic"><use href="#i-zap"/></svg>Usou 1 pedido');
+    else if (t.gasto === 0) p.push('<svg class="ic"><use href="#i-zap"/></svg><span class="gratis">Sem custo</span>');
+    if (t.anotou) p.push("· A IA guardou o que você contou sobre o negócio para os próximos pedidos");
+    return p.length ? '<div class="msg-meta">' + p.join(" ") + "</div>" : "";
+  }
+
+  function htmlTurno(t) {
+    var h = '<div class="msg-eu">' + esc(t.mostrar) + "</div>";
+    h += '<div class="msg-ia"><span class="chat-av"><svg class="ic"><use href="#i-spark"/></svg></span><div class="msg-ia-c">' + htmlPassos(t);
+    if (t.estado === "resposta") {
+      h += '<div class="msg-resp">' + paragrafos(t.resultado.resposta || t.resultado.resumo || "") + "</div>";
+      if (t.resultado.sugestao && !ia.ocupado) h += '<div class="msg-sug"><span>Quer que eu monte essa mudança?</span><button class="b ghost sm" type="button" data-ia="sugestao" data-t="' + t.id + '"><svg class="ic"><use href="#i-spark"/></svg>' + esc(t.resultado.sugestao) + "</button></div>";
+      h += htmlMeta(t);
+    } else if (t.estado === "erro") {
+      h += '<p class="msg-txt">' + esc(t.erro) + "</p>" + (ia.ocupado ? "" : '<div><button class="b ghost sm" type="button" data-ia="repetir" data-t="' + t.id + '">Tentar de novo</button></div>');
+    } else if (t.resultado) {
+      h += '<p class="msg-txt">' + citar(esc(t.resultado.resumo || "")) + "</p>";
+      if (t.estado !== "naoEntendeu") h += htmlCartao(t);
+      h += htmlMeta(t);
+    }
+    return h + "</div></div>";
+  }
+
+  function renderFio() {
+    var fio = $("#iaFio");
+    if (!ia.turnos.length) {
+      fio.innerHTML = '<div class="chat-vazio"><span class="chat-av"><svg class="ic"><use href="#i-spark"/></svg></span><h4>O que você quer mudar na escala?</h4>' +
+        "<p>Escreva do seu jeito. A IA monta uma proposta, confere a escala que ficou montada e mostra o que muda no custo e na cobertura. Nada muda sem você aprovar.</p>" +
+        '<div class="ia-chips">' + sugestoesIA().map(function (x) { return '<button type="button" data-sug="' + esc(x) + '">' + esc(x) + "</button>"; }).join("") + "</div></div>";
+    } else fio.innerHTML = ia.turnos.map(htmlTurno).join("");
+    $("#iaNova").hidden = !ia.turnos.length || ia.ocupado;
+    $("#iaEnviar").disabled = ia.ocupado;
+  }
+  function rolarFim() { var f = $("#iaFio"); f.scrollTop = f.scrollHeight; }
+  function atualizar() { renderFio(); rolarFim(); }
+  function autoAltura() { var el = $("#iaPedido"); el.style.height = "auto"; el.style.height = Math.min(160, el.scrollHeight) + "px"; }
+
+  // Saldo de pedidos à IA (só no painel com conta). O servidor é quem manda: aqui só se mostra,
+  // no topo, no menu do perfil e embaixo da caixa de texto do chat.
   var iaRecarga = "";
-  function mostrarSaldo(n, recarga) {
+  function mostrarSaldo(n, recarga, perguntas) {
     if (typeof recarga === "string") iaRecarga = recarga;
+    if (perguntas && typeof perguntas.limite === "number") {
+      ia.perguntas = perguntas;
+      var livres = Math.max(0, perguntas.limite - perguntas.usadas);
+      $("#iaRegra").textContent = "Mudança usa 1 pedido · " + (livres ? livres + (livres === 1 ? " pergunta grátis" : " perguntas grátis") + " hoje" : "perguntas grátis de hoje acabaram");
+    }
     if (typeof n !== "number") return;
-    var q = Math.max(0, n), el = $("#iaSaldo");
-    el.innerHTML = q + (q === 1 ? " pedido restante" : " pedidos restantes") +
-      (q <= 2 && iaRecarga ? ' · <a href="' + esc(iaRecarga) + '" target="_blank" rel="noopener">Recarregar</a>' : "");
-    el.hidden = false;
+    var q = Math.max(0, n), nivel = q === 0 ? "zero" : q <= 2 ? "baixo" : "";
+    ia.saldo = q;
+    var chip = $("#credChip");
+    chip.hidden = false; chip.className = "cred-chip " + nivel; $("#credChipN").textContent = q;
+    chip.title = q + (q === 1 ? " pedido restante" : " pedidos restantes") + " para o ajuste com IA";
+    var el = $("#iaSaldo");
+    el.className = "cred " + nivel;
+    $("#iaSaldoTxt").innerHTML = q + (q === 1 ? " pedido restante" : " pedidos restantes") +
+      (q <= 3 && iaRecarga ? '<a href="' + esc(iaRecarga) + '" target="_blank" rel="noopener">Recarregar</a>' : "");
+    $("#pmCred").hidden = false; $("#pmCredN").textContent = q;
+    var rec = $("#pmCredRec"); rec.hidden = !iaRecarga; if (iaRecarga) rec.href = iaRecarga;
+    var barra = $("#pmCredBarra"); barra.style.width = Math.min(100, q / Math.max(10, q) * 100) + "%"; barra.className = nivel ? "baixo" : "";
   }
   function carregarSaldo() {
     fetch(PAINEL.ia + "/saldo", { credentials: "same-origin" })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) { if (j) mostrarSaldo(j.saldo, j.recarga); })
+      .then(function (j) { if (j) mostrarSaldo(j.saldo, j.recarga, j.perguntas); })
       .catch(function () {});
   }
+
   function semCredito(j) {
-    mostrarSaldo(j.saldo, j.recarga);
+    mostrarSaldo(j.saldo, j.recarga, j.perguntas);
     var a = document.querySelector('#dlgSemCredito [data-sc="recarregar"]');
     a.hidden = !iaRecarga;
     if (iaRecarga) a.href = iaRecarga;
-    iaPasso(1);
     $("#dlgSemCredito").showModal();
   }
 
@@ -1789,102 +1912,185 @@
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); });
   }
 
+  function resumoEscala() {
+    var abertos = DIAS.filter(function (d) { return state.funcionamento[d]; }).length;
+    return state.equipe.length + (state.equipe.length === 1 ? " pessoa" : " pessoas") + " · " + abertos + " dias abertos · jornada de " + VERSOES[state.versao].jornadaSemanal + " h";
+  }
+
   // 1ª chamada: a proposta. Se ela muda a grade, 2ª chamada: a IA confere a escala que o painel montou de
   // verdade (semanas A e B) e corrige o que não ficou como o dono pediu. O texto mostrado é o da conferência.
-  function enviarIA() {
-    var pedido = $("#iaPedido").value.trim();
-    if (!pedido) { toast("Escreva o que você quer mudar."); return; }
-    ia.pedido = pedido;
-    iaCarregando("A IA está montando a proposta. Pode levar até 1 minuto…");
-    iaPasso(2);
-    chamarIA({ pedido: pedido, contexto: contextoIA(), anterior: ia.anterior || undefined, historico: ia.anterior ? ia.historico || undefined : undefined })
+  // origem: o turno cuja proposta a IA deve melhorar (botão "Pedir alternativa melhor").
+  function enviarIA(origem) {
+    if (ia.ocupado) return;
+    var pedido = origem ? origem.pedido : $("#iaPedido").value.trim();
+    if (!pedido) { toast("Escreva o que você quer mudar."); $("#iaPedido").focus(); return; }
+    var anterior = origem ? { proposta: origem.resultado.proposta, avisosDaIA: origem.resultado.avisos, problemasMedidos: origem.problemas,
+      metricasComAProposta: { horasSemCobertura: origem.depois.falta, pontosForaDaLei: origem.depois.calc.erros, custoExtraMes: Math.round(origem.depois.custo), folhaMes: Math.round(origem.depois.folha) } } : undefined;
+    var substituidos = ia.turnos.filter(function (x) { return x.estado === "pendente"; });
+    substituidos.forEach(function (x) { x.estado = "fora"; });
+    var t = { id: ++ia.seq, pedido: pedido, mostrar: origem ? "Quero uma alternativa que resolva os avisos da proposta anterior." : pedido,
+      estado: "rodando", passos: [], t0: Date.now(), aberto: true, saldoAntes: ia.saldo };
+    ia.turnos.push(t);
+    if (!origem) { $("#iaPedido").value = ""; autoAltura(); }
+    passo(t, "ler", "Lendo a sua escala", resumoEscala(), "ok");
+    passo(t, "proposta", origem ? "Montando uma alternativa" : "Analisando o seu pedido", "Lê a escala, a equipe, a memória do negócio e as regras da CLT", "rodando");
+    passo(t, "conferir", "Conferir a escala montada", "", "fila");
+    passo(t, "medir", "Comparar antes e depois", "", "fila");
+    ia.ocupado = true; atualizar();
+    ia.relogio = setInterval(function () {
+      document.querySelectorAll("#iaFio [data-rel]").forEach(function (el) { el.textContent = tempo(Date.now() - Number(el.dataset.rel)); });
+    }, 1000);
+    chamarIA({ pedido: pedido, contexto: contextoIA(), anterior: anterior, historico: origem ? origem.historico : undefined })
       .then(function (x) {
         if (x.status === 401) { location.href = PAINEL.login; return; }
-        if (x.status === 402 && x.j.semCredito) return semCredito(x.j);
-        if (!x.ok || !x.j.resultado) { toast(x.j.erro || "A IA não respondeu. Tente de novo."); iaPasso(1); return; }
+        if (x.status === 402 && x.j.semCredito) {
+          // Nada foi cobrado: o turno sai da conversa e o texto volta para a caixa, para mandar depois da recarga.
+          ia.turnos = ia.turnos.filter(function (z) { return z !== t; });
+          if (!origem) { $("#iaPedido").value = pedido; autoAltura(); }
+          fim(t, "semCredito");
+          return semCredito(x.j);
+        }
+        if (!x.ok || !x.j.resultado) { passo(t, "proposta", "A IA não respondeu", "", "erro"); t.erro = x.j.erro || "A IA não respondeu. Tente de novo."; return fim(t, "erro"); }
         var r1 = x.j.resultado, p1 = r1.proposta || {};
-        ia.historico = x.j.historico; ia.anotou = !!x.j.anotou; ia.rodada = x.j.rodada;
-        mostrarSaldo(x.j.saldo);
-        if (r1.entendeu === false || (!p1.remontar && !(p1.celulas || []).length && !aplicarProposta(p1).pendente)) return mostrarIA(r1);
+        t.historico = x.j.historico; t.anotou = !!x.j.anotou; t.rodada = x.j.rodada;
+        mostrarSaldo(x.j.saldo, undefined, x.j.perguntas);
+        // Pergunta: a IA só responde, sem proposta para conferir nem aplicar.
+        if (r1.tipo === "resposta" && r1.entendeu !== false) {
+          passo(t, "proposta", "Pergunta respondida", "Sem mudar nada na escala", "ok");
+          t.passos = t.passos.filter(function (p) { return p.k === "ler" || p.k === "proposta"; });
+          t.resultado = r1; t.pergunta = x.j.pergunta || { gratis: false };
+          // Uma pergunta não substitui a proposta que estava esperando: ela volta a poder ser aplicada.
+          substituidos.forEach(function (z) { if (z.estado === "fora") z.estado = "pendente"; });
+          return fim(t, "resposta");
+        }
+        var nm = (r1.mudancas || []).length;
+        passo(t, "proposta", origem ? "Alternativa montada" : "Proposta montada", r1.entendeu === false ? "Não ficou claro o que mudar" : nm + (nm === 1 ? " mudança" : " mudanças"), "ok");
+        if (r1.entendeu === false || (!p1.remontar && !(p1.celulas || []).length && !aplicarProposta(p1).pendente)) {
+          t.passos = t.passos.filter(function (p) { return p.k !== "conferir"; });
+          return concluir(t, r1);
+        }
         var previa1 = aplicarProposta(p1);
-        iaCarregando("Conferindo a escala montada com a proposta…");
-        return chamarIA({ pedido: pedido, contexto: contextoIA(), historico: ia.historico, rodada: ia.rodada, conferir: {
+        passo(t, "conferir", "Conferindo a escala montada", "Monta a grade das semanas A e B e confere se ficou como você pediu", "rodando");
+        atualizar();
+        return chamarIA({ pedido: pedido, contexto: contextoIA(), historico: t.historico, rodada: t.rodada, conferir: {
           suaPropostaAnterior: { resumo: r1.resumo, mudancas: r1.mudancas, avisos: r1.avisos },
           equipeDepois: previa1.equipe.map(function (p) { return { id: p.id, nome: p.nome, horas: parcial(p, previa1.versao) ? Number(p.horas) : 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [] }; }),
           semanas: semanasIA(previa1)
         } }).then(function (y) {
           if (y.status === 401) { location.href = PAINEL.login; return; }
-          mostrarSaldo(y.j && y.j.saldo);
+          mostrarSaldo(y.j && y.j.saldo, undefined, y.j && y.j.perguntas);
           if (!y.ok || !y.j.resultado || y.j.resultado.entendeu === false) {
+            passo(t, "conferir", "Não deu para conferir", "Confira a grade antes de aplicar", "erro");
             r1.avisos = (r1.avisos || []).concat(["Não deu para conferir a escala montada com a proposta. Confira a grade antes de aplicar."]);
-            return mostrarIA(r1);
+            return concluir(t, r1);
           }
           var r2 = y.j.resultado, extra = ((r2.proposta || {}).celulas || []);
+          passo(t, "conferir", "Escala conferida", extra.length ? "Corrigiu " + extra.length + (extra.length === 1 ? " ponto da grade" : " pontos da grade") : "Tudo como você pediu, nada a corrigir", "ok");
           // A proposta final reproduz a prévia conferida: a 1ª (com remontar) e depois as células da conferência.
-          mostrarIA({ entendeu: true, resumo: r2.resumo, mudancas: (r2.mudancas || []).length ? r2.mudancas : r1.mudancas, avisos: r2.avisos || [],
+          concluir(t, { entendeu: true, resumo: r2.resumo, mudancas: (r2.mudancas || []).length ? r2.mudancas : r1.mudancas, avisos: r2.avisos || [],
             proposta: Object.assign({}, p1, { celulas: (p1.celulas || []).concat(extra) }), conferida: true });
         });
       })
-      .catch(function () { toast("Sem conexão com a IA. Tente de novo."); iaPasso(1); });
+      .catch(function () {
+        t.passos.forEach(function (p) { if (p.st === "rodando") { p.st = "erro"; p.ms = Date.now() - p.t0; } });
+        t.erro = "Sem conexão com a IA. Tente de novo."; fim(t, "erro");
+      });
   }
 
-  function iaCarregando(txt) { var el = $("#iaCarregando span:last-child"); if (el) el.textContent = txt; }
-
-  function mostrarIA(r) {
-    ia.resultado = r;
-    var h = '<p class="ia-resumo">' + citar(esc(r.resumo || "")) + "</p>";
-    if (r.entendeu === false) { $("#iaResultado").innerHTML = h; ia.piorou = false; iaPasso(3); return; }
-    ia.previa = aplicarProposta(r.proposta || {});
-    var a = metricas(state), b = metricas(ia.previa), auto = problemas(a, b);
-    ia.piorou = auto.length > 0 || (r.avisos || []).length > 0;
-    ia.problemas = auto;
-    ia.depois = b;
-    if ((r.mudancas || []).length) h += '<p class="rot">O que muda</p><ul class="ia-mud">' + r.mudancas.map(function (x) { return "<li>" + citar(esc(x)) + "</li>"; }).join("") + "</ul>";
-    var linha = function (rot, va, vb, fmt, menorMelhor) {
-      var cls = Math.abs(vb - va) < 0.01 ? "" : (vb < va) === menorMelhor ? " melhor" : " pior";
-      return "<tr><td>" + rot + "</td><td>" + fmt(va) + '</td><td class="' + cls.trim() + '">' + fmt(vb) + "</td></tr>";
-    };
-    h += '<p class="rot">Antes e depois</p><table class="ia-comp"><thead><tr><th></th><th>Hoje</th><th>Com a proposta</th></tr></thead><tbody>' +
-      linha("Horas sem cobertura/semana", a.falta, b.falta, horas, true) +
-      linha("Pontos fora da lei", a.erros, b.erros, String, true) +
-      linha("Custo extra para cobrir (mês)", a.custo, b.custo, brl, true) +
-      linha("Folha da equipe (mês)", a.folha, b.folha, brl, true) + "</tbody></table>";
-    var avisos = (r.avisos || []).concat(auto.length ? ["A proposta deixa " + auto.join(", ") + "."] : []);
-    if (avisos.length) h += '<div class="ia-avisos"><b>Atenção</b><ul>' + avisos.map(function (x) { return "<li>" + citar(esc(x)) + "</li>"; }).join("") + "</ul></div>";
-    if (ia.previa.pendente) h += '<p class="muted sm">A grade atual fica como está; depois de aplicar, use “Montar a escala de novo” para redistribuir os turnos.</p>';
-    if (ia.anotou) h += '<p class="muted sm" id="iaAnotou">A IA guardou o que você contou sobre o negócio para os próximos pedidos.</p>';
-    $("#iaResultado").innerHTML = h;
-    iaPasso(3);
+  function concluir(t, r) {
+    t.resultado = r;
+    if (r.entendeu !== false) {
+      t.previa = aplicarProposta(r.proposta || {});
+      t.antes = metricas(state); t.depois = metricas(t.previa);
+      t.problemas = problemas(t.antes, t.depois);
+      t.piorou = t.problemas.length > 0 || (r.avisos || []).length > 0;
+      var dc = t.depois.custo - t.antes.custo, df = t.depois.falta - t.antes.falta;
+      passo(t, "medir", "Comparado antes e depois",
+        (Math.abs(df) < 0.01 ? "Cobertura igual" : df < 0 ? "Cobre " + horas(-df) + " a mais" : "Descobre " + horas(df)) + " · " +
+        (Math.abs(dc) < 1 ? "custo igual" : dc < 0 ? brl(-dc) + "/mês a menos" : brl(dc) + "/mês a mais"), "ok");
+    } else t.passos = t.passos.filter(function (p) { return p.k !== "medir"; });
+    fim(t, r.entendeu === false ? "naoEntendeu" : "pendente");
   }
+
+  function fim(t, estado) {
+    t.passos = t.passos.filter(function (p) { return p.st !== "fila"; });
+    t.estado = estado; t.ms = Date.now() - t.t0; t.aberto = false;
+    if (typeof t.saldoAntes === "number" && typeof ia.saldo === "number" && estado !== "semCredito" && estado !== "erro") t.gasto = Math.max(0, t.saldoAntes - ia.saldo);
+    clearInterval(ia.relogio); ia.ocupado = false;
+    atualizar();
+    if (estado !== "semCredito") $("#iaPedido").focus();
+  }
+
+  // Depois de aplicar a proposta: a tela rola até a grade, as pessoas e dias que mudaram acendem um a um
+  // e os indicadores do topo pulsam, para o dono ver onde a escala mudou.
+  function animarMudancas(antes, depois) {
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var v = depois.versao, sem = depois.semana;
+    var ga = (antes.escalas[v] || {})[sem] || {}, gb = (depois.escalas[v] || {})[sem] || {};
+    var mudou = [];
+    depois.equipe.forEach(function (p) {
+      DIAS.forEach(function (d) {
+        if (JSON.stringify((ga[p.id] || {})[d] || null) !== JSON.stringify((gb[p.id] || {})[d] || null)) mudou.push([p.id, d]);
+      });
+    });
+    var grade = $("#grid");
+    if (grade) grade.closest(".grid-box").scrollIntoView({ behavior: "smooth", block: "center" });
+    document.querySelectorAll("#kpis .kpi").forEach(function (k, i) {
+      k.classList.remove("kpi-pulsa"); void k.offsetWidth;
+      k.style.animationDelay = i * 80 + "ms"; k.classList.add("kpi-pulsa");
+    });
+    var els = [];
+    mudou.forEach(function (m) { document.querySelectorAll('#grid [data-p="' + m[0] + '"][data-d="' + m[1] + '"]').forEach(function (el) { els.push(el); }); });
+    // Ordem de leitura da grade: de cima para baixo, da esquerda para a direita.
+    els.sort(function (a, b) { var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return ra.top - rb.top || ra.left - rb.left; });
+    els.slice(0, 80).forEach(function (el, i) {
+      el.classList.remove("mudou"); void el.offsetWidth;
+      el.style.animationDelay = 250 + Math.min(i * 45, 1800) + "ms";
+      el.classList.add("mudou");
+      el.addEventListener("animationend", function () { el.classList.remove("mudou"); el.style.animationDelay = ""; }, { once: true });
+    });
+    if (mudou.length) toast(mudou.length + (mudou.length === 1 ? " dia mudou na escala" : " dias mudaram na escala") + " (destacados na grade)");
+  }
+
+  function turnoDe(el) { var id = Number(el.dataset.t); return ia.turnos.filter(function (x) { return x.id === id; })[0]; }
 
   function ligarIA() {
     if (!PAINEL || !PAINEL.ia) return;
     $("#btnIA").hidden = false;
     $("#btnIA").addEventListener("click", function () { abrirIA(""); });
-    $("#iaChips").addEventListener("click", function (e) { var b = e.target.closest("[data-sug]"); if (b) { $("#iaPedido").value = b.dataset.sug; $("#iaPedido").focus(); } });
+    $("#credChip").addEventListener("click", function () { abrirIA(""); });
+    $("#iaFechar").addEventListener("click", function () { $("#dlgIA").close(); });
+    $("#iaNova").addEventListener("click", function () { if (ia.ocupado) return; ia.turnos = []; renderFio(); $("#iaPedido").focus(); });
+    $("#iaEnviar").addEventListener("click", function () { enviarIA(); });
+    $("#iaPedido").addEventListener("input", autoAltura);
+    $("#iaPedido").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); enviarIA(); } });
     window.addEventListener("focus", function () { if ($("#dlgIA").open) carregarSaldo(); });
     $("#dlgSemCredito").addEventListener("click", function (e) { if (e.target.closest('[data-sc="recarregar"]')) $("#dlgSemCredito").close(); });
-    $("#iaPedido").addEventListener("keydown", function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) enviarIA(); });
-    $("#iaActs").addEventListener("click", function (e) {
-      var b = e.target.closest("[data-ia]"); if (!b) return;
-      var acao = b.dataset.ia;
-      if (acao === "enviar") enviarIA();
-      else if (acao === "voltar") { ia.anterior = null; iaPasso(1); }
-      else if (acao === "melhorar") {
-        ia.anterior = { proposta: ia.resultado.proposta, avisosDaIA: ia.resultado.avisos, problemasMedidos: ia.problemas,
-          metricasComAProposta: { horasSemCobertura: ia.depois.falta, pontosForaDaLei: ia.depois.calc.erros, custoExtraMes: Math.round(ia.depois.custo), folhaMes: Math.round(ia.depois.folha) } };
-        $("#iaPedido").value = ia.pedido;
-        enviarIA();
-      } else if (acao === "aplicar") {
+    $("#iaFio").addEventListener("toggle", function (e) { var d = e.target.closest && e.target.closest("[data-turno]"); if (d) { var t = turnoDe({ dataset: { t: d.dataset.turno } }); if (t) t.aberto = d.open; } }, true);
+    $("#iaFio").addEventListener("click", function (e) {
+      var s = e.target.closest("[data-sug]"); if (s) { $("#iaPedido").value = s.dataset.sug; autoAltura(); $("#iaPedido").focus(); return; }
+      var b = e.target.closest("[data-ia]"); if (!b || ia.ocupado) return;
+      var t = turnoDe(b), acao = b.dataset.ia; if (!t) return;
+      if (acao === "melhorar") enviarIA(t);
+      else if (acao === "sugestao") { $("#iaPedido").value = t.resultado.sugestao; autoAltura(); enviarIA(); }
+      else if (acao === "repetir") { $("#iaPedido").value = t.pedido; ia.turnos = ia.turnos.filter(function (x) { return x !== t; }); enviarIA(); }
+      else if (acao === "descartar") { t.estado = "descartada"; renderFio(); }
+      else if (acao === "desfazer") { desfazer(); renderFio(); }
+      else if (acao === "aplicar") {
         desfazerSnap = JSON.stringify(state);
-        state = ia.previa;
+        t.snap = desfazerSnap; t.estado = "aplicada";
+        var antes = state;
+        state = t.previa;
         salvar(); renderCfg(); render();
+        renderFio();
         $("#dlgIA").close();
+        animarMudancas(antes, state);
         // Memória do caso: a IA fica sabendo, nos próximos pedidos, que esta proposta foi aplicada.
-        if (ia.historico) fetch(PAINEL.ia + "/aplicado", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: ia.historico }) }).catch(function () {});
-        dica("<b>Proposta da IA aplicada.</b> " + esc(ia.resultado.resumo || ""), '<button type="button" class="b ghost sm" data-dica="desfazer">Desfazer</button>');
+        if (t.historico) fetch(PAINEL.ia + "/aplicado", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: t.historico }) }).catch(function () {});
+        dica("<b>Proposta da IA aplicada.</b> " + esc(t.resultado.resumo || ""), '<button type="button" class="b ghost sm" data-dica="desfazer">Desfazer</button>');
       }
     });
+    carregarSaldo();
   }
 
   function ligarEdicao() {

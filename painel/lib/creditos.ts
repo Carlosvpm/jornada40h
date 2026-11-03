@@ -43,6 +43,27 @@ export const RECARGA_URL = process.env.RECARGA_URL || "";
 
 export type Etapa = "proposta" | "melhorar" | "conferencia";
 
+// Perguntas sobre a escala (a IA responde sem propor mudança) são grátis até PERGUNTAS_DIA por dia (dia de Brasília).
+// A rodada nasce como "proposta" (só se sabe que é pergunta depois da resposta) e vira "pergunta" (grátis, crédito
+// estornado) ou "pergunta_paga" (passou do limite: fica cobrada como um pedido).
+export const PERGUNTAS_DIA = 20;
+export function perguntasHoje(usuarioId: number): number {
+  const r = getDb().prepare(
+    "SELECT COUNT(*) AS n FROM uso_ia WHERE usuario_id = ? AND etapa = 'pergunta' AND ok = 1 AND date(criado_em, '-3 hours') = date('now', '-3 hours')"
+  ).get(usuarioId) as { n: number };
+  return r.n;
+}
+/** Fecha a rodada como pergunta: grátis (estorna o crédito, se cobrado) enquanto houver cota no dia. */
+export function marcarPergunta(usuarioId: number, rodada: number): { gratis: boolean } {
+  const d = getDb();
+  return d.transaction(() => {
+    const gratis = perguntasHoje(usuarioId) < PERGUNTAS_DIA;
+    d.prepare("UPDATE uso_ia SET etapa = ? WHERE id = ? AND usuario_id = ?").run(gratis ? "pergunta" : "pergunta_paga", rodada, usuarioId);
+    if (gratis) estornarRodada(usuarioId, rodada);
+    return { gratis };
+  }).immediate();
+}
+
 /**
  * Abre uma rodada de uso da IA. Com cobrança, a checagem do saldo e o débito de 1 crédito ficam na mesma
  * transação (duas abas com saldo 1: só uma passa). A ref do livro-razão é "ia:r<rodada>", o id nunca é reaproveitado.

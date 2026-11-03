@@ -4,7 +4,7 @@ import { usuarioAtual, ipDe } from "@/lib/auth";
 import { limitar } from "@/lib/limite";
 import { ErroIA, iaAtiva, pedirAjuste } from "@/lib/ia";
 import { getDb } from "@/lib/db";
-import { abrirRodada, estornarRodada, fecharRodada, RECARGA_URL, reservarConferencia, saldoDe, usarMelhoriaGratis, type Etapa } from "@/lib/creditos";
+import { abrirRodada, estornarRodada, fecharRodada, marcarPergunta, PERGUNTAS_DIA, perguntasHoje, RECARGA_URL, reservarConferencia, saldoDe, usarMelhoriaGratis, type Etapa } from "@/lib/creditos";
 import { atualizarCaso, atualizarResumo, memoriaDe, registrarPedido } from "@/lib/memoria";
 
 export const maxDuration = 120;
@@ -13,6 +13,7 @@ const LIMITE = 120_000; // bytes do corpo (pedido + dados da escala)
 
 // Ajuste com IA. Corpo: { pedido, contexto, anterior?, conferir?, historico?, rodada? }. Devolve a proposta (+ rodada e saldo); quem aplica é o navegador.
 // Cada pedido do dono custa 1 crédito (lib/creditos.ts); a conferência é grátis, uma por rodada.
+// Pergunta (a IA responde tipo "resposta", sem propor mudança): grátis até PERGUNTAS_DIA por dia, mesmo sem saldo.
 // Cada pedido do dono faz até 2 chamadas: a proposta e a conferência sobre a escala montada.
 // A 1ª leva a memória do caso, grava o pedido (devolve historico, o id) e o que a IA anotou sobre o negócio;
 // a conferência atualiza o resumo desse id. Conferência e melhoria usam o texto gravado desse pedido (o "pedido" do corpo
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
   let rodadaUso: number; // a linha de uso_ia desta chamada (telemetria)
   let etapa: Etapa = "proposta";
   let melhoriaGratis = false;
+  let soPergunta = false;
   let conferirCorpo: unknown = corpo.conferir;
   if (conferir) {
     const gravado = rodadaPedida
@@ -72,9 +74,15 @@ export async function POST(req: Request) {
     if (!pedido) return NextResponse.json({ erro: "Escreva o que você quer mudar." }, { status: 400 });
     etapa = melhorar ? "melhorar" : "proposta";
     melhoriaGratis = melhorar && usarMelhoriaGratis(u.id, pedidoId);
-    const aberta = abrirRodada(u.id, etapa, !melhoriaGratis);
+    let aberta = abrirRodada(u.id, etapa, !melhoriaGratis);
+    // Sem saldo, um pedido novo ainda pode ser pergunta (grátis): vai sem cobrar enquanto houver cota no dia.
+    // Se a IA devolver uma proposta, a resposta é descartada e o dono recebe o 402 (ver soPergunta abaixo).
+    if ("semCredito" in aberta && etapa === "proposta" && perguntasHoje(u.id) < PERGUNTAS_DIA) {
+      soPergunta = true;
+      aberta = abrirRodada(u.id, etapa, false);
+    }
     if ("semCredito" in aberta) {
-      return NextResponse.json({ erro: "Seus pedidos à IA acabaram.", semCredito: true, saldo: aberta.saldo, recarga: RECARGA_URL }, { status: 402 });
+      return NextResponse.json({ erro: "Seus pedidos à IA acabaram.", semCredito: true, saldo: aberta.saldo, recarga: RECARGA_URL, perguntas: cotaPerguntas(u.id) }, { status: 402 });
     }
     rodada = rodadaUso = aberta.rodada;
   }
@@ -84,6 +92,16 @@ export async function POST(req: Request) {
     const memoria = conferir ? undefined : memoriaDe(u.id);
     const { resultado, uso } = await pedirAjuste({ pedido, contexto: corpo.contexto, anterior: corpo.anterior, conferir: conferirCorpo, memoria });
     const resumo = String((resultado as { resumo?: unknown })?.resumo || "");
+    // Pergunta: só vale numa proposta nova (na conferência e na melhoria o tipo é sempre proposta).
+    const ehPergunta = etapa === "proposta" && (resultado as { tipo?: unknown })?.tipo === "resposta";
+    if (soPergunta && !ehPergunta) {
+      // A chamada já custou: conta na cota de perguntas do dia, senão quem está sem saldo chamaria a IA sem limite.
+      marcarPergunta(u.id, rodadaUso);
+      fecharRodada(rodadaUso, uso, Date.now() - t0);
+      return NextResponse.json({ erro: "Seus pedidos à IA acabaram.", semCredito: true, saldo: saldoDe(u.id), recarga: RECARGA_URL, perguntas: cotaPerguntas(u.id) }, { status: 402 });
+    }
+    let pergunta: { gratis: boolean } | undefined;
+    if (ehPergunta) pergunta = marcarPergunta(u.id, rodadaUso);
     let historico: number | undefined, anotou = false;
     if (conferir) {
       atualizarResumo(u.id, pedidoId, resumo); // o pedido da rodada conferida, não o "historico" do corpo
@@ -96,7 +114,7 @@ export async function POST(req: Request) {
       anotou = atualizarCaso(u.id, String((resultado as { sobreONegocio?: unknown })?.sobreONegocio || ""));
     }
     fecharRodada(rodadaUso, uso, Date.now() - t0, historico);
-    return NextResponse.json({ resultado, historico, anotou, rodada, saldo: saldoDe(u.id) });
+    return NextResponse.json({ resultado, historico, anotou, rodada, saldo: saldoDe(u.id), perguntas: cotaPerguntas(u.id), ...(pergunta ? { pergunta } : {}) });
   } catch (e) {
     // A IA não entregou nada: devolve o crédito cobrado e não gasta a conferência nem a melhoria grátis.
     if (conferir) getDb().prepare("UPDATE uso_ia SET conferida = 0 WHERE id = ? AND usuario_id = ?").run(rodada, u.id);
@@ -122,4 +140,9 @@ function conferirDoServidor(conferir: unknown, resumoGravado: string): unknown {
   const frases = (v: unknown) => (Array.isArray(v) ? v.filter(x => typeof x === "string").slice(0, 20).map(x => (x as string).slice(0, 300)) : []);
   const ant = c.suaPropostaAnterior && typeof c.suaPropostaAnterior === "object" ? c.suaPropostaAnterior : {};
   return { ...c, suaPropostaAnterior: { resumo: resumoGravado, mudancas: frases(ant.mudancas), avisos: frases(ant.avisos) } };
+}
+
+// Perguntas grátis do dia: quantas já foram e o limite (o navegador mostra quantas restam).
+function cotaPerguntas(usuarioId: number) {
+  return { usadas: perguntasHoje(usuarioId), limite: PERGUNTAS_DIA };
 }

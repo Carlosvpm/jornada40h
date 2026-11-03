@@ -87,6 +87,12 @@ try {
   ok(!JSON.stringify(db.prepare("SELECT * FROM codigos").all()).match(/\b\d{6}\b/), "banco não guarda código em claro");
 
   console.log("3. edição salva no banco");
+  // Ao entrar, o painel abre a revisão (ou o aviso do almoço) 300 ms depois de carregar: fecha antes de editar.
+  await page.waitForTimeout(600);
+  await page.evaluate(() => document.querySelectorAll("dialog[open]").forEach(d => d.close()));
+  // Fechar a revisão grava "pulada" na sessão; o teste quer que ela volte depois do reload.
+  await page.waitForTimeout(50);
+  await page.evaluate(() => sessionStorage.removeItem("j40h:revisao-pulada"));
   await page.locator("#grid button.cell.turno").first().click();
   await page.locator("#dlgForm input[value=folga]").check();
   await page.click("#dlgOk");
@@ -104,20 +110,24 @@ try {
   console.log("3b. ajuste com IA (resposta simulada)");
   ok(await page.isVisible("#btnIA"), "botão Ajuste com IA aparece no painel");
   await page.click("#btnIA");
-  await page.waitForFunction(() => /^10 pedidos restantes/.test(document.querySelector("#iaSaldo").textContent), null, { timeout: 5000 });
-  ok(await page.isVisible("#iaSaldo"), "ao abrir o diálogo da IA aparece o saldo do banco (10 pedidos restantes)");
+  await page.waitForFunction(() => /^10 pedidos restantes/.test(document.querySelector("#iaSaldoTxt").textContent), null, { timeout: 5000 });
+  ok(await page.isVisible("#iaSaldo"), "ao abrir o chat da IA aparece o saldo do banco (10 pedidos restantes)");
+  ok((await page.textContent("#credChipN")) === "10" && await page.isVisible("#credChip"), "o saldo também aparece no topo do painel");
   await page.fill("#iaPedido", "A primeira pessoa não pode trabalhar aos sábados");
-  await page.click('[data-ia="enviar"]');
-  await page.waitForSelector("#iaResultado:not([hidden]) .ia-comp", { timeout: 15000 });
-  ok(await page.evaluate(() => document.querySelector("#iaSaldo").textContent) === "9 pedidos restantes", "depois de um pedido o saldo cai 1 (a conferência não desconta)");
+  await page.click("#iaEnviar");
+  await page.waitForSelector("#iaFio .prop .ia-comp", { timeout: 15000 });
+  ok(await page.textContent("#iaSaldoTxt") === "9 pedidos restantes", "depois de um pedido o saldo cai 1 (a conferência não desconta)");
+  ok(await page.locator("#iaFio .passo.ok").count() === 4, "o chat mostra as 4 etapas: ler, propor, conferir, comparar");
+  ok(/Usou 1 pedido/.test(await page.textContent("#iaFio .msg-meta")), "a resposta diz quanto custou");
   const usoCli = db.prepare("SELECT s.etapa, s.ok FROM uso_ia s JOIN usuarios u ON u.id = s.usuario_id WHERE u.email = 'cliente@exemplo.com' ORDER BY s.id").all();
   ok(usoCli.length === 2 && usoCli[1].etapa === "conferencia" && usoCli[1].ok === 1, "o navegador manda a rodada: a conferência passa (não dá 409)");
-  ok(/sábado/.test(await page.textContent("#iaResultado")), "proposta mostra resumo e o que muda");
-  ok(await page.locator("#iaResultado .ia-comp tbody tr").count() === 4, "comparação antes e depois");
+  ok(/sábado/.test(await page.textContent("#iaFio")), "proposta mostra resumo e o que muda");
+  ok(await page.locator("#iaFio .ia-comp tbody tr").count() === 4, "comparação antes e depois");
   const antesIA = await page.evaluate(() => JSON.stringify(window.__j40h.state.equipe));
-  await page.click('[data-ia="aplicar"]');
+  await page.click('.prop-acts [data-ia="aplicar"]');
   const eq = await page.evaluate(() => window.__j40h.state.equipe);
   ok(eq[0].naoPode.includes("sab") && JSON.stringify(eq) !== antesIA, "aplicar grava a proposta");
+  ok(!(await page.evaluate(() => document.querySelector("#dlgIA").open)), "aplicar fecha o chat para mostrar a escala");
   await page.click('#iaDica [data-dica="desfazer"]');
   ok(await page.evaluate(() => JSON.stringify(window.__j40h.state.equipe)) === antesIA, "desfazer volta ao que era");
 
@@ -127,9 +137,24 @@ try {
   ok(/4 pessoas trabalhando ao mesmo tempo/.test(await page.textContent("#duvidas")), "4 ao mesmo tempo com equipe de 4 vira pergunta");
   await page.fill("#duvTxt", "São 4 no total, ficam 2 ao mesmo tempo");
   await page.click('#duvidas [data-duv="enviar"]');
-  await page.waitForSelector("#iaResultado:not([hidden]) .ia-comp", { timeout: 15000 });
-  ok(/Minha resposta: São 4 no total/.test(await page.inputValue("#iaPedido")), "resposta vai para a IA com a pergunta junto");
-  await page.click('#iaActs [value="cancel"]');
+  await page.waitForFunction(() => document.querySelectorAll("#iaFio .prop .ia-comp").length >= 2, null, { timeout: 15000 });
+  ok(/Minha resposta: São 4 no total/.test(await page.locator("#iaFio .msg-eu").last().textContent()), "resposta vai para a IA com a pergunta junto");
+  ok(await page.locator("#iaFio .prop-est.aplicada, #iaFio .prop-est.fora").count() >= 1, "a proposta anterior continua na conversa, com o estado dela");
+  await page.click("#iaFechar");
+
+  console.log("3c1. pergunta no chat: resposta grátis, sem proposta");
+  await page.click("#btnIA");
+  await page.click("#iaNova");
+  const saldoAntesP = await page.textContent("#iaSaldoTxt");
+  await page.fill("#iaPedido", "Quem trabalha no sábado?");
+  await page.press("#iaPedido", "Enter");
+  await page.waitForSelector("#iaFio .msg-resp", { timeout: 15000 });
+  ok(await page.locator("#iaFio .prop").count() === 0 && await page.locator("#iaFio .passo.ok").count() === 2, "pergunta vira resposta em texto, sem cartão de proposta nem conferência");
+  ok(await page.textContent("#iaSaldoTxt") === saldoAntesP, "pergunta não gasta pedido");
+  ok(/Pergunta grátis · restam 19 hoje/.test(await page.textContent("#iaFio .msg-meta")) && /19 perguntas grátis hoje/.test(await page.textContent("#iaRegra")), "o chat mostra quantas perguntas grátis restam no dia");
+  ok(await page.locator("#iaFio .msg-resp li").count() === 3, "linhas com \"- \" viram lista");
+  ok(await page.isVisible('#iaFio [data-ia="sugestao"]'), "a resposta oferece montar a mudança sugerida");
+  await page.click("#iaFechar");
   await page.click('#duvidas [data-duv="ok"]');
   ok(await page.isHidden("#duvidas") && await page.evaluate(() => !!window.__j40h.state.duvidasOk["pessoas:4:4"]), "\"Está certo assim\" some com o card e fica gravado");
   await page.evaluate(() => { const s = window.__j40h.state; s.funcionamento.seg.pessoas = 2; delete s.duvidasOk; window.__j40h.render(); });
@@ -138,12 +163,13 @@ try {
   const pedidosIA = () => db.prepare("SELECT p.pedido, p.resumo, p.aplicado FROM pedidos_ia p JOIN usuarios u ON u.id = p.usuario_id WHERE u.email = 'cliente@exemplo.com' ORDER BY p.id").all();
   await espera(() => pedidosIA()[0]?.aplicado === 1);
   const mem = pedidosIA();
-  ok(mem.length === 2 && /não pode trabalhar aos sábados/.test(mem[0].pedido) && mem[0].resumo, "cada pedido à IA fica guardado com o resumo (a conferência não duplica)");
+  ok(mem.length === 3 && /não pode trabalhar aos sábados/.test(mem[0].pedido) && mem[0].resumo, "cada pedido à IA fica guardado com o resumo (a conferência não duplica)");
+  ok(mem[2].pedido === "Quem trabalha no sábado?" && mem[2].resumo && mem[2].aplicado === 0, "a pergunta também fica na memória, com o resumo da resposta");
   ok(mem[0].aplicado === 1 && mem[1].aplicado === 0, "fica marcado o que foi aplicado e o que foi descartado");
   ok(db.prepare("SELECT caso FROM usuarios WHERE email = 'cliente@exemplo.com'").get().caso === "Ana não trabalha aos sábados.", "a IA atualiza o briefing (memória do negócio) quando o dono conta algo novo");
   ok((await liberar("cliente@exemplo.com", { caso: "Observações: a Ana estuda à noite." })).ok, "admin grava o que se sabe do negócio");
   const adm = await (await fetch(BASE + "/painel/api/admin/escala?email=cliente@exemplo.com", { headers: { "x-admin-key": ADMIN_KEY } })).json();
-  ok(adm.memoria?.sobreONegocio === "Observações: a Ana estuda à noite." && adm.memoria.pedidosAnteriores.length === 2 && adm.memoria.pedidosAnteriores[0].aplicado === true, "admin lê a memória do caso junto com a escala");
+  ok(adm.memoria?.sobreONegocio === "Observações: a Ana estuda à noite." && adm.memoria.pedidosAnteriores.length === 3 && adm.memoria.pedidosAnteriores[0].aplicado === true, "admin lê a memória do caso junto com a escala");
   ok((await post("/painel/api/ia/aplicado", { id: 1 })).status === 401, "marcar aplicado sem login → 401");
 
   console.log("3c3. créditos da IA: inclusos, recarga e pendentes");
@@ -269,8 +295,8 @@ try {
   const nUso = uso(A).length;
   const z = await ia(cookieA, {});
   const zj = await z.json();
-  ok(z.status === 402 && zj.semCredito === true && zj.saldo === 0 && typeof zj.erro === "string" && "recarga" in zj, "sem saldo → 402 com semCredito, saldo e recarga");
-  ok(uso(A).length === nUso, "402 não cria linha em uso_ia");
+  ok(z.status === 402 && zj.semCredito === true && zj.saldo === 0 && typeof zj.erro === "string" && "recarga" in zj && zj.perguntas?.limite === 20, "sem saldo, pedido de mudança → 402 com semCredito, saldo, recarga e a cota de perguntas");
+  ok(uso(A).length === nUso + 1 && uso(A).at(-1).etapa === "pergunta", "sem saldo a IA é chamada (podia ser pergunta) e a chamada conta na cota de perguntas do dia");
   const cz = await ia(cookieA, { conferir: { grade: 1 }, rodada: p1.rodada });
   ok(cz.status === 409, "sem saldo a conferência já usada segue 409 (não 402)");
 
@@ -281,42 +307,74 @@ try {
   const st = par.map(r => r.status).sort();
   ok(st[0] === 200 && st[1] === 402 && saldoEmail(A) === 0, "duas propostas em paralelo com saldo 1 → uma 200 e uma 402");
 
+  // Perguntas: grátis até 20 por dia, mesmo sem saldo; passou do limite, cobra 1 pedido (sem saldo, 402 sem chamar a IA).
+  limpaLimites();
+  const perguntasDe = email => uso(email).filter(r => r.etapa === "pergunta" && r.ok === 1).length;
+  const nPerg = perguntasDe(A);
+  const pq = await ia(cookieA, { pedido: "Quem trabalha no sábado?" });
+  const pqj = await pq.json();
+  ok(pq.status === 200 && pqj.resultado.tipo === "resposta" && pqj.pergunta?.gratis === true && saldoEmail(A) === 0, "sem saldo, a pergunta é respondida de graça");
+  ok(perguntasDe(A) === nPerg + 1 && pqj.perguntas.usadas === nPerg + 1 && pqj.perguntas.limite === 20, "a pergunta conta na cota do dia");
+  const sq = await (await fetch(BASE + "/painel/api/ia/saldo", { headers: { cookie: cookieA } })).json();
+  ok(sq.perguntas?.usadas === nPerg + 1 && sq.perguntas?.limite === 20, "a rota de saldo devolve a cota de perguntas");
+  const idA = db.prepare("SELECT id FROM usuarios WHERE email = ?").get(A).id;
+  const enche = dbw.prepare("INSERT INTO uso_ia (usuario_id, etapa, ok) VALUES (?, 'pergunta', 1)");
+  for (let i = perguntasDe(A); i < 20; i++) enche.run(idA);
+  const nUso2 = uso(A).length;
+  const pq2 = await ia(cookieA, { pedido: "Quem trabalha no sábado?" });
+  ok(pq2.status === 402 && uso(A).length === nUso2, "sem saldo e sem cota, nem chama a IA (402)");
+  await credAdm({ email: A, delta: 1, tipo: "ajuste", ref: "pergunta-paga-a" });
+  limpaLimites();
+  const pq3 = await ia(cookieA, { pedido: "Quem trabalha no sábado?" });
+  const pq3j = await pq3.json();
+  ok(pq3.status === 200 && pq3j.pergunta?.gratis === false && saldoEmail(A) === 0 && uso(A).at(-1).etapa === "pergunta_paga", "passou das 20 perguntas, a pergunta cobra 1 pedido");
+
   console.log("3b2. saldo zerado: modal de recarga, melhorar com histórico");
   {
     const cliente = "cliente@exemplo.com";
     await page.evaluate(() => { window.__corpos = []; const f = window.fetch; window.fetch = (u, o) => { if (o && o.body && /\/api\/ia$/.test(String(u))) window.__corpos.push(JSON.parse(o.body)); return f(u, o); }; });
     await page.click("#btnIA");
+    await page.click("#iaNova");
     await page.fill("#iaPedido", "A primeira pessoa não pode trabalhar aos sábados");
     limpaLimites();
-    await page.click('[data-ia="enviar"]');
-    await page.waitForSelector("#iaResultado:not([hidden]) .ia-comp", { timeout: 15000 });
-    await page.click('[data-ia="melhorar"]');
+    await page.click("#iaEnviar");
+    await page.waitForSelector("#iaFio .prop .ia-comp", { timeout: 15000 });
+    await page.click('.prop-acts [data-ia="melhorar"]');
     await page.waitForFunction(() => window.__corpos.some(c => c.anterior), null, { timeout: 15000 });
-    await page.waitForSelector("#iaResultado:not([hidden]) .ia-comp", { timeout: 15000 });
+    await page.waitForFunction(() => document.querySelectorAll("#iaFio .prop .ia-comp").length === 2 && !document.querySelector("#iaFio .passo.rodando"), null, { timeout: 15000 });
+    ok(/Substituída/.test(await page.locator("#iaFio .prop-est.fora").first().textContent()), "a proposta melhorada substitui a anterior na conversa");
     const cm = await page.evaluate(() => window.__corpos.find(c => c.anterior));
     const ped = db.prepare("SELECT MAX(p.id) AS id FROM pedidos_ia p JOIN usuarios u ON u.id = p.usuario_id WHERE u.email = ?").get(cliente).id;
     ok(cm.historico === ped, "melhorar manda o historico do pedido original");
     const cf = await page.evaluate(() => window.__corpos.filter(c => c.conferir).map(c => c.rodada));
     ok(cf.length >= 2 && cf.every(Number.isInteger), "conferências mandam a rodada");
-    await page.click('#iaActs [value="cancel"]');
+    await page.click("#iaFechar");
 
     await credAdm({ email: cliente, delta: -saldoEmail(cliente), tipo: "ajuste", ref: "zera-cliente" });
     ok(saldoEmail(cliente) === 0, "admin zerou o saldo do cliente");
     await page.click("#btnIA");
-    await page.waitForFunction(() => /^0 pedidos restantes/.test(document.querySelector("#iaSaldo").textContent), null, { timeout: 5000 });
+    await page.waitForFunction(() => /^0 pedidos restantes/.test(document.querySelector("#iaSaldoTxt").textContent), null, { timeout: 5000 });
     ok(await page.locator("#iaSaldo a").count() === 0, "sem RECARGA_URL o saldo baixo não tem link de recarga");
+    ok(/zero/.test(await page.getAttribute("#credChip", "class")), "saldo zero deixa o contador do topo em vermelho");
+    const turnosAntes = await page.locator("#iaFio .msg-eu").count();
     await page.fill("#iaPedido", "Pedido que precisa ficar guardado");
     limpaLimites();
-    await page.click('[data-ia="enviar"]');
+    await page.click("#iaEnviar");
     await page.waitForSelector("#dlgSemCredito[open]", { timeout: 10000 });
     ok(await page.textContent("#dlgSemCredito h3") === "Seus pedidos à IA acabaram", "modal sem crédito com o título exato");
-    ok(/^Você usou todos os pedidos de ajuste com IA\. Recarregue para continuar usando o assistente\. A sua escala e os ajustes à mão continuam funcionando normalmente\.$/.test((await page.textContent("#dlgSemCredito p")).trim()), "modal com o texto exato");
-    ok(await page.inputValue("#iaPedido") === "Pedido que precisa ficar guardado" && await page.isVisible("#iaPasso1"), "o texto do pedido continua no passo 1");
+    ok(/^Você usou todos os pedidos de ajuste com IA\. Recarregue para continuar pedindo mudanças à IA\. A sua escala e os ajustes à mão continuam funcionando normalmente\.$/.test((await page.textContent("#dlgSemCredito p")).trim()), "modal com o texto exato");
+    ok(/Perguntas sobre a escala continuam grátis/.test(await page.textContent("#dlgSemCredito")), "a modal avisa que perguntas seguem grátis");
+    ok(await page.inputValue("#iaPedido") === "Pedido que precisa ficar guardado" && await page.locator("#iaFio .msg-eu").count() === turnosAntes, "o texto do pedido volta para a caixa e não fica turno na conversa");
     ok(await page.locator('#dlgSemCredito [data-sc="recarregar"]').isHidden(), "sem RECARGA_URL o botão de recarga fica escondido");
     ok((await page.textContent('#dlgSemCredito [data-sc="fechar"]')).trim() === "Agora não", "botão secundário \"Agora não\"");
     await page.click('#dlgSemCredito [data-sc="fechar"]');
     ok(await page.isHidden("#dlgSemCredito") && await page.evaluate(() => document.querySelector("#dlgIA").open), "\"Agora não\" fecha só a modal");
-    await page.click('#iaActs [value="cancel"]');
+    await page.fill("#iaPedido", "Quanto custa a equipe?");
+    limpaLimites();
+    await page.click("#iaEnviar");
+    await page.waitForFunction(() => document.querySelectorAll("#iaFio .msg-resp").length > 0 && !document.querySelector("#iaFio .passo.rodando"), null, { timeout: 15000 });
+    ok(await page.isHidden("#dlgSemCredito") && saldoEmail(cliente) === 0, "sem saldo, a pergunta é respondida de graça");
+    await page.click("#iaFechar");
 
     // Servidor com RECARGA_URL: o botão aponta para ele (mesmo banco e mesma sessão).
     const RECARGA = "https://pagamento.exemplo.com/recarga?x=1";
@@ -329,11 +387,12 @@ try {
       ok(await page.evaluate(() => window.J40H_PAINEL.recarga) === RECARGA, "a config do painel leva recarga = RECARGA_URL");
       await page.evaluate(() => sessionStorage.setItem("j40h:revisao-pulada", "1"));
       await page.click("#btnIA");
-      await page.waitForFunction(() => /^0 pedidos restantes/.test(document.querySelector("#iaSaldo").textContent), null, { timeout: 5000 });
+      await page.waitForFunction(() => /^0 pedidos restantes/.test(document.querySelector("#iaSaldoTxt").textContent), null, { timeout: 5000 });
       ok(await page.getAttribute("#iaSaldo a", "href") === RECARGA, "saldo baixo mostra o link Recarregar");
+      ok(await page.getAttribute("#pmCredRec", "href") === RECARGA, "o menu do perfil também leva à recarga");
       await page.fill("#iaPedido", "Outro pedido");
       limpaLimites();
-      await page.click('[data-ia="enviar"]');
+      await page.click("#iaEnviar");
       await page.waitForSelector("#dlgSemCredito[open]", { timeout: 10000 });
       const bt = page.locator('#dlgSemCredito [data-sc="recarregar"]');
       ok(await bt.isVisible() && await bt.getAttribute("href") === RECARGA && await bt.getAttribute("target") === "_blank" && (await bt.textContent()).trim() === "Recarregar +10 pedidos por R$ 19,90", "botão de recarga aponta para a RECARGA_URL e abre em outra aba");
