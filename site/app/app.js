@@ -1710,10 +1710,11 @@
         }),
         horasSemCobertura: c.falta,
         ondeFalta: DIAS.filter(function (d) { return c.dias[d].aberto && c.dias[d].falta; }).map(function (d) { return NOME_DIA[d] + ": " + textoFaixa(c.dias[d].faixas); }),
-        pontosForaDaLei: c.erros
+        pontosForaDaLei: c.erros,
+        paresFolgandoJuntos: conflitosPar(s, s.versao, w).map(function (x) { return x.a + " e " + x.b + " (" + NOME_DIA[x.d].toLowerCase() + ")"; })
       };
       return o;
-    }, { trabalhamDomingoNasSemanasAeB: trabalhaTodoDomingo(s) });
+    }, { trabalhamDomingoNasSemanasAeB: trabalhaTodoDomingo(s), mulheresSemDomingoNasSemanasAeB: mulheresSemDomingo(s) });
   }
 
   var HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -1737,9 +1738,13 @@
           id: antigo ? antigo.id : uid(), nome: String(p.nome || "").trim().slice(0, 40) || "Pessoa", funcao: String(p.funcao || "").trim().slice(0, 40),
           salario: Number(p.salario) > 0 ? Number(p.salario) : null, horas: Number(p.horas) > 0 ? Math.min(60, Math.round(Number(p.horas))) : null,
           folgaFixa: DIAS.indexOf(p.folgaFixa) >= 0 ? p.folgaFixa : "",
-          naoPode: (p.naoPode || []).filter(function (d) { return DIAS.indexOf(d) >= 0; })
+          naoPode: (p.naoPode || []).filter(function (d) { return DIAS.indexOf(d) >= 0; }),
+          // sexo e par: ausentes na proposta = ficam como estavam.
+          sexo: p.sexo === "F" || p.sexo === "M" || p.sexo === "" ? p.sexo : (antigo && antigo.sexo) || "",
+          naoFolgaCom: Array.isArray(p.naoFolgaCom) ? p.naoFolgaCom.map(String) : ((antigo && antigo.naoFolgaCom) || []).slice()
         };
       });
+      simetrizarPares(s.equipe);
     }
     if (prop.custos) ["salario", "encargos", "he"].forEach(function (k) { var v = Number(prop.custos[k]); if (v > 0) s.custos[k] = v; });
     if (prop.remontar) { gerarTudo(s); s.pendente = false; }

@@ -351,6 +351,24 @@ try {
     await p4.close();
   }
 
+  console.log("16. proposta da IA com sexo e par");
+  {
+    const r16 = await p2.evaluate(b => {
+      const J = window.__j40h, base = Object.assign(JSON.parse(JSON.stringify(b)), { equipe: [
+        { id: "p0", nome: "Ana", funcao: "", sexo: "F", naoFolgaCom: [] }, { id: "p1", nome: "Bia", funcao: "" }, { id: "p2", nome: "Caio", funcao: "", sexo: "M" }] });
+      J.gerarTudo(base);
+      const eq = base.equipe.map(p => ({ id: p.id, nome: p.nome, funcao: "", salario: 0, horas: 0, folgaFixa: "", naoPode: [] }));
+      const com = J.aplicarProposta({ equipe: eq.map((p, i) => Object.assign({}, p, i === 0 ? { sexo: "F", naoFolgaCom: ["p1"] } : { sexo: "", naoFolgaCom: [] })), remontar: true, celulas: [] }, base);
+      const sem = J.aplicarProposta({ equipe: eq, remontar: true, celulas: [] }, base);
+      const sm = J.semanasIA(com);
+      return { com: com.equipe.map(p => [p.sexo, p.naoFolgaCom]), sem: sem.equipe.map(p => [p.sexo, p.naoFolgaCom || []]),
+        conf: ["A", "B"].every(w => Array.isArray(sm[w].paresFolgandoJuntos)) && Array.isArray(sm.mulheresSemDomingoNasSemanasAeB) };
+    }, baseP);
+    ok(JSON.stringify(r16.com) === JSON.stringify([["F", ["p1"]], ["", ["p0"]], ["", []]]), "proposta grava sexo e o par dos dois lados: " + JSON.stringify(r16.com));
+    ok(r16.conf, "conferência da IA recebe pares e mulheres sem domingo por semana");
+    ok(JSON.stringify(r16.sem) === JSON.stringify([["F", []], ["", []], ["M", []]]), "proposta sem os campos mantém os valores antigos: " + JSON.stringify(r16.sem));
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();

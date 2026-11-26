@@ -55,7 +55,7 @@ const SCHEMA = {
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["id", "nome", "funcao", "salario", "horas", "folgaFixa", "naoPode"],
+            required: ["id", "nome", "funcao", "salario", "horas", "folgaFixa", "naoPode", "sexo", "naoFolgaCom"],
             properties: {
               id: { type: "string", description: "id atual; vazio para pessoa nova" },
               nome: { type: "string" },
@@ -64,6 +64,8 @@ const SCHEMA = {
               horas: { type: "number", description: "carga semanal de quem é meio período (ex.: 16); 0 = tempo integral" },
               folgaFixa: { type: "string", enum: ["", ...DIAS] },
               naoPode: { type: "array", items: dia },
+              sexo: { type: "string", enum: ["", "F", "M"], description: "F ou M só quando o dono disser; nunca deduza pelo nome; vazio = não informado" },
+              naoFolgaCom: { type: "array", items: { type: "string" }, description: "ids de quem não pode folgar no mesmo dia que esta pessoa (marque nas duas pessoas)" },
             },
           },
         },
@@ -119,6 +121,8 @@ Como decidir:
 - Mudança de equipe, folga fixa, dias que a pessoa não pode, horário de funcionamento ou número de pessoas por dia: atualize os dados e use remontar: true para o motor redistribuir turnos e folgas.
 - Troca pontual de turno ou folga de alguém num dia: use celulas e remontar: false, para não desfazer o que o dono já ajustou à mão.
 - Pessoa nova vai com id vazio. Para tirar alguém, deixe a pessoa fora da lista.
+- Quem não pode folgar junto (no mesmo dia): grave em naoFolgaCom das duas pessoas e use remontar: true (não resolva só com celulas). Mantenha sexo e naoFolgaCom de quem não mudou.
+- Sexo: só preencha F ou M quando o dono disser; nunca deduza pelo nome. Mulher folga no domingo pelo menos 1 vez a cada 2 semanas (CLT, art. 386): na conferência, olhe mulheresSemDomingoNasSemanasAeB e paresFolgandoJuntos e diga em avisos o que não deu para cumprir.
 - Meio período: preencha horas com a carga semanal (ex.: 16) e use remontar: true. O painel encaixa essa pessoa sozinho nos horários que ainda faltam gente, até essa carga, e o custo dela sai proporcional às horas. Para limitar os dias, use naoPode. Quem é tempo integral vai com horas 0.
 - Se o pedido piora a escala (abre buraco de cobertura, aumenta custo, cria ponto fora da lei), faça o que foi pedido mesmo assim, explique o problema em avisos e diga no resumo qual alternativa resolveria. Se receber o resultado de uma proposta anterior com problemas, proponha uma alternativa que mantenha a intenção do dono e resolva os problemas.
 - Não invente gente, salário ou horário que o dono não pediu. Para cobrir buraco, prefira primeiro redistribuir quem já existe; sugerir contratação só quando não houver outro jeito, e diga o custo.
@@ -152,19 +156,19 @@ export type Uso = { modelo: Modelo; entrada: number; saida: number; cacheLido: n
 
 // Pergunta simulada (IA_MOCK): termina com "?" ou começa com palavra de pergunta.
 const ehPerguntaMock = (p: string) => /\?\s*$/.test(p) || /^(por ?que|quem|quanto|quando|qual|quais|como|onde|posso|dá|da pra|tem|é)\b/i.test(p.trim());
-function mockResposta(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; folgaFixa: string; naoPode: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
+function mockResposta(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; folgaFixa: string; naoPode: string[]; sexo?: string; naoFolgaCom?: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
   const equipe = ctx.equipe || [];
   return {
     tipo: "resposta", entendeu: true,
     resposta: `A sua equipe tem ${equipe.length} pessoas: ${equipe.map(p => p.nome).join(", ")}.\nNesta resposta de teste a IA não leu a escala de verdade. Com a IA ligada, ela responde com os dias, horários e valores da sua escala, por exemplo:\n- quem trabalha em cada dia\n- de onde vêm as horas sem cobertura\n- o que a lei diz sobre folga e descanso (CLT, art. 66)`,
     sugestao: `${equipe[0]?.nome || "A primeira pessoa"} não pode trabalhar aos sábados`,
     resumo: "Expliquei a equipe e a escala.", mudancas: [], avisos: [], sobreONegocio: "",
-    proposta: { funcionamento: ctx.funcionamento, equipe: equipe.map(p => ({ ...p, salario: p.salario || 0, horas: p.horas || 0 })), custos: ctx.custos, remontar: false, celulas: [] },
+    proposta: { funcionamento: ctx.funcionamento, equipe: equipe.map(p => ({ ...p, salario: p.salario || 0, horas: p.horas || 0, sexo: p.sexo || "", naoFolgaCom: p.naoFolgaCom || [] })), custos: ctx.custos, remontar: false, celulas: [] },
   };
 }
 
-function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; folgaFixa: string; naoPode: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
-  const equipe = (ctx.equipe || []).map((p, i) => ({ ...p, salario: p.salario || 0, horas: p.horas || 0, naoPode: i === 0 ? Array.from(new Set([...(p.naoPode || []), "sab"])) : p.naoPode || [] }));
+function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; folgaFixa: string; naoPode: string[]; sexo?: string; naoFolgaCom?: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
+  const equipe = (ctx.equipe || []).map((p, i) => ({ ...p, salario: p.salario || 0, horas: p.horas || 0, sexo: p.sexo || "", naoFolgaCom: p.naoFolgaCom || [], naoPode: i === 0 ? Array.from(new Set([...(p.naoPode || []), "sab"])) : p.naoPode || [] }));
   return {
     tipo: "proposta", resposta: "", sugestao: "",
     entendeu: true,
