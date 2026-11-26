@@ -636,6 +636,27 @@ try {
     await pa.close();
   }
 
+  console.log("23. IA: funções e picos");
+  {
+    const r = await p2.evaluate(est => {
+      const J = window.__j40h, c = o => JSON.parse(JSON.stringify(o));
+      const base = J.normalizar(Object.assign(c(est), { intervalo: "fora" }));
+      const cx = base.funcoes.find(f => f.nome === "caixa").id;
+      base.picos = [{ id: "k1", dias: ["sab"], inicio: "08:00", fim: "10:00", funcao: "", pessoas: 3 }];
+      const ctx = J.contextoIA(base);
+      const novo = J.aplicarProposta({ equipe: ctx.equipe, funcoes: ctx.funcoes, picos: [{ dias: ["seg"], inicio: "11:00", fim: "14:00", funcao: "caixa", pessoas: 1 }, { dias: ["ter"], inicio: "12:00", fim: "13:00", funcao: "Gerente", pessoas: 1 }], remontar: true, celulas: [] }, base);
+      const sem = J.aplicarProposta({ equipe: ctx.equipe, remontar: true, celulas: [] }, base);
+      const ger = novo.funcoes.find(f => f.nome === "Gerente");
+      return { ctxF: ctx.funcoes, ctxP: ctx.picos, p0: novo.picos[0] && novo.picos[0].funcao === cx, ger: !!ger && novo.picos[1].funcao === ger.id, sem: sem.picos.length,
+        conf: Array.isArray(J.semanasIA(novo).A.picosDescobertos) };
+    }, estado);
+    ok(JSON.stringify(r.ctxF) === '["atendente","caixa"]' && JSON.stringify(r.ctxP) === '[{"dias":["sab"],"inicio":"08:00","fim":"10:00","funcao":"","pessoas":3}]', "contexto leva funções e picos por nome: " + JSON.stringify([r.ctxF, r.ctxP]));
+    ok(r.p0, "pico da IA com função pelo nome vira o id da função");
+    ok(r.ger, "função nova no pico entra no catálogo");
+    ok(r.sem === 1, "proposta sem picos mantém os atuais");
+    ok(r.conf, "conferência recebe picos descobertos por semana");
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();

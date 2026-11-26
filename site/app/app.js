@@ -1325,10 +1325,11 @@
     renderFuncoesPicos();
   }
 
-  function funcaoEmUso(f) {
+  function funcaoEmUsoEm(s, f) {
     var k = normFuncao(f.nome);
-    return (k && state.equipe.some(function (p) { return normFuncao(p.funcao) === k; })) || (state.picos || []).some(function (pc) { return pc.funcao === f.id; });
+    return (k && s.equipe.some(function (p) { return normFuncao(p.funcao) === k; })) || (s.picos || []).some(function (pc) { return pc.funcao === f.id; });
   }
+  function funcaoEmUso(f) { return funcaoEmUsoEm(state, f); }
 
   function renderFuncoesPicos() {
     var fs = state.funcoes || [];
@@ -1911,6 +1912,8 @@
       regras: { jornadaSemanal: R.jornadaSemanal, jornadaDiariaMax: R.jornadaDiariaMax, almocoForaDaJornada: fora(s), intervaloMin: imin(s) },
       negocio: s.negocio,
       funcionamento: DIAS.reduce(function (o, d) { var f = s.funcionamento[d]; o[d] = f ? { aberto: true, abre: f.abre, fecha: f.fecha, pessoas: Number(f.pessoas) || 1 } : { aberto: false, abre: "", fecha: "", pessoas: 0 }; return o; }, {}),
+      funcoes: (s.funcoes || []).map(function (f) { return f.nome; }),
+      picos: picosMotor(s),
       equipe: s.equipe.map(function (p) { return { id: p.id, nome: p.nome, funcao: p.funcao, salario: p.salario || 0, horas: parcial(p, s.versao) || jornadaPropria(p, s.versao) ? Number(p.horas) || 0 : 0, horasDia: Number(p.horasDia) || 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [], sexo: p.sexo || "", naoFolgaCom: p.naoFolgaCom || [] }; }),
       custos: s.custos,
       grade: s.equipe.map(function (p, i) {
@@ -1945,7 +1948,8 @@
         horasSemCobertura: c.falta,
         ondeFalta: DIAS.filter(function (d) { return c.dias[d].aberto && c.dias[d].falta; }).map(function (d) { return NOME_DIA[d] + ": " + textoFaixa(c.dias[d].faixas); }),
         pontosForaDaLei: c.erros,
-        paresFolgandoJuntos: conflitosPar(s, s.versao, w).map(function (x) { return x.a + " e " + x.b + " (" + NOME_DIA[x.d].toLowerCase() + ")"; })
+        paresFolgandoJuntos: conflitosPar(s, s.versao, w).map(function (x) { return x.a + " e " + x.b + " (" + NOME_DIA[x.d].toLowerCase() + ")"; }),
+        picosDescobertos: c.picos.map(textoPico)
       };
       return o;
     }, { trabalhamDomingoNasSemanasAeB: trabalhaTodoDomingo(s), mulheresSemDomingoNasSemanasAeB: mulheresSemDomingo(s) });
@@ -1957,7 +1961,7 @@
   function aplicarProposta(prop, base) {
     base = base || state;
     var s = JSON.parse(JSON.stringify(base));
-    var antesEstr = JSON.stringify([s.funcionamento, s.equipe, s.intervaloMin]);
+    var antesEstr = JSON.stringify([s.funcionamento, s.equipe, s.intervaloMin, s.picos]);
     if (prop.intervaloMin === 60 || prop.intervaloMin === 120) s.intervaloMin = prop.intervaloMin;
     DIAS.forEach(function (d) {
       var f = prop.funcionamento && prop.funcionamento[d]; if (!f) return;
@@ -1995,8 +1999,27 @@
       simetrizarPares(s.equipe);
     }
     if (prop.custos) ["salario", "encargos", "he"].forEach(function (k) { var v = Number(prop.custos[k]); if (v > 0) s.custos[k] = v; });
+    // Funções e picos vêm pelo nome da função; nome novo entra no catálogo. Ausentes = ficam como estavam.
+    normalizarFuncoesPicos(s);
+    var idFuncao = function (nome) {
+      nome = String(nome || "").trim().slice(0, 40); if (!nome) return "";
+      var f = s.funcoes.filter(function (x) { return normFuncao(x.nome) === normFuncao(nome); })[0];
+      if (!f) { f = { id: uid(), nome: nome }; s.funcoes.push(f); }
+      return f.id;
+    };
+    if (Array.isArray(prop.funcoes)) {
+      var pedidas = prop.funcoes.map(normFuncao);
+      s.funcoes = s.funcoes.filter(function (f) { return pedidas.indexOf(normFuncao(f.nome)) >= 0 || funcaoEmUsoEm(s, f); });
+      prop.funcoes.forEach(idFuncao);
+    }
+    if (Array.isArray(prop.picos)) {
+      s.picos = prop.picos.slice(0, 40).map(function (pc) {
+        return { dias: pc.dias, inicio: pc.inicio, fim: pc.fim, funcao: idFuncao(pc.funcao), pessoas: pc.pessoas };
+      });
+      normalizarFuncoesPicos(s);
+    }
     if (prop.remontar) { gerarTudo(s); s.pendente = false; }
-    else if (JSON.stringify([s.funcionamento, s.equipe, s.intervaloMin]) !== antesEstr) s.pendente = true;
+    else if (JSON.stringify([s.funcionamento, s.equipe, s.intervaloMin, s.picos]) !== antesEstr) s.pendente = true;
     (prop.celulas || []).forEach(function (c) {
       if (DIAS.indexOf(c.dia) < 0 || !s.equipe.some(function (p) { return p.id === c.pessoaId; })) return;
       var g = s.escalas[s.versao][SEMANAS.indexOf(c.semana) >= 0 ? c.semana : s.semana]; g[c.pessoaId] = g[c.pessoaId] || {};
