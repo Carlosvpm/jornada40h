@@ -537,6 +537,8 @@ input:disabled { background: var(--surface-2); color: var(--faint); box-shadow: 
 .tbl input, .tbl select { margin-top: 0; padding: 7px 9px; font-size: 13.5px; }
 .tbl input[type=number] { width: 90px; }
 .tbl .chk { display: flex; align-items: center; gap: 6px; color: var(--text); font-weight: 500; font-size: 13px; }
+.cfg-int { display: block; max-width: 420px; margin-top: 14px; }
+.cfg-int select { max-width: 140px; display: block; }
 .regen { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
 .regen .muted { font-size: 12.5px; flex: 1 1 240px; }
 .foot { font-size: 12px; margin-top: 8px; color: var(--faint); }

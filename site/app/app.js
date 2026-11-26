@@ -1200,7 +1200,7 @@
         '<td><input type="text" maxlength="40" data-e="funcao" value="' + esc(p.funcao) + '"></td>' +
         '<td><input type="number" min="0" step="10" data-e="salario" placeholder="média" value="' + (p.salario || "") + '"></td>' +
         '<td><input type="number" min="0" max="60" step="1" data-e="horas" placeholder="integral" value="' + (p.horas || "") + '"></td>' +
-        '<td><input type="number" min="0" max="8.4" step="0.1" data-e="horasDia" placeholder="da empresa" value="' + (p.horasDia || "") + '"></td>' +
+        '<td><input type="number" min="0" max="8.4" step="0.1" data-e="horasDia" placeholder="empresa" value="' + (p.horasDia || "") + '"></td>' +
         '<td><select data-e="folgaFixa"><option value="">rodízio</option>' + DIAS.map(function (d) { return '<option value="' + d + '"' + (p.folgaFixa === d ? " selected" : "") + ">" + NOME_DIA[d] + "</option>"; }).join("") + "</select></td>" +
         '<td>' + chipsDias(p.naoPode, "np") + "</td>" +
         '<td><button type="button" class="x" data-del="' + p.id + '" title="Remover">×</button></td></tr>';
