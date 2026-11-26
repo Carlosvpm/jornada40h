@@ -67,5 +67,27 @@ if (GRAVAR) {
 
 // Casos novos entram abaixo (Tasks 2 e 3).
 
+const monta = (funcionamento, funcionarios, semana, regras = V42) =>
+  gerarEscala({ negocio: { nome: "X", tipo: "Padaria" }, funcionamento, funcionarios, salarioMedio: 1800, semana, regras });
+const junto = (s, a, b) => folgasDe(s, a).filter(d => folgasDe(s, b).includes(d));
+
+console.log("2. não folgar junto");
+const SETE = func(SEG_DOM, "06:00", "19:00", 2);
+const comPar = (extra = {}) => CINCO.map(n => Object.assign({ nome: n, funcao: "atendente" },
+  n === "Ana" ? { naoFolgaCom: ["Bia"] } : n === "Bia" ? { naoFolgaCom: ["Ana"] } : {}, extra[n] || {}));
+for (const sem of ["A", "B"]) for (const [rv, rg] of [["42", V42], ["40", V40]]) {
+  const s = monta(SETE, comPar(), sem, rg);
+  const j = junto(s, "Ana", "Bia");
+  ok(!j.length && folgasDe(s, "Ana").length === 2 && folgasDe(s, "Bia").length === 2, `par: Ana e Bia nunca folgam no mesmo dia aberto (${rv}h, ${sem})` + (j.length ? ": " + j.join(",") : ""));
+}
+{
+  const s = monta(PADARIA.dom ? Object.assign({}, PADARIA, { dom: null }) : PADARIA, comPar(), "A");
+  ok(folgasDe(s, "Ana").includes("dom") && folgasDe(s, "Bia").includes("dom") && !s.avisos.some(a => /folgam no mesmo dia/.test(a)), "par: dia fechado não conta");
+}
+{
+  const s = monta(SETE, comPar({ Ana: { folgaFixa: "qua" }, Bia: { folgaFixa: "qua" } }), "A");
+  ok(junto(s, "Ana", "Bia").includes("qua") && s.avisos.some(a => /Ana e Bia folgam no mesmo dia \(quarta\)/.test(a)), "par: folga fixa igual vence o par, com aviso");
+}
+
 console.log(falhas ? `\n${falhas} falha(s)` : "\nTudo ok");
 process.exit(falhas ? 1 : 0);

@@ -202,6 +202,9 @@ function montarDias(funcionamento, regras) {
  *  2. rodízio do fim de semana (semana A: primeira metade da equipe, B: segunda);
  *  3. folgas restantes nos dias de menor demanda relativa (demanda ÷ pessoas disponíveis),
  *     sem nunca zerar um dia aberto.
+ *
+ * naoFolgaCom (nomes): a pessoa nunca folga num dia aberto em que um deles folga, salvo quando a folga
+ * fixa/naoPode obriga ou quando não há outro dia para as 2 folgas (aí sai aviso). Dia fechado não conta.
  */
 function distribuirFolgas(funcionarios, dias, regras, semana, avisos) {
   var abertos = DIAS.filter(function (d) { return dias[d].aberto; });
@@ -240,6 +243,28 @@ function distribuirFolgas(funcionarios, dias, regras, semana, avisos) {
     restantes[p.nome] = extras;
   });
 
+  // Par que não pode folgar junto: algum parceiro de p já folga no dia aberto d?
+  function juntoCom(p, d) {
+    return (p.naoFolgaCom || []).some(function (n) { return folgas[n] && folgas[n][d]; });
+  }
+  var avisadoPar = {};
+  function avisarPar(p, d, motivo) {
+    (p.naoFolgaCom || []).forEach(function (n) {
+      if (!folgas[n] || !folgas[n][d]) return;
+      var par = [p.nome, n].sort();
+      var k = par.join("|") + "|" + d;
+      if (avisadoPar[k]) return;
+      avisadoPar[k] = true;
+      var nomes = funcionarios.filter(function (q) { return par.indexOf(q.nome) >= 0; }).map(function (q) { return q.nome; });
+      avisos.push(nomes.join(" e ") + " folgam no mesmo dia (" + NOME_DIA[d].toLowerCase() + "): " + motivo);
+    });
+  }
+  funcionarios.forEach(function (p) {
+    abertos.forEach(function (d) {
+      if (folgas[p.nome][d] && juntoCom(p, d)) avisarPar(p, d, "a folga fixa ou o dia que não podem vale mais que a regra de não folgar junto.");
+    });
+  });
+
   // Quantas folgas extras cabem em cada dia sem desequilibrar a semana:
   // a média de folgas por dia aberto, ou a sobra de gente do dia (o que for maior).
   var totalExtras = 0;
@@ -264,7 +289,7 @@ function distribuirFolgas(funcionarios, dias, regras, semana, avisos) {
       if (jaTem) return;
       var melhor = null;
       fds.forEach(function (d) {
-        if (!podeFolgar(d)) return;
+        if (!podeFolgar(d) || juntoCom(p, d)) return;
         var limite = Math.max(1, mediaPorDia, disponiveis[d] - dias[d].pessoasParaCobrir);
         if (folgasFds[d] >= limite) return;
         if (!melhor || custoFolga(d) < custoFolga(melhor)) melhor = d;
@@ -284,11 +309,16 @@ function distribuirFolgas(funcionarios, dias, regras, semana, avisos) {
     houve = false;
     funcionarios.forEach(function (p) {
       if (restantes[p.nome] <= 0) return;
-      var melhor = null;
-      abertos.forEach(function (d) {
-        if (folgas[p.nome][d] || !podeFolgar(d)) return;
-        if (!melhor || custoFolga(d) < custoFolga(melhor) - 1e-9) melhor = d;
+      var melhor = null, forcado = false;
+      [false, true].forEach(function (aceitaPar) {
+        if (melhor) return;
+        abertos.forEach(function (d) {
+          if (folgas[p.nome][d] || !podeFolgar(d) || (!aceitaPar && juntoCom(p, d))) return;
+          if (!melhor || custoFolga(d) < custoFolga(melhor) - 1e-9) melhor = d;
+        });
+        forcado = aceitaPar;
       });
+      if (melhor && forcado) avisarPar(p, melhor, "não havia outro dia sem deixar o dia sem ninguém.");
       if (!melhor) {
         avisos.push("Não foi possível dar todas as folgas a " + p.nome + " sem deixar um dia sem ninguém.");
         restantes[p.nome] = 0;
