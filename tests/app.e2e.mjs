@@ -257,6 +257,28 @@ try {
   ok(!virada.montada.some(e => /dias seguidos|semana [AB]/.test(e)), "escala montada sem mais de 6 dias seguidos na virada" + (virada.montada.length ? ": " + virada.montada[0] : ""));
   ok(virada.manual.some(e => /Ana trabalha 10 dias seguidos, de quarta da semana A a sexta da semana B/.test(e)), "alerta de dias seguidos na virada A → B");
 
+  console.log("13. regressão da montagem (contas sem os campos novos)");
+  const montagens = await p2.evaluate(est => {
+    const J = window.__j40h, D = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"], out = {};
+    const base = { custos: { salario: 1800, encargos: 1.7, he: 50 }, versao: "42", semana: "A", intervalo: "fora" };
+    const mercado = {}; D.forEach(d => { mercado[d] = { abre: d === "qui" || d === "sex" || d === "dom" ? "07:00" : "07:30", fecha: d === "dom" ? "12:00" : d === "sex" ? "19:00" : "20:00", pessoas: 4 }; });
+    const padaria = {}; D.forEach(d => { padaria[d] = d === "dom" ? { abre: "07:00", fecha: "13:00", pessoas: 2 } : { abre: "06:00", fecha: "19:00", pessoas: 2 }; });
+    const casos = {
+      topo: Object.assign({}, base, JSON.parse(JSON.stringify(est))),
+      mercado: Object.assign({}, base, { negocio: { nome: "Mercado Exemplo", tipo: "Mercado" }, funcionamento: mercado, equipe: Array.from({ length: 9 }, (_, i) => ({ id: "p" + i, nome: "Pessoa " + (i + 1), funcao: "" })) }),
+      padaria: Object.assign({}, base, { negocio: { nome: "Padaria Exemplo", tipo: "Padaria" }, funcionamento: padaria, equipe: ["Ana", "Bia", "Caio", "Duda", "Edu"].map((n, i) => ({ id: "p" + i, nome: n, funcao: "atendente" })) }),
+    };
+    for (const k in casos) { J.gerarTudo(casos[k]); out[k] = JSON.stringify(casos[k].escalas); }
+    return out;
+  }, estado);
+  const FIX = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "app-base.json");
+  if (process.env.GRAVAR) { fs.writeFileSync(FIX, JSON.stringify(montagens, null, 1)); console.log("  fixture gravada"); }
+  else {
+    const base = JSON.parse(fs.readFileSync(FIX, "utf8"));
+    const dif = Object.keys(base).filter(k => base[k] !== montagens[k]);
+    ok(!dif.length, "mesma escala de antes" + (dif.length ? ": " + dif.join(", ") : ""));
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();
