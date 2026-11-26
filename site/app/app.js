@@ -1722,7 +1722,7 @@
       regras: { jornadaSemanal: R.jornadaSemanal, jornadaDiariaMax: R.jornadaDiariaMax, almocoForaDaJornada: fora(s), intervaloMin: imin(s) },
       negocio: s.negocio,
       funcionamento: DIAS.reduce(function (o, d) { var f = s.funcionamento[d]; o[d] = f ? { aberto: true, abre: f.abre, fecha: f.fecha, pessoas: Number(f.pessoas) || 1 } : { aberto: false, abre: "", fecha: "", pessoas: 0 }; return o; }, {}),
-      equipe: s.equipe.map(function (p) { return { id: p.id, nome: p.nome, funcao: p.funcao, salario: p.salario || 0, horas: parcial(p, s.versao) ? Number(p.horas) : 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [], sexo: p.sexo || "", naoFolgaCom: p.naoFolgaCom || [] }; }),
+      equipe: s.equipe.map(function (p) { return { id: p.id, nome: p.nome, funcao: p.funcao, salario: p.salario || 0, horas: parcial(p, s.versao) || jornadaPropria(p, s.versao) ? Number(p.horas) || 0 : 0, horasDia: Number(p.horasDia) || 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [], sexo: p.sexo || "", naoFolgaCom: p.naoFolgaCom || [] }; }),
       custos: s.custos,
       grade: s.equipe.map(function (p, i) {
         return { pessoaId: p.id, nome: p.nome, horasSemana: c.pessoas[i].horas, dias: DIAS.reduce(function (o, d) {
@@ -1768,7 +1768,8 @@
   function aplicarProposta(prop, base) {
     base = base || state;
     var s = JSON.parse(JSON.stringify(base));
-    var antesEstr = JSON.stringify([s.funcionamento, s.equipe]);
+    var antesEstr = JSON.stringify([s.funcionamento, s.equipe, s.intervaloMin]);
+    if (prop.intervaloMin === 60 || prop.intervaloMin === 120) s.intervaloMin = prop.intervaloMin;
     DIAS.forEach(function (d) {
       var f = prop.funcionamento && prop.funcionamento[d]; if (!f) return;
       s.funcionamento[d] = f.aberto && HORA_RE.test(f.abre) && HORA_RE.test(f.fecha) && f.abre !== f.fecha
@@ -1782,6 +1783,8 @@
         return {
           id: antigo ? antigo.id : uid(), nome: String(p.nome || "").trim().slice(0, 40) || "Pessoa", funcao: String(p.funcao || "").trim().slice(0, 40),
           salario: Number(p.salario) > 0 ? Number(p.salario) : null, horas: Number(p.horas) > 0 ? Math.min(60, Math.round(Number(p.horas))) : null,
+          // horasDia ausente na proposta = fica como estava; 0 = jornada da empresa.
+          horasDia: p.horasDia == null ? (antigo ? antigo.horasDia || null : null) : horasDiaDe(p.horasDia),
           folgaFixa: DIAS.indexOf(p.folgaFixa) >= 0 ? p.folgaFixa : "",
           naoPode: (p.naoPode || []).filter(function (d) { return DIAS.indexOf(d) >= 0; }),
           // sexo e par: ausentes na proposta = ficam como estavam.
@@ -1804,7 +1807,7 @@
     }
     if (prop.custos) ["salario", "encargos", "he"].forEach(function (k) { var v = Number(prop.custos[k]); if (v > 0) s.custos[k] = v; });
     if (prop.remontar) { gerarTudo(s); s.pendente = false; }
-    else if (JSON.stringify([s.funcionamento, s.equipe]) !== antesEstr) s.pendente = true;
+    else if (JSON.stringify([s.funcionamento, s.equipe, s.intervaloMin]) !== antesEstr) s.pendente = true;
     (prop.celulas || []).forEach(function (c) {
       if (DIAS.indexOf(c.dia) < 0 || !s.equipe.some(function (p) { return p.id === c.pessoaId; })) return;
       var g = s.escalas[s.versao][SEMANAS.indexOf(c.semana) >= 0 ? c.semana : s.semana]; g[c.pessoaId] = g[c.pessoaId] || {};

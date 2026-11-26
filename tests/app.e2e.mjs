@@ -480,6 +480,25 @@ try {
     await p7.close();
   }
 
+  console.log("20. IA: jornada e intervalo");
+  {
+    const r20 = await p2.evaluate(b => {
+      const J = window.__j40h, c = o => JSON.parse(JSON.stringify(o));
+      const s = J.normalizar(Object.assign(c(b), { equipe: ["Ana", "Bia", "Caio"].map((n, i) => Object.assign({ id: "p" + i, nome: n, funcao: "" }, i === 0 ? { horasDia: 6, horas: 24 } : {})) }));
+      const ctx = J.contextoIA(s);
+      const igual = J.aplicarProposta({ funcionamento: ctx.funcionamento, equipe: ctx.equipe, intervaloMin: ctx.regras.intervaloMin, remontar: true, celulas: [] }, s);
+      const semCampo = J.aplicarProposta({ equipe: ctx.equipe.map(p => { const q = Object.assign({}, p); delete q.horasDia; return q; }), remontar: true, celulas: [] }, s);
+      const dois = J.aplicarProposta({ equipe: ctx.equipe, intervaloMin: 120, remontar: true, celulas: [] }, s);
+      const dur = x => { const m = h => parseInt(h) * 60 + +h.slice(3); let a = m(x.inicio), e = m(x.fim); if (e <= a) e += 1440; return e - a; };
+      return { ctx: [ctx.equipe[0].horasDia, ctx.equipe[0].horas, ctx.regras.intervaloMin], igual: [igual.equipe[0].horasDia, igual.equipe[0].horas, igual.intervaloMin],
+        semCampo: semCampo.equipe[0].horasDia, dois: [dois.intervaloMin, Object.values(dois.escalas["42"].A.p1).some(x => x.tipo === "turno" && dur(x) === 624)] };
+    }, baseP);
+    ok(JSON.stringify(r20.ctx) === "[6,24,60]", "contexto da IA leva horasDia, horas e intervaloMin: " + JSON.stringify(r20.ctx));
+    ok(JSON.stringify(r20.igual) === "[6,24,60]", "proposta sem mudança mantém a jornada própria: " + JSON.stringify(r20.igual));
+    ok(r20.semCampo === 6, "proposta sem horasDia mantém o antigo");
+    ok(JSON.stringify(r20.dois) === "[120,true]", "proposta com intervalo de 2 h remonta: " + JSON.stringify(r20.dois));
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();

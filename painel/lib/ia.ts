@@ -37,7 +37,7 @@ const SCHEMA = {
     proposta: {
       type: "object",
       additionalProperties: false,
-      required: ["funcionamento", "equipe", "custos", "remontar", "celulas"],
+      required: ["funcionamento", "equipe", "custos", "intervaloMin", "remontar", "celulas"],
       properties: {
         funcionamento: {
           type: "object",
@@ -50,18 +50,20 @@ const SCHEMA = {
             properties: { aberto: { type: "boolean" }, abre: hora, fecha: hora, pessoas: { type: "integer" } },
           }])),
         },
+        intervaloMin: { type: "integer", enum: [60, 120], description: "intervalo de refeição em minutos para turno de mais de 6 h (CLT, art. 71: 1 a 2 h); repita regras.intervaloMin se o pedido não falar disso" },
         equipe: {
           type: "array",
           items: {
             type: "object",
             additionalProperties: false,
-            required: ["id", "nome", "funcao", "salario", "horas", "folgaFixa", "naoPode", "sexo", "naoFolgaCom"],
+            required: ["id", "nome", "funcao", "salario", "horas", "horasDia", "folgaFixa", "naoPode", "sexo", "naoFolgaCom"],
             properties: {
               id: { type: "string", description: "id atual; vazio para pessoa nova" },
               nome: { type: "string" },
               funcao: { type: "string" },
               salario: { type: "number", description: "0 = usa o salário médio (proporcional às horas no meio período)" },
-              horas: { type: "number", description: "carga semanal de quem é meio período (ex.: 16); 0 = tempo integral" },
+              horas: { type: "number", description: "carga semanal de quem é meio período (ex.: 16) ou limite semanal de quem tem jornada própria; 0 = jornada da empresa" },
+              horasDia: { type: "number", description: "horas de trabalho por dia de quem tem jornada própria menor que a da empresa (ex.: 6); 0 = jornada da empresa" },
               folgaFixa: { type: "string", enum: ["", ...DIAS] },
               naoPode: { type: "array", items: dia },
               sexo: { type: "string", enum: ["", "F", "M"], description: "F ou M só quando o dono disser; nunca deduza pelo nome; vazio = não informado" },
@@ -101,8 +103,8 @@ Regras da escala (CLT, com a nova jornada):
 - Versão 42 h (a partir de dez/2026): até 42 h por semana e 8,4 h por dia. Versão 40 h (a partir de dez/2027): até 40 h e 8 h por dia.
 - 2 folgas por semana por pessoa. Pelo menos 11 h de descanso entre o fim de um turno e o início do próximo.
 - Hora extra: no máximo 2 h por pessoa por dia, paga com adicional (custos.he, em %).
-- Intervalo de refeição (CLT, art. 71): trabalho de mais de 6 h pede 1 h de almoço; de 4 a 6 h, 15 min. O almoço não conta como trabalho.
-  - regras.almocoForaDaJornada true: o turno na loja é a jornada + o almoço (ex.: 8h24 de trabalho = 9h24 na loja, 8 h = 9 h). A grade mostra o almoço de cada turno, que o painel escalona sozinho; horasSemana já desconta o almoço. Um turno que você criar recebe almoço no meio, então faça o turno na loja com a jornada + 1 h.
+- Intervalo de refeição (CLT, art. 71): trabalho de mais de 6 h pede de 1 a 2 h de almoço (regras.intervaloMin: 60 ou 120, escolhido pelo dono); de 4 a 6 h, 15 min. O almoço não conta como trabalho.
+  - regras.almocoForaDaJornada true: o turno na loja é a jornada + o almoço (ex.: 8h24 de trabalho = 9h24 na loja, 8 h = 9 h). A grade mostra o almoço de cada turno, que o painel escalona sozinho; horasSemana já desconta o almoço. Um turno que você criar recebe almoço no meio, então faça o turno na loja com a jornada + o intervalo (regras.intervaloMin).
   - regras.almocoForaDaJornada false: escala antiga, com o almoço dentro do turno (na prática 1 h a menos de trabalho por dia). Não mude isso por conta própria; se o pedido tocar no almoço, diga que o dono pode aplicar a mudança pelo aviso "Ver a mudança" nos alertas.
 - Semana A e B: quem folga no fim de semana alterna entre as semanas, e elas se repetem A, B, A, B. Na virada (domingo de uma, segunda da outra) ninguém pode passar de 6 dias seguidos de trabalho nem ter menos de 11 h de descanso; o painel mede isso e põe em pontosForaDaLei.
 - "pessoas" em cada dia é quantas pessoas precisam estar trabalhando ao mesmo tempo enquanto o negócio está aberto.
@@ -123,7 +125,9 @@ Como decidir:
 - Pessoa nova vai com id vazio. Para tirar alguém, deixe a pessoa fora da lista.
 - Quem não pode folgar junto (no mesmo dia): grave em naoFolgaCom das duas pessoas e use remontar: true (não resolva só com celulas). Para desfazer, tire das duas. Mantenha sexo e naoFolgaCom de quem não mudou.
 - Sexo: só preencha F ou M quando o dono disser; nunca deduza pelo nome. Mulher folga no domingo pelo menos 1 vez a cada 2 semanas (CLT, art. 386): na conferência, olhe mulheresSemDomingoNasSemanasAeB e paresFolgandoJuntos e diga em avisos o que não deu para cumprir.
-- Meio período: preencha horas com a carga semanal (ex.: 16) e use remontar: true. O painel encaixa essa pessoa sozinho nos horários que ainda faltam gente, até essa carga, e o custo dela sai proporcional às horas. Para limitar os dias, use naoPode. Quem é tempo integral vai com horas 0.
+- Intervalo: se o dono pedir intervalo de 2 h (ou de 1 h), mude intervaloMin para 120 (ou 60) e use remontar: true. Não mude intervaloMin por conta própria.
+- Jornada própria (ex.: "a Ana só pode trabalhar 6 h por dia"): preencha horasDia (e horas, se o dono disser o limite da semana) e use remontar: true. A pessoa trabalha 5 dias com turno desse tamanho, entra no rodízio como as outras e o custo sai proporcional às horas. Só pode ser menor que a jornada da empresa. Mantenha horas e horasDia de quem não mudou.
+- Meio período: preencha horas com a carga semanal (ex.: 16) e use remontar: true. O painel encaixa essa pessoa sozinho nos horários que ainda faltam gente, até essa carga, e o custo dela sai proporcional às horas. Para limitar os dias, use naoPode. Quem é tempo integral vai com horas 0 e horasDia 0.
 - Se o pedido piora a escala (abre buraco de cobertura, aumenta custo, cria ponto fora da lei), faça o que foi pedido mesmo assim, explique o problema em avisos e diga no resumo qual alternativa resolveria. Se receber o resultado de uma proposta anterior com problemas, proponha uma alternativa que mantenha a intenção do dono e resolva os problemas.
 - Não invente gente, salário ou horário que o dono não pediu. Para cobrir buraco, prefira primeiro redistribuir quem já existe; sugerir contratação só quando não houver outro jeito, e diga o custo.
 - Escreva para o dono do negócio, sem jargão técnico, em frases curtas.
@@ -156,19 +160,19 @@ export type Uso = { modelo: Modelo; entrada: number; saida: number; cacheLido: n
 
 // Pergunta simulada (IA_MOCK): termina com "?" ou começa com palavra de pergunta.
 const ehPerguntaMock = (p: string) => /\?\s*$/.test(p) || /^(por ?que|quem|quanto|quando|qual|quais|como|onde|posso|dá|da pra|tem|é)\b/i.test(p.trim());
-function mockResposta(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; folgaFixa: string; naoPode: string[]; sexo?: string; naoFolgaCom?: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
+function mockResposta(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; horasDia?: number; folgaFixa: string; naoPode: string[]; sexo?: string; naoFolgaCom?: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown; regras?: { intervaloMin?: number } }) {
   const equipe = ctx.equipe || [];
   return {
     tipo: "resposta", entendeu: true,
     resposta: `A sua equipe tem ${equipe.length} pessoas: ${equipe.map(p => p.nome).join(", ")}.\nNesta resposta de teste a IA não leu a escala de verdade. Com a IA ligada, ela responde com os dias, horários e valores da sua escala, por exemplo:\n- quem trabalha em cada dia\n- de onde vêm as horas sem cobertura\n- o que a lei diz sobre folga e descanso (CLT, art. 66)`,
     sugestao: `${equipe[0]?.nome || "A primeira pessoa"} não pode trabalhar aos sábados`,
     resumo: "Expliquei a equipe e a escala.", mudancas: [], avisos: [], sobreONegocio: "",
-    proposta: { funcionamento: ctx.funcionamento, equipe: equipe.map(p => ({ ...p, salario: p.salario || 0, horas: p.horas || 0, sexo: p.sexo || "", naoFolgaCom: p.naoFolgaCom || [] })), custos: ctx.custos, remontar: false, celulas: [] },
+    proposta: { funcionamento: ctx.funcionamento, equipe: equipe.map(p => ({ ...p, salario: p.salario || 0, horas: p.horas || 0, horasDia: p.horasDia || 0, sexo: p.sexo || "", naoFolgaCom: p.naoFolgaCom || [] })), custos: ctx.custos, intervaloMin: ctx.regras?.intervaloMin === 120 ? 120 : 60, remontar: false, celulas: [] },
   };
 }
 
-function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; folgaFixa: string; naoPode: string[]; sexo?: string; naoFolgaCom?: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown }) {
-  const equipe = (ctx.equipe || []).map((p, i) => ({ ...p, salario: p.salario || 0, horas: p.horas || 0, sexo: p.sexo || "", naoFolgaCom: p.naoFolgaCom || [], naoPode: i === 0 ? Array.from(new Set([...(p.naoPode || []), "sab"])) : p.naoPode || [] }));
+function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salario: number | null; horas?: number; horasDia?: number; folgaFixa: string; naoPode: string[]; sexo?: string; naoFolgaCom?: string[] }[]; funcionamento?: Record<string, unknown>; custos?: unknown; regras?: { intervaloMin?: number } }) {
+  const equipe = (ctx.equipe || []).map((p, i) => ({ ...p, salario: p.salario || 0, horas: p.horas || 0, horasDia: p.horasDia || 0, sexo: p.sexo || "", naoFolgaCom: p.naoFolgaCom || [], naoPode: i === 0 ? Array.from(new Set([...(p.naoPode || []), "sab"])) : p.naoPode || [] }));
   return {
     tipo: "proposta", resposta: "", sugestao: "",
     entendeu: true,
@@ -176,7 +180,7 @@ function mock(ctx: { equipe?: { id: string; nome: string; funcao: string; salari
     mudancas: [`${equipe[0]?.nome || "Pessoa 1"} não trabalha mais no sábado`],
     avisos: ["Com uma pessoa a menos no sábado, a cobertura desse dia pode ficar menor."],
     sobreONegocio: `${equipe[0]?.nome || "Pessoa 1"} não trabalha aos sábados.`,
-    proposta: { funcionamento: ctx.funcionamento, equipe, custos: ctx.custos, remontar: true, celulas: [] },
+    proposta: { funcionamento: ctx.funcionamento, equipe, custos: ctx.custos, intervaloMin: ctx.regras?.intervaloMin === 120 ? 120 : 60, remontar: true, celulas: [] },
   };
 }
 
