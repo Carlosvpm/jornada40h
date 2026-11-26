@@ -528,6 +528,35 @@ try {
     await p8.close();
   }
 
+  console.log("22. funções e picos (dados)");
+  {
+    const r22 = await p2.evaluate(est => {
+      const J = window.__j40h, c = o => JSON.parse(JSON.stringify(o)), out = {};
+      const n = J.normalizar(Object.assign(c(est), { intervalo: "fora", picos: [
+        { dias: ["seg"], inicio: "11:00", fim: "14:00", funcao: "zz", pessoas: 0 },
+        { dias: ["seg"], inicio: "11:00", fim: "11:00", funcao: "", pessoas: 1 },
+        { dias: ["seg"], inicio: "xx", fim: "14:00", funcao: "", pessoas: 1 }] }));
+      out.funcoes = n.funcoes.map(f => f.nome).sort();
+      out.ids = new Set(n.funcoes.map(f => f.id)).size;
+      out.picos = n.picos.map(p => [p.funcao, p.pessoas]);
+      const cx = n.funcoes.find(f => f.nome === "caixa").id;
+      const comP = picos => J.normalizar(Object.assign(c(est), { intervalo: "fora", funcoes: n.funcoes, picos }));
+      const sT = comP([{ dias: ["seg"], inicio: "11:00", fim: "14:00", funcao: "", pessoas: 4 }]);
+      const sC = comP([{ dias: ["seg"], inicio: "11:00", fim: "14:00", funcao: cx, pessoas: 1 }]);
+      out.nec = [J.necessidade(sT, "seg", 720).total, J.necessidade(sT, "seg", 600).total, J.necessidade(sC, "seg", 720).porFuncao.caixa];
+      const s0 = comP([]);
+      out.falta = [J.calcular(s0, "42", "A").falta, J.calcular(sT, "42", "A").falta];
+      const sF = comP([{ dias: ["seg"], inicio: "18:00", fim: "20:00", funcao: "", pessoas: 5 }]);
+      out.fora = J.calcular(sF, "42", "A").dias.seg.blocos.filter(b => b.need === 5).length;
+      return out;
+    }, estado);
+    ok(JSON.stringify(r22.funcoes) === '["atendente","caixa"]' && r22.ids === 2, "funções nascem da equipe: " + JSON.stringify(r22.funcoes));
+    ok(JSON.stringify(r22.picos) === '[["",1]]', "pico com função inexistente vira qualquer; inválidos somem: " + JSON.stringify(r22.picos));
+    ok(JSON.stringify(r22.nec) === "[4,2,1]", "necessidade: total e por função: " + JSON.stringify(r22.nec));
+    ok(r22.falta[1] > r22.falta[0], "pico aumenta a falta: " + JSON.stringify(r22.falta));
+    ok(r22.fora === 2, "pico depois do fechamento conta só no aberto");
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();

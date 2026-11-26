@@ -121,6 +121,53 @@
     return s;
   }
 
+  // Catálogo de funções (nasce das funções que a equipe já tem) e horários de pico válidos.
+  function normalizarFuncoesPicos(s) {
+    var fs = [], vistos = {}, idsUsados = {};
+    (Array.isArray(s.funcoes) ? s.funcoes : []).forEach(function (f) {
+      var nome = String((f && f.nome) || "").trim().slice(0, 40), k = normFuncao(nome);
+      if (!k || vistos[k]) return;
+      var id = f.id && !idsUsados[f.id] ? String(f.id) : uid();
+      vistos[k] = id; idsUsados[id] = 1; fs.push({ id: id, nome: nome });
+    });
+    s.equipe.forEach(function (p) {
+      var k = normFuncao(p.funcao); if (!k || vistos[k]) return;
+      var id = uid(); vistos[k] = id; fs.push({ id: id, nome: String(p.funcao).trim().slice(0, 40) });
+    });
+    s.funcoes = fs;
+    var hora = /^([01]\d|2[0-3]):[0-5]\d$/;
+    s.picos = (Array.isArray(s.picos) ? s.picos : []).map(function (pc) {
+      pc = pc || {};
+      return {
+        id: pc.id || uid(),
+        dias: DIAS.filter(function (d) { return (pc.dias || []).indexOf(d) >= 0; }),
+        inicio: String(pc.inicio || ""), fim: String(pc.fim || ""),
+        funcao: fs.some(function (f) { return f.id === pc.funcao; }) ? pc.funcao : "",
+        pessoas: Math.max(1, Math.min(50, Math.round(Number(pc.pessoas) || 1)))
+      };
+    }).filter(function (pc) { return pc.dias.length && hora.test(pc.inicio) && hora.test(pc.fim) && pc.inicio !== pc.fim; });
+  }
+  function nomeFuncao(s, id) { var f = (s.funcoes || []).filter(function (x) { return x.id === id; })[0]; return f ? f.nome : ""; }
+  // Picos para o motor e para as contas: função pelo nome.
+  function picosMotor(s) {
+    return (s.picos || []).map(function (pc) { return { dias: pc.dias, inicio: pc.inicio, fim: pc.fim, funcao: pc.funcao ? nomeFuncao(s, pc.funcao) : "", pessoas: pc.pessoas }; });
+  }
+  // Dia para as contas de necessidade: pessoas ao mesmo tempo e picos no eixo do dia.
+  function diaNec(s, d) {
+    var f = s.funcionamento[d]; if (!f) return null;
+    return { pessoas: Math.max(1, Number(f.pessoas) || 1), picos: picosDoDia(picosMotor(s), d, min(f.abre)) };
+  }
+  // Necessidade da meia hora que começa em t (minutos no eixo do dia): total e por função (nome normalizado).
+  function necessidade(s, d, t) { var dn = diaNec(s, d); return dn ? necessidadeBloco(dn, t) : { total: 0, porFuncao: {} }; }
+  // Horas de gente pedidas no dia (pessoas × horas, mais os picos).
+  function horasPedidas(s, d) {
+    var f = s.funcionamento[d]; if (!f) return 0;
+    var dn = diaNec(s, d), a = min(f.abre), b = min(f.fecha); if (b <= a) b += 1440;
+    if (!dn.picos.length) return dur({ inicio: f.abre, fim: f.fecha }) * dn.pessoas;
+    var h = 0; for (var t = a; t < b; t += 30) h += necessidadeBloco(dn, t).total * Math.min(30, b - t) / 60;
+    return h;
+  }
+
   // Formato do link pessoal: o mesmo estado, sem nada além do necessário.
   function normalizar(s) {
     s.v = 1;
@@ -137,6 +184,7 @@
         sexo: p.sexo === "F" || p.sexo === "M" ? p.sexo : "", naoFolgaCom: Array.isArray(p.naoFolgaCom) ? p.naoFolgaCom.slice() : [] };
     });
     simetrizarPares(s.equipe);
+    normalizarFuncoesPicos(s);
     s.pendente = !!s.pendente;
     if (s.intervalo !== "fora" && s.intervalo !== "dentro") s.intervalo = undefined;
     s.intervaloMin = imin(s);
@@ -283,6 +331,7 @@
       funcionarios: funcionarios,
       salarioMedio: s.custos.salario,
       semana: sem,
+      picos: picosMotor(s),
       regras: { jornadaSemanal: VERSOES[v].jornadaSemanal, jornadaDiariaMax: VERSOES[v].jornadaDiariaMax, intervaloFora: fora(s), intervaloMin: imin(s) }
     };
   }
@@ -334,11 +383,11 @@
     DIAS.forEach(function (d) {
       var f = s.funcionamento[d]; if (!f) return;
       var a = min(f.abre), b = min(f.fecha); if (b <= a) b += 1440;
-      var need = Math.max(1, Number(f.pessoas) || 1), bl = [];
+      var dn = diaNec(s, d), bl = [];
       var turnos = Object.keys(g).map(function (id) { return g[id][d]; }).filter(function (c) { return c && c.tipo === "turno"; }).map(function (c) { return presencas(c, s, a); });
       for (var t = a; t < b; t += 30) {
         var n = 0; turnos.forEach(function (ps) { if (ps.some(function (x) { return x[0] <= t && t < x[1]; })) n++; });
-        bl.push({ t: t, f: Math.max(0, need - n) });
+        bl.push({ t: t, f: Math.max(0, necessidadeBloco(dn, t).total - n) });
       }
       falta[d] = { a: a, b: b, bl: bl };
     });
@@ -416,12 +465,12 @@
     if (!fora(s)) return;
     var R = VERSOES[v], dias = montarDias(s.funcionamento, regrasMotor(s, v));
     var deficit = function (d) {
-      var f = s.funcionamento[d], a = min(f.abre), b = min(f.fecha), need = Math.max(1, Number(f.pessoas) || 1), out = [];
+      var f = s.funcionamento[d], a = min(f.abre), b = min(f.fecha), dn = diaNec(s, d), out = [];
       if (b <= a) b += 1440;
       var ps = Object.keys(g).map(function (id) { return g[id][d]; }).filter(function (c) { return c && c.tipo === "turno"; }).map(function (c) { return presencas(c, s, a); });
       for (var t = a; t < b; t += 30) {
         var n = 0; ps.forEach(function (x) { if (x.some(function (y) { return y[0] <= t && t < y[1]; })) n++; });
-        if (n < need) out.push(t);
+        if (n < necessidadeBloco(dn, t).total) out.push(t);
       }
       return out;
     };
@@ -697,19 +746,30 @@
   // Cobertura em blocos de 30 min, horas por pessoa e alertas legais.
   function calcular(s, v, sem) {
     var R = VERSOES[v];
-    var res = { dias: {}, pessoas: [], falta: 0, sobra: 0, erros: [], avisos: [], trabalhandoNoDia: {} };
+    var res = { dias: {}, pessoas: [], falta: 0, sobra: 0, erros: [], avisos: [], trabalhandoNoDia: {}, picos: [] };
+    var nomeDe = {}; (s.funcoes || []).forEach(function (f) { nomeDe[normFuncao(f.nome)] = f.nome; });
     DIAS.forEach(function (d) {
       var f = s.funcionamento[d];
       if (!f) { res.dias[d] = { aberto: false }; return; }
       var a = min(f.abre), b = min(f.fecha); if (b <= a) b += 1440;
-      var need = Math.max(1, Number(f.pessoas) || 1);
-      var turnos = s.equipe.map(function (p) { return celula(s, v, sem, p.id, d); }).filter(function (c) { return c.tipo === "turno"; })
-        .map(function (c) { return presencas(c, s, a); });
-      var blocos = [], falta = 0, sobra = 0;
+      var need = Math.max(1, Number(f.pessoas) || 1), dn = diaNec(s, d);
+      var quem = s.equipe.map(function (p) { return { f: normFuncao(p.funcao), c: celula(s, v, sem, p.id, d) }; }).filter(function (x) { return x.c.tipo === "turno"; })
+        .map(function (x) { return { f: x.f, ps: presencas(x.c, s, a) }; });
+      var turnos = quem.map(function (x) { return x.ps; });
+      var blocos = [], falta = 0, sobra = 0, porF = {};
       for (var t = a; t < b; t += 30) {
         var n = 0; turnos.forEach(function (ps) { if (ps.some(function (x) { return x[0] <= t && t < x[1]; })) n++; });
-        blocos.push({ t: t, n: n, need: need });
-        falta += Math.max(0, need - n) * 0.5; sobra += Math.max(0, n - need) * 0.5;
+        var nb = necessidadeBloco(dn, t);
+        blocos.push({ t: t, n: n, need: nb.total });
+        falta += Math.max(0, nb.total - n) * 0.5; sobra += Math.max(0, n - nb.total) * 0.5;
+        // Pico por função: quem dessa função está no balcão nessa meia hora.
+        Object.keys(nb.porFuncao).forEach(function (k) {
+          var tem = quem.filter(function (x) { return x.f === k && x.ps.some(function (y) { return y[0] <= t && t < y[1]; }); }).length;
+          var def = Math.max(0, nb.porFuncao[k] - tem), cur = porF[k];
+          if (def > 0 && cur && cur.def === def && cur.fim === t) cur.fim = t + 30;
+          else if (def > 0) { porF[k] = { d: d, funcao: nomeDe[k] || k, def: def, ini: t, fim: t + 30 }; res.picos.push(porF[k]); }
+          else porF[k] = null;
+        });
       }
       var faixas = [], cur = null;
       blocos.forEach(function (bl) {
@@ -778,6 +838,10 @@
     DIAS.forEach(function (d) {
       var f = s.funcionamento[d]; if (!f) return;
       var n = Math.max(1, (dias[d] && dias[d].turnos || []).length) * Math.max(1, Number(f.pessoas) || 1);
+      // Pico com mais gente que o dia: 1 turno a mais para cada pessoa a mais no pico.
+      var dn = diaNec(s, d), maior = dn.pessoas;
+      dn.picos.forEach(function (pc) { for (var t = pc.ini; t < pc.fim; t += 30) maior = Math.max(maior, necessidadeBloco(dn, t).total); });
+      n += maior - dn.pessoas;
       porDia[d] = n; total += n;
     });
     return { total: total, porDia: porDia, pessoas: Math.ceil(total / 5) };
@@ -787,9 +851,9 @@
   // ainda falta. Vale a pior das semanas A e B: é isso que o dono vê depois de aplicar (memória por dados de entrada).
   var simCache = {};
   function simularContratacao(s, v, sem, n, h) {
-    var k = JSON.stringify([s.funcionamento, s.equipe, v, sem, n, h || 0, s.intervalo, imin(s)]);
+    var k = JSON.stringify([s.funcionamento, s.equipe, v, sem, n, h || 0, s.intervalo, imin(s), s.funcoes, s.picos]);
     if (simCache[k]) return simCache[k];
-    var s2 = { negocio: s.negocio, funcionamento: s.funcionamento, custos: s.custos, intervalo: s.intervalo, intervaloMin: imin(s), equipe: s.equipe.slice(), escalas: {} };
+    var s2 = { negocio: s.negocio, funcionamento: s.funcionamento, custos: s.custos, intervalo: s.intervalo, intervaloMin: imin(s), funcoes: s.funcoes, picos: s.picos, equipe: s.equipe.slice(), escalas: {} };
     for (var i = 0; i < n; i++) s2.equipe.push({ id: "sim" + i, nome: "", funcao: "", naoPode: [] });
     if (h > 0) s2.equipe.push({ id: "simP", nome: "", funcao: "", horas: h, naoPode: [] });
     s2.escalas[v] = {};
@@ -1086,7 +1150,7 @@
       return "<li>" + t + "</li>";
     });
     var pede = 0;
-    DIAS.forEach(function (d) { var f = state.funcionamento[d]; if (f) pede += dur({ inicio: f.abre, fim: f.fecha }) * Math.max(1, Number(f.pessoas) || 1); });
+    DIAS.forEach(function (d) { pede += horasPedidas(state, d); });
     var trab = calc.pessoas.reduce(function (t, p) { return t + p.horas; }, 0);
     var capac = calc.pessoas.reduce(function (t, p) { return t + p.limite; }, 0);
     var nParc = state.equipe.filter(function (p) { return parcial(p, state.versao); }).length, nInt = state.equipe.length - nParc;
@@ -2566,7 +2630,7 @@
     }
     if (pior.falta > 0.01) {
       var pede = 0;
-      DIAS.forEach(function (d) { var f = state.funcionamento[d]; if (f) pede += dur({ inicio: f.abre, fim: f.fecha }) * Math.max(1, Number(f.pessoas) || 1); });
+      DIAS.forEach(function (d) { pede += horasPedidas(state, d); });
       var capac = pior.pessoas.reduce(function (t, p) { return t + p.limite; }, 0);
       var dias = DIAS.filter(function (d) { return pior.dias[d].aberto && pior.dias[d].falta; });
       h += '<p class="rev-tit"><b>' + horas(pior.falta) + " por semana sem cobertura</b> (" + R.rotulo + ")</p><ul class=\"rev-lista\">" +
@@ -2641,5 +2705,5 @@
   }
 
   // Usado pelo teste automatizado.
-  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, normalizar: normalizar, jornadaPropria: jornadaPropria, turnoDoGrupo: turnoDoGrupo, conflitosPar: conflitosPar, mulheresSemDomingo: mulheresSemDomingo, problemasLei: problemasLei, render: function () { render(); } };
+  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, normalizar: normalizar, necessidade: necessidade, jornadaPropria: jornadaPropria, turnoDoGrupo: turnoDoGrupo, conflitosPar: conflitosPar, mulheresSemDomingo: mulheresSemDomingo, problemasLei: problemasLei, render: function () { render(); } };
 })();
