@@ -134,5 +134,25 @@ console.log("4. revisão final");
   ok(!x || x.avisos.some(a => /Ana e Cris folgam no mesmo dia \(domingo\)/.test(a)), "domingo da mulher junto do par sai com aviso");
 }
 
+console.log("5. intervalo de 2 h");
+const { intervaloDe } = require("../site/js/escala.js");
+const V42_2 = Object.assign({}, V42, { intervaloMin: 120 });
+const dur = c => { let a = parseInt(c.inicio) * 60 + +c.inicio.slice(3), b = parseInt(c.fim) * 60 + +c.fim.slice(3); if (b <= a) b += 1440; return b - a; };
+const turnosDe = (s, nome, dias = DIAS) => dias.map(d => s.grade.find(l => l.nome === nome).dias[d]).filter(c => c.tipo === "turno");
+ok(intervaloDe(600, 120) === 120 && intervaloDe(540, 120) === 120 && intervaloDe(470, 120) === 60 && intervaloDe(300, 120) === 15 && intervaloDe(564) === 60 && intervaloDe(564, 60) === 60, "intervaloDe com 1 h e 2 h");
+{
+  const s = monta(PADARIA, CINCO.map(n => ({ nome: n, funcao: "atendente" })), "A", V42_2);
+  const ts = CINCO.flatMap(n => turnosDe(s, n, SEG_SAB));
+  ok(ts.length && ts.every(c => dur(c) === 624 || c.rotulo === "Turno único") && s.grade.every(l => l.horasSemana <= 42), "intervalo 2 h: turno na loja = jornada + 2 h");
+  ok(s.avisos.some(a => a.includes("precisam de 2 h de intervalo")), "aviso cita 2 h");
+}
+{
+  const s = monta(MERCADO, NOVE.map(n => ({ nome: n })), "A", V42_2);
+  const ts = NOVE.flatMap(n => turnosDe(s, n, ["dom"]));
+  ok(ts.length && ts.every(c => c.rotulo === "Turno único" && dur(c) === 300), "intervalo 2 h: dia curto não ganha 2 h");
+  const a = monta(MERCADO, NOVE.map(n => ({ nome: n })), "A", Object.assign({}, V42, { intervaloMin: 60 })), b = monta(MERCADO, NOVE.map(n => ({ nome: n })), "A");
+  ok(JSON.stringify(a.grade) === JSON.stringify(b.grade), "intervalo 1 h explícito = padrão");
+}
+
 console.log(falhas ? `\n${falhas} falha(s)` : "\nTudo ok");
 process.exit(falhas ? 1 : 0);

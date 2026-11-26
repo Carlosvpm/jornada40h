@@ -30,8 +30,11 @@ var BLOCO_MIN = 30; // granularidade da cobertura (minutos)
  * Intervalo de refeição (minutos) de um turno com essa presença na loja (CLT, art. 71): trabalho de mais
  * de 6 h pede 1 h; de 4 a 6 h, 15 min. O intervalo não conta como hora trabalhada.
  */
-function intervaloDe(presencaMin) {
-  return presencaMin - 15 > 360 ? 60 : presencaMin > 240 ? 15 : 0;
+function intervaloDe(presencaMin, intervaloMin) {
+  // intervaloMin: 60 (padrão) ou 120, escolhido pelo dono. Se com 2 h o trabalho ficaria até 6 h, vale o mínimo de 1 h.
+  var im = intervaloMin === 120 ? 120 : 60;
+  if (presencaMin - 15 <= 360) return presencaMin > 240 ? 15 : 0;
+  return presencaMin - im > 360 ? im : 60;
 }
 
 /** "06:30" -> 390 (minutos desde 00:00). */
@@ -148,7 +151,8 @@ function montarDias(funcionamento, regras) {
   // intervaloFora: o almoço fica fora da jornada, então o turno na loja é a jornada + o intervalo
   // (8 h de trabalho = 9 h na loja). Sem a regra, o intervalo fica dentro do turno (modelo antigo).
   var fora = !!regras.intervaloFora;
-  if (fora) maxMin += maxMin > 360 ? 60 : maxMin > 240 ? 15 : 0;
+  var im = regras.intervaloMin === 120 ? 120 : 60;
+  if (fora) maxMin += maxMin > 360 ? im : maxMin > 240 ? 15 : 0;
   DIAS.forEach(function (d) {
     var f = funcionamento ? funcionamento[d] : null;
     if (!f || !f.abre || !f.fecha) { info[d] = { aberto: false }; return; }
@@ -174,14 +178,14 @@ function montarDias(funcionamento, regras) {
     // mais e, para alguém cobrir os almoços, gente além da que fica ao mesmo tempo.
     var almocoH = 0, extraAlmoco = 0;
     if (fora) {
-      turnos.forEach(function (t) { if (intervaloDe(t.fim - t.inicio) >= 60) almocoH += pessoas; });
+      turnos.forEach(function (t) { var iv = intervaloDe(t.fim - t.inicio, im); if (iv >= 60) almocoH += pessoas * iv / 60; });
       var maior = Math.max.apply(null, turnos.map(function (t) { return t.fim - t.inicio; }));
       if (almocoH) extraAlmoco = Math.ceil(almocoH * 60 / Math.max(60, maior - 180));
     }
     info[d] = {
       aberto: true, abre: abre, fecha: fecha, horas: horas, pessoas: pessoas,
       demanda: horas * pessoas + almocoH, turnos: turnos,
-      intervaloFora: fora,
+      intervaloFora: fora, intervaloMin: im,
       // quantas pessoas cobririam o dia inteiro sem buraco
       pessoasParaCobrir: pessoas * turnos.length + extraAlmoco
     };
@@ -426,7 +430,7 @@ function escalarDia(dia, pessoasDisp, contagem, blocos) {
     contagem[p.nome][t.rotulo] = (contagem[p.nome][t.rotulo] || 0) + 1;
     contagem[p.nome].total++;
     var pres = t.fim - t.inicio;
-    resultado[p.nome] = { tipo: "turno", inicio: paraHora(t.inicio), fim: paraHora(t.fim), rotulo: t.rotulo, horas: (pres - (dia.intervaloFora ? intervaloDe(pres) : 0)) / 60 };
+    resultado[p.nome] = { tipo: "turno", inicio: paraHora(t.inicio), fim: paraHora(t.fim), rotulo: t.rotulo, horas: (pres - (dia.intervaloFora ? intervaloDe(pres, dia.intervaloMin) : 0)) / 60 };
   });
   return resultado;
 }
