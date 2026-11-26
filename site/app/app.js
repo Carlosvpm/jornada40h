@@ -252,7 +252,7 @@
     // Almoço de quem é tempo integral antes: o meio período entra nos buracos que sobram, inclusive na hora do almoço.
     marcarAlmocos(s, g, integrais.map(function (p) { return p.id; }));
     cobrirComReserva(s, v, g, integrais);
-    encaixarParciais(s, v, g);
+    encaixarParciais(s, v, g, sem);
     marcarAlmocos(s, g, s.equipe.filter(function (p) { return parcial(p, v); }).map(function (p) { return p.id; }));
     return g;
   }
@@ -268,7 +268,8 @@
   // Coloca quem é meio período nos horários com menos gente que o pedido: a cada passo, o turno (até a
   // jornada diária e o que resta da carga semanal) que cobre mais meia-horas em falta, respeitando
   // folga fixa, dias que a pessoa não pode, 2 folgas e 11 h de descanso entre um dia e outro.
-  function encaixarParciais(s, v, g) {
+  // Mulher em meio período não pega o domingo na semana B: assim folga no domingo a cada 2 semanas (CLT, art. 386).
+  function encaixarParciais(s, v, g, sem) {
     var R = VERSOES[v], maxDia = Math.round(R.jornadaDiariaMax * 60), fo = fora(s);
     var liq = function (pres) { return pres - (fo ? intervaloDe(pres) : 0); };
     var parciais = s.equipe.filter(function (p) { return parcial(p, v); });
@@ -297,6 +298,7 @@
         DIAS.forEach(function (d) {
           var F = falta[d];
           if (!F || usados[d] || p.folgaFixa === d || (p.naoPode || []).indexOf(d) >= 0) return;
+          if (d === "dom" && p.sexo === "F" && sem === "B") return;
           for (var i = 0; i < F.bl.length; i++) {
             if (!F.bl[i].f) continue;
             var ganho = 0;
@@ -1743,6 +1745,17 @@
           sexo: p.sexo === "F" || p.sexo === "M" || p.sexo === "" ? p.sexo : (antigo && antigo.sexo) || "",
           naoFolgaCom: Array.isArray(p.naoFolgaCom) ? p.naoFolgaCom.map(String) : ((antigo && antigo.naoFolgaCom) || []).slice()
         };
+      });
+      // Par que existia e saiu da lista de qualquer um dos dois lados: sai dos dois (senão a simetria o traria de volta).
+      base.equipe.forEach(function (a) {
+        (a.naoFolgaCom || []).forEach(function (bId) {
+          var na = s.equipe.filter(function (x) { return x.id === a.id; })[0], nb = s.equipe.filter(function (x) { return x.id === bId; })[0];
+          if (!na || !nb) return;
+          if (na.naoFolgaCom.indexOf(bId) < 0 || nb.naoFolgaCom.indexOf(a.id) < 0) {
+            na.naoFolgaCom = na.naoFolgaCom.filter(function (id) { return id !== bId; });
+            nb.naoFolgaCom = nb.naoFolgaCom.filter(function (id) { return id !== a.id; });
+          }
+        });
       });
       simetrizarPares(s.equipe);
     }

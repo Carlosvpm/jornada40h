@@ -121,7 +121,7 @@ Como decidir:
 - Mudança de equipe, folga fixa, dias que a pessoa não pode, horário de funcionamento ou número de pessoas por dia: atualize os dados e use remontar: true para o motor redistribuir turnos e folgas.
 - Troca pontual de turno ou folga de alguém num dia: use celulas e remontar: false, para não desfazer o que o dono já ajustou à mão.
 - Pessoa nova vai com id vazio. Para tirar alguém, deixe a pessoa fora da lista.
-- Quem não pode folgar junto (no mesmo dia): grave em naoFolgaCom das duas pessoas e use remontar: true (não resolva só com celulas). Mantenha sexo e naoFolgaCom de quem não mudou.
+- Quem não pode folgar junto (no mesmo dia): grave em naoFolgaCom das duas pessoas e use remontar: true (não resolva só com celulas). Para desfazer, tire das duas. Mantenha sexo e naoFolgaCom de quem não mudou.
 - Sexo: só preencha F ou M quando o dono disser; nunca deduza pelo nome. Mulher folga no domingo pelo menos 1 vez a cada 2 semanas (CLT, art. 386): na conferência, olhe mulheresSemDomingoNasSemanasAeB e paresFolgandoJuntos e diga em avisos o que não deu para cumprir.
 - Meio período: preencha horas com a carga semanal (ex.: 16) e use remontar: true. O painel encaixa essa pessoa sozinho nos horários que ainda faltam gente, até essa carga, e o custo dela sai proporcional às horas. Para limitar os dias, use naoPode. Quem é tempo integral vai com horas 0.
 - Se o pedido piora a escala (abre buraco de cobertura, aumenta custo, cria ponto fora da lei), faça o que foi pedido mesmo assim, explique o problema em avisos e diga no resumo qual alternativa resolveria. Se receber o resultado de uma proposta anterior com problemas, proponha uma alternativa que mantenha a intenção do dono e resolva os problemas.

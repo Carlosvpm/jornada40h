@@ -282,8 +282,14 @@ function distribuirFolgas(funcionarios, dias, regras, semana, avisos) {
   var grupo = semana === "B" ? funcionarios.slice(metade) : funcionarios.slice(0, metade);
   var mulheres = dias.dom.aberto ? funcionarios.filter(function (p) { return p.sexo === "F"; }) : [];
   if (mulheres.length) {
-    var gA = mulheres.filter(function (p, i) { return i % 2 === 0; });
-    var gB = mulheres.filter(function (p, i) { return i % 2 === 1; });
+    // Cada mulher vai para o grupo com menos mulheres (empate: A), salvo se lá já está alguém com quem
+    // ela não pode folgar junto e o outro grupo não tem: aí vai para o outro.
+    var gA = [], gB = [];
+    var temPar = function (g, p) { return g.some(function (q) { return (p.naoFolgaCom || []).indexOf(q.nome) >= 0; }); };
+    mulheres.forEach(function (p) {
+      var prim = gA.length <= gB.length ? gA : gB, seg = prim === gA ? gB : gA;
+      (temPar(prim, p) && !temPar(seg, p) ? seg : prim).push(p);
+    });
     funcionarios.forEach(function (p) {
       if (p.sexo === "F") return;
       if (gA.length < metade) gA.push(p); else gB.push(p);
@@ -295,6 +301,7 @@ function distribuirFolgas(funcionarios, dias, regras, semana, avisos) {
   // mesmo que aperte a cobertura do domingo (a lei vem antes).
   grupo.forEach(function (p) {
     if (p.sexo !== "F" || folgas[p.nome].dom) return;
+    if (juntoCom(p, "dom")) avisarPar(p, "dom", "a folga da mulher no domingo (CLT, art. 386) vem antes da regra de não folgar junto.");
     folgas[p.nome].dom = true;
     disponiveis.dom--;
     if (restantes[p.nome] > 0) restantes[p.nome]--;

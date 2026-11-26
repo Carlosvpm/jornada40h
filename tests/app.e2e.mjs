@@ -369,6 +369,27 @@ try {
     ok(JSON.stringify(r16.sem) === JSON.stringify([["F", []], ["", []], ["M", []]]), "proposta sem os campos mantém os valores antigos: " + JSON.stringify(r16.sem));
   }
 
+  console.log("17. revisão final");
+  {
+    const r17 = await p2.evaluate(b => {
+      const J = window.__j40h, base = Object.assign(JSON.parse(JSON.stringify(b)), { equipe: [
+        { id: "p0", nome: "Ana", funcao: "", naoFolgaCom: ["p1"] }, { id: "p1", nome: "Bia", funcao: "", naoFolgaCom: ["p0"] }, { id: "p2", nome: "Caio", funcao: "" }] });
+      J.gerarTudo(base);
+      const eq = base.equipe.map(p => ({ id: p.id, nome: p.nome, funcao: "", salario: 0, horas: 0, folgaFixa: "", naoPode: [], sexo: "", naoFolgaCom: p.id === "p1" ? ["p0"] : [] }));
+      return J.aplicarProposta({ equipe: eq, remontar: true, celulas: [] }, base).equipe.map(p => p.naoFolgaCom);
+    }, baseP);
+    const r17b = await p2.evaluate(([b, D]) => {
+      const J = window.__j40h, merc = {};
+      D.forEach(d => { merc[d] = { abre: "07:00", fecha: d === "dom" ? "13:00" : "20:00", pessoas: 3 }; });
+      const s = Object.assign(JSON.parse(JSON.stringify(b)), { funcionamento: merc, equipe: Array.from({ length: 5 }, (_, i) => ({ id: "p" + i, nome: "Pessoa " + (i + 1), funcao: "" }))
+        .concat([{ id: "p9", nome: "Bia", funcao: "", sexo: "F", horas: 24 }]) });
+      J.gerarTudo(s);
+      return { sem: ["42", "40"].flatMap(v => J.mulheresSemDomingo(s, v)), dom: ["A", "B"].map(w => (s.escalas["42"][w].p9 || {}).dom) };
+    }, [baseP, D7]);
+    ok(!r17b.sem.length, "mulher em meio período folga no domingo em A ou B: " + JSON.stringify(r17b.dom));
+    ok(JSON.stringify(r17) === "[[],[],[]]", "IA tirar o par de um lado só desfaz o par: " + JSON.stringify(r17));
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();

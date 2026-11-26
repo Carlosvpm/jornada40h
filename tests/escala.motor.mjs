@@ -118,5 +118,21 @@ const mulheres = (lista, idx, extra = {}) => lista.map((n, i) => Object.assign({
   ok(!!s && s.avisos.some(a => /Ana trabalha 4 dias nesta semana para folgar no domingo/.test(a)), "abre 5 dias com domingo: folga no domingo e aviso");
 }
 
+console.log("4. revisão final");
+{
+  const eq = ["Ana", "Bia", "Cris", "Duda", "Edu", "Fabio"].map(n => Object.assign({ nome: n },
+    ["Ana", "Bia", "Cris"].includes(n) ? { sexo: "F" } : {}, n === "Ana" ? { naoFolgaCom: ["Cris"] } : n === "Cris" ? { naoFolgaCom: ["Ana"] } : {}));
+  const r = ["A", "B"].map(w => monta(SETE, eq, w));
+  const j = r.map(x => junto(x, "Ana", "Cris"));
+  ok(j.every(x => !x.length), "par de mulheres não folga junto no domingo (vão para semanas diferentes)" + (j.some(x => x.length) ? ": " + JSON.stringify(j) : ""));
+}
+{
+  const eq = ["Ana", "Cris", "Duda", "Edu"].map(n => Object.assign({ nome: n }, ["Ana", "Cris"].includes(n) ? { sexo: "F" } : {},
+    n === "Ana" ? { naoFolgaCom: ["Cris"], folgaFixa: "dom" } : n === "Cris" ? { naoFolgaCom: ["Ana"] } : {}));
+  const r = ["A", "B"].map(w => monta(SETE, eq, w));
+  const x = r.find(s => junto(s, "Ana", "Cris").includes("dom"));
+  ok(!x || x.avisos.some(a => /Ana e Cris folgam no mesmo dia \(domingo\)/.test(a)), "domingo da mulher junto do par sai com aviso");
+}
+
 console.log(falhas ? `\n${falhas} falha(s)` : "\nTudo ok");
 process.exit(falhas ? 1 : 0);
