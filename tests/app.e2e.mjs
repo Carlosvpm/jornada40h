@@ -657,6 +657,32 @@ try {
     ok(r.conf, "conferência recebe picos descobertos por semana");
   }
 
+  console.log("25. pico de função em dia longo e IA sem mudança");
+  {
+    const r = await p2.evaluate(est => {
+      const J = window.__j40h, c = o => JSON.parse(JSON.stringify(o)), out = {};
+      const e = c(est), f = {};
+      ["seg", "ter", "qua", "qui", "sex", "sab"].forEach(d => { f[d] = { abre: "06:00", fecha: "22:00", pessoas: 2 }; });
+      f.dom = { abre: "07:00", fecha: "13:00", pessoas: 2 };
+      Object.assign(e, { funcionamento: f, intervalo: "fora", funcoes: [{ id: "cx", nome: "caixa" }, { id: "at", nome: "atendente" }],
+        picos: [{ id: "k", dias: ["seg", "ter", "qua", "qui", "sex", "sab"], inicio: "11:00", fim: "14:00", funcao: "cx", pessoas: 1 }] });
+      e.equipe = Array.from({ length: 8 }, (_, i) => ({ id: "q" + i, nome: "P" + i, funcao: i < 2 ? "caixa" : "atendente" }));
+      const s = J.normalizar(e); J.gerarTudo(s);
+      out.picos = ["42", "40"].flatMap(v => ["A", "B"].flatMap(w => J.calcular(s, v, w).picos.map(x => v + w + x.d + ":" + x.ini)));
+      out.erros = ["42", "40"].reduce((t, v) => t + ["A", "B"].reduce((u, w) => u + J.calcular(s, v, w).erros.length, 0), 0);
+      // IA devolvendo o que recebeu: nada muda, nada fica pendente.
+      s.pendente = false;
+      const ctx = J.contextoIA(s);
+      const novo = J.aplicarProposta({ funcionamento: ctx.funcionamento, equipe: ctx.equipe, funcoes: ctx.funcoes, picos: ctx.picos, remontar: false, celulas: [] }, s);
+      out.pend = novo.pendente; out.id = novo.picos[0].id;
+      return out;
+    }, estado);
+    // Antes do reparo de picos sobravam 7 trechos; 1 ainda exige cadeia de 3 trocas (fica no alerta).
+    ok(r.picos.length <= 1, "dia longo: grade final cobre o pico de caixa: " + JSON.stringify(r.picos));
+    ok(r.erros === 0, "sem erro de lei no dia longo com pico: " + r.erros);
+    ok(r.pend === false && r.id === "k", "proposta da IA igual ao atual não deixa a escala pendente: " + JSON.stringify([r.pend, r.id]));
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();

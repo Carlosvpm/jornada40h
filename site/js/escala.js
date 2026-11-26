@@ -462,14 +462,15 @@ function criarBlocos(dia) {
 }
 
 /** Quantos blocos ainda descobertos este turno cobriria. */
-// funcao (normalizada): blocos onde falta essa função no pico valem 2 a mais (o caixa vai para o pico de caixa).
+// funcao (normalizada): cada bloco onde falta essa função no pico vale mais que o dia inteiro de cobertura
+// comum, então o caixa vai para o pico de caixa mesmo que outro turno cubra mais horas vazias.
 function ganhoTurno(blocos, turno, funcao) {
   var g = 0;
   for (var i = 0; i < blocos.length; i++) {
     var b = blocos[i];
     if (b.inicio < turno.inicio || b.inicio >= turno.fim) continue;
     if (b.escalado < b.necessario) g++;
-    if (funcao && b.porFuncao[funcao] && (b.escFuncao[funcao] || 0) < b.porFuncao[funcao]) g += 2;
+    if (funcao && b.porFuncao[funcao] && (b.escFuncao[funcao] || 0) < b.porFuncao[funcao]) g += blocos.length;
   }
   return g;
 }

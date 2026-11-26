@@ -655,6 +655,85 @@
       s.escalas[v] = {};
       SEMANAS.forEach(function (sem) { s.escalas[v][sem] = gerar(s, v, sem); });
       repararVirada(s, v);
+      repararPicos(s, v);
+    });
+  }
+
+  // Pico de função descoberto: troca os turnos de um dia entre alguém da função e alguém de outra função
+  // (mesma classe de jornada, mesmas horas). O dia fica com os mesmos turnos, então a cobertura total não muda;
+  // a troca só vale se o pico melhora sem piorar descanso, lei nem cobertura.
+  function repararPicos(s, v) {
+    if (!(s.picos || []).some(function (pc) { return pc.funcao && pc.dias.length; })) return;
+    var E = s.escalas[v];
+    var integ = s.equipe.filter(function (p) { return !parcial(p, v); });
+    var cls = {}, fun = {};
+    integ.forEach(function (p) { cls[p.id] = classeTurno(p, v); fun[p.id] = normFuncao(p.funcao); });
+    function vizinho(w, d, passo) {
+      var i = DIAS.indexOf(d) + passo, k = SEMANAS.indexOf(w);
+      if (i < 0) return [SEMANAS[(k + SEMANAS.length - 1) % SEMANAS.length], DIAS[DIAS.length - 1]];
+      if (i >= DIAS.length) return [SEMANAS[(k + 1) % SEMANAS.length], DIAS[0]];
+      return [w, DIAS[i]];
+    }
+    function descansoOk(w, id, d) {
+      var c = celula(s, v, w, id, d), a = vizinho(w, d, -1), b = vizinho(w, d, 1);
+      return descanso(celula(s, v, a[0], id, a[1]), c) >= INTERJORNADA_MIN && descanso(c, celula(s, v, b[0], id, b[1])) >= INTERJORNADA_MIN;
+    }
+    SEMANAS.forEach(function (w) {
+      var g = E[w]; if (!g) return;
+      for (var volta = 0; volta < 40; volta++) {
+        var calc = calcular(s, v, w);
+        if (!calc.picos.length) return;
+        var base = { pico: horasPico(calc), falta: calc.falta, erros: calc.erros.length }, feito = false;
+        calc.picos.some(function (x) {
+          var k = normFuncao(x.funcao), d = x.d;
+          var trabalha = integ.filter(function (p) { var c = g[p.id] && g[p.id][d]; return c && c.tipo === "turno"; }).map(function (p) { return p.id; });
+          // Troca o dia do pico sozinho ou junto com o dia antes ou depois (para manter as 11 h de descanso).
+          var i = DIAS.indexOf(d), blocos = [[d]];
+          if (i > 0) blocos.push([DIAS[i - 1], d]);
+          if (i < DIAS.length - 1) blocos.push([d, DIAS[i + 1]]);
+          var serve = function (a, b, dd) {
+            var ca = g[a][dd], cb = g[b][dd];
+            return ca && cb && ca.tipo === "turno" && cb.tipo === "turno" && Math.abs(trab(ca, s) - trab(cb, s)) < 1e-9;
+          };
+          return trabalha.filter(function (a) { return fun[a] === k; }).some(function (a) {
+            return trabalha.some(function (b) {
+              if (fun[b] === k || cls[b] !== cls[a]) return false;
+              return blocos.some(function (ds) {
+                if (!ds.every(function (dd) { return serve(a, b, dd); })) return false;
+                if (ds.every(function (dd) { return g[a][dd].inicio === g[b][dd].inicio && g[a][dd].fim === g[b][dd].fim; })) return false;
+                var antes = [clone(g[a]), clone(g[b])];
+                ds.forEach(function (dd) { var t = g[a][dd]; g[a][dd] = g[b][dd]; g[b][dd] = t; });
+                marcarAlmocos(s, g, [a, b]);
+                var c2 = calcular(s, v, w);
+                if (ds.every(function (dd) { return descansoOk(w, a, dd) && descansoOk(w, b, dd); }) && horasPico(c2) < base.pico - 0.01 && c2.falta <= base.falta + 0.01 && c2.erros.length <= base.erros) return (feito = true);
+                g[a] = antes[0]; g[b] = antes[1];
+                return false;
+              });
+            });
+          });
+        });
+        // Sem troca: alguém da função que está de reserva no dia e tem horas sobrando na semana pega um turno do dia.
+        if (!feito) calc.picos.some(function (x) {
+          var k = normFuncao(x.funcao), d = x.d;
+          return integ.filter(function (p) { return fun[p.id] === k && g[p.id] && g[p.id][d] && g[p.id][d].tipo === "livre"; }).some(function (p) {
+            var horasSem = DIAS.reduce(function (t, dd) { var c = g[p.id][dd]; return t + (c && c.tipo === "turno" ? trab(c, s) : 0); }, 0);
+            var vistos = {};
+            return integ.filter(function (q) { var c = g[q.id] && g[q.id][d]; return cls[q.id] === cls[p.id] && c && c.tipo === "turno"; }).some(function (q) {
+              var t = g[q.id][d], kk = t.inicio + "-" + t.fim;
+              if (vistos[kk] || horasSem + trab(t, s) > limiteSemana(p, v) + 1e-9) return false;
+              vistos[kk] = 1;
+              var antes = clone(g[p.id]);
+              g[p.id][d] = { tipo: "turno", inicio: t.inicio, fim: t.fim, rotulo: t.rotulo };
+              marcarAlmocos(s, g, [p.id]);
+              var c2 = calcular(s, v, w);
+              if (descansoOk(w, p.id, d) && horasPico(c2) < base.pico - 0.01 && c2.falta <= base.falta + 0.01 && c2.erros.length <= base.erros) return (feito = true);
+              g[p.id] = antes;
+              return false;
+            });
+          });
+        });
+        if (!feito) return;
+      }
     });
   }
 
@@ -2013,10 +2092,16 @@
       prop.funcoes.forEach(idFuncao);
     }
     if (Array.isArray(prop.picos)) {
+      var velhos = (s.picos || []).slice();
       s.picos = prop.picos.slice(0, 40).map(function (pc) {
         return { dias: pc.dias, inicio: pc.inicio, fim: pc.fim, funcao: idFuncao(pc.funcao), pessoas: pc.pessoas };
       });
       normalizarFuncoesPicos(s);
+      // Pico que voltou igual mantém o id (senão toda proposta pareceria mudar os picos).
+      var chave = function (pc) { return JSON.stringify([pc.dias, pc.inicio, pc.fim, pc.funcao, pc.pessoas]); };
+      s.picos.forEach(function (pc) {
+        for (var j = 0; j < velhos.length; j++) if (velhos[j] && chave(velhos[j]) === chave(pc)) { pc.id = velhos[j].id; velhos[j] = null; return; }
+      });
     }
     if (prop.remontar) { gerarTudo(s); s.pendente = false; }
     else if (JSON.stringify([s.funcionamento, s.equipe, s.intervaloMin, s.picos]) !== antesEstr) s.pendente = true;

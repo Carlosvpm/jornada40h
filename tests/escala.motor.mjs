@@ -212,5 +212,20 @@ const montaP = (funcionamento, funcionarios, semana, picos) =>
   ok(JSON.stringify(sobe) === '["18:00","18:30"]', "pico fora do horário conta só no aberto: " + JSON.stringify(sobe));
 }
 
+{
+  // Dia longo (06–22): o caixa precisa preferir o turno que cobre o pico, mesmo com o fechamento descoberto.
+  const f = Object.assign(func(SEG_SAB, "06:00", "22:00", 2), func(["dom"], "07:00", "13:00", 2));
+  const eq = Array.from({ length: 8 }, (_, i) => ({ nome: "P" + i, funcao: i < 2 ? "caixa" : "atendente" }));
+  const faltas = [];
+  for (const w of ["A", "B"]) {
+    const s = montaP(f, eq, w, [{ dias: SEG_SAB, inicio: "11:00", fim: "14:00", funcao: "caixa", pessoas: 1 }]);
+    SEG_SAB.forEach(d => {
+      const tem = ["P0", "P1"].some(n => { const c = s.grade.find(l => l.nome === n).dias[d]; return c.tipo === "turno" && c.inicio <= "11:00" && c.fim >= "14:00"; });
+      if (!tem && ["P0", "P1"].some(n => s.grade.find(l => l.nome === n).dias[d].tipo === "turno")) faltas.push(w + d);
+    });
+  }
+  ok(!faltas.length, "dia longo: caixa que trabalha no dia pega o turno do pico" + (faltas.length ? ": " + faltas.join(",") : ""));
+}
+
 console.log(falhas ? `\n${falhas} falha(s)` : "\nTudo ok");
 process.exit(falhas ? 1 : 0);
