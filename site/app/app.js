@@ -62,23 +62,26 @@
   // Almoço fora da jornada (s.intervalo === "fora"): o turno na loja é a jornada + o intervalo, e as horas
   // da pessoa descontam o intervalo. "dentro" (escalas antigas mantidas pelo dono): o intervalo fica dentro do turno.
   function fora(s) { return !!s && s.intervalo === "fora"; }
-  function regrasMotor(s, v) { return { jornadaDiariaMax: VERSOES[v].jornadaDiariaMax, intervaloFora: fora(s) }; }
-  function pausaMin(c, s) { return fora(s) ? intervaloDe(Math.round(dur(c) * 60)) : 0; }
+  // Intervalo de refeição de quem trabalha mais de 6 h, escolhido pelo dono: 1 h (padrão) ou 2 h (CLT, art. 71).
+  function imin(s) { return s && Number(s.intervaloMin) === 120 ? 120 : 60; }
+  function regrasMotor(s, v) { return { jornadaDiariaMax: VERSOES[v].jornadaDiariaMax, intervaloFora: fora(s), intervaloMin: imin(s) }; }
+  function pausaMin(c, s) { return fora(s) ? intervaloDe(Math.round(dur(c) * 60), imin(s)) : 0; }
   function trab(c, s) { return dur(c) - pausaMin(c, s) / 60; }
-  // Início do almoço de 1 h, em minutos no eixo do turno [ini, fim): o marcado na grade ou o meio do turno.
+  // Início do almoço (1 h ou 2 h), em minutos no eixo do turno [ini, fim): o marcado na grade ou o meio do turno.
   function almocoIni(c, s, ini, fim) {
-    if (pausaMin(c, s) < 60) return null;
-    if (c.almoco && /^\d\d:\d\d$/.test(c.almoco)) { var a = min(c.almoco); while (a < ini) a += 1440; if (a + 60 <= fim) return a; }
-    return ini + Math.round((fim - ini - 60) / 2 / 30) * 30;
+    var L = pausaMin(c, s);
+    if (L < 60) return null;
+    if (c.almoco && /^\d\d:\d\d$/.test(c.almoco)) { var a = min(c.almoco); while (a < ini) a += 1440; if (a + L <= fim) return a; }
+    return ini + Math.round((fim - ini - L) / 2 / 30) * 30;
   }
   // Pedaços em que a pessoa está no balcão: o turno sem o almoço.
   function presencas(c, s, abre) {
     var x = faixaTurno(c, abre), a = almocoIni(c, s, x[0], x[1]);
-    return a == null ? [x] : [[x[0], a], [a + 60, x[1]]];
+    return a == null ? [x] : [[x[0], a], [a + pausaMin(c, s), x[1]]];
   }
   function textoAlmoco(c, s) {
     var x = faixaTurno(c, 0), a = almocoIni(c, s, x[0], x[1]);
-    return a == null ? "" : "almoço " + falada(a % 1440) + "–" + falada((a + 60) % 1440);
+    return a == null ? "" : "almoço " + falada(a % 1440) + "–" + falada((a + pausaMin(c, s)) % 1440);
   }
   function slug(s) { return String(s || "escala").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "escala"; }
 
@@ -136,6 +139,7 @@
     simetrizarPares(s.equipe);
     s.pendente = !!s.pendente;
     if (s.intervalo !== "fora" && s.intervalo !== "dentro") s.intervalo = undefined;
+    s.intervaloMin = imin(s);
     if (!s.escalas || !s.escalas["42"] || !s.escalas["40"]) { s.intervalo = s.intervalo || "fora"; gerarTudo(s); }
     return s;
   }
@@ -232,7 +236,7 @@
       funcionarios: funcionarios,
       salarioMedio: s.custos.salario,
       semana: sem,
-      regras: { jornadaSemanal: VERSOES[v].jornadaSemanal, jornadaDiariaMax: VERSOES[v].jornadaDiariaMax, intervaloFora: fora(s) }
+      regras: { jornadaSemanal: VERSOES[v].jornadaSemanal, jornadaDiariaMax: VERSOES[v].jornadaDiariaMax, intervaloFora: fora(s), intervaloMin: imin(s) }
     };
   }
 
@@ -270,8 +274,8 @@
   // folga fixa, dias que a pessoa não pode, 2 folgas e 11 h de descanso entre um dia e outro.
   // Mulher em meio período não pega o domingo na semana B: assim folga no domingo a cada 2 semanas (CLT, art. 386).
   function encaixarParciais(s, v, g, sem) {
-    var R = VERSOES[v], maxDia = Math.round(R.jornadaDiariaMax * 60), fo = fora(s);
-    var liq = function (pres) { return pres - (fo ? intervaloDe(pres) : 0); };
+    var R = VERSOES[v], maxDia = Math.round(R.jornadaDiariaMax * 60), fo = fora(s), im = imin(s);
+    var liq = function (pres) { return pres - (fo ? intervaloDe(pres, im) : 0); };
     var parciais = s.equipe.filter(function (p) { return parcial(p, v); });
     if (!parciais.length) return;
     var falta = {};
@@ -294,7 +298,7 @@
         return (!ant || ini + 1440 - ant[1] >= INTERJORNADA_MIN) && (!prox || prox[0] + 1440 - fim >= INTERJORNADA_MIN);
       };
       while (resta >= 120 && nUsados < 5) {
-        var melhor = null, lim = Math.min(maxDia, resta), limPres = fo ? lim + (lim > 360 ? 60 : lim > 240 ? 15 : 0) : lim;
+        var melhor = null, lim = Math.min(maxDia, resta), limPres = presencaDe(lim, fo, im);
         DIAS.forEach(function (d) {
           var F = falta[d];
           if (!F || usados[d] || p.folgaFixa === d || (p.naoPode || []).indexOf(d) >= 0) return;
@@ -338,16 +342,18 @@
         ps.forEach(function (x) { for (var t = a + Math.ceil((x[0] - a) / 30) * 30; t < x[1]; t += 30) n[t] = (n[t] || 0) + 1; });
       });
       cs.sort(function (p, q) { return faixaTurno(p, a)[0] - faixaTurno(q, a)[0]; }).forEach(function (c) {
-        if (pausaMin(c, s) < 60) return;
+        var L = pausaMin(c, s);
+        if (L < 60) return;
         // Horários na mesma grade de 30 min da cobertura, que começa na abertura.
-        var x = faixaTurno(c, a), meio = a + Math.round((x[0] + (x[1] - x[0] - 60) / 2 - a) / 30) * 30, melhor = null;
-        for (var t = a + Math.ceil((x[0] + 90 - a) / 30) * 30; t + 60 <= x[1] - 90; t += 30) {
-          var folga = Math.min((n[t] || 0) - need, (n[t + 30] || 0) - need);
+        var x = faixaTurno(c, a), meio = a + Math.round((x[0] + (x[1] - x[0] - L) / 2 - a) / 30) * 30, melhor = null;
+        for (var t = a + Math.ceil((x[0] + 90 - a) / 30) * 30; t + L <= x[1] - 90; t += 30) {
+          var folga = Infinity;
+          for (var u = t; u < t + L; u += 30) folga = Math.min(folga, (n[u] || 0) - need);
           if (!melhor || folga > melhor.f || (folga === melhor.f && Math.abs(t - meio) < Math.abs(melhor.t - meio))) melhor = { t: t, f: folga };
         }
         var ini = melhor ? melhor.t : meio;
         c.almoco = hhmm(ini % 1440);
-        n[ini] = (n[ini] || 0) - 1; n[ini + 30] = (n[ini + 30] || 0) - 1;
+        for (var w = ini; w < ini + L; w += 30) n[w] = (n[w] || 0) - 1;
       });
     });
   }
@@ -726,9 +732,9 @@
   // ainda falta. Vale a pior das semanas A e B: é isso que o dono vê depois de aplicar (memória por dados de entrada).
   var simCache = {};
   function simularContratacao(s, v, sem, n, h) {
-    var k = JSON.stringify([s.funcionamento, s.equipe, v, sem, n, h || 0]);
+    var k = JSON.stringify([s.funcionamento, s.equipe, v, sem, n, h || 0, s.intervalo, imin(s)]);
     if (simCache[k]) return simCache[k];
-    var s2 = { negocio: s.negocio, funcionamento: s.funcionamento, custos: s.custos, intervalo: s.intervalo, equipe: s.equipe.slice(), escalas: {} };
+    var s2 = { negocio: s.negocio, funcionamento: s.funcionamento, custos: s.custos, intervalo: s.intervalo, intervaloMin: imin(s), equipe: s.equipe.slice(), escalas: {} };
     for (var i = 0; i < n; i++) s2.equipe.push({ id: "sim" + i, nome: "", funcao: "", naoPode: [] });
     if (h > 0) s2.equipe.push({ id: "simP", nome: "", funcao: "", horas: h, naoPode: [] });
     s2.escalas[v] = {};
@@ -1016,7 +1022,7 @@
       var t = "<b>" + nomeDias(g.dias) + "</b>: aberto " + falada(min(g.f.abre)) + "–" + falada(min(g.f.fecha)) + " (" + horas(aberto) + "), com " + g.f.pessoas + (Number(g.f.pessoas) === 1 ? " pessoa" : " pessoas") + " ao mesmo tempo. ";
       if (g.turnos.length <= 1) t += "Cabe num turno só de " + horas(aberto) + ".";
       else {
-        t += "Como ninguém pode passar de " + horas(R.jornadaDiariaMax) + " de trabalho por dia" + (fora(state) ? " (" + hm(R.jornadaDiariaMax + 1) + " na loja, com 1 h de almoço)" : "") + ", o dia vira " + g.turnos.length + " turnos: " +
+        t += "Como ninguém pode passar de " + horas(R.jornadaDiariaMax) + " de trabalho por dia" + (fora(state) ? " (" + hm(R.jornadaDiariaMax + imin(state) / 60) + " na loja, com " + hm(imin(state) / 60) + " de almoço)" : "") + ", o dia vira " + g.turnos.length + " turnos: " +
           g.turnos.map(function (x) { return x.rotulo.toLowerCase() + " " + falada(x.inicio) + "–" + falada(x.fim); }).join(", ") + ".";
         var a = g.turnos[0], b = g.turnos[1];
         if (b && b.inicio < a.fim) t += " Eles se cruzam das " + falada(b.inicio) + " às " + falada(a.fim) + ": é a hora da troca e do intervalo de refeição.";
@@ -1166,6 +1172,9 @@
         '<td><input type="number" min="1" max="50" data-h="pessoas" data-d="' + d + '" value="' + (f ? f.pessoas : 1) + '"' + (f ? "" : " disabled") + "></td></tr>";
     });
     $("#tblHorario").innerHTML = h + "</tbody>";
+    $("#fIntervalo").value = String(imin(state));
+    $("#fIntervalo").disabled = state.intervalo === "dentro";
+    $("#fIntervalo").title = state.intervalo === "dentro" ? "Vale quando o almoço fica fora do turno (veja o aviso nos alertas)." : "";
 
     var e = "<thead><tr><th>Nome</th><th>Função</th><th>Salário (opcional)</th><th>Horas/semana</th><th>Folga fixa</th><th>Não pode trabalhar</th><th></th></tr></thead><tbody>";
     state.equipe.forEach(function (p) {
@@ -1199,7 +1208,7 @@
     $("#dlgPresets").innerHTML = turnos.map(function (t) {
       return '<button type="button" data-ini="' + hhmm(t.inicio) + '" data-fim="' + hhmm(t.fim) + '" data-rot="' + esc(t.rotulo) + '">' + esc(t.rotulo) + " " + falada(t.inicio) + "–" + falada(t.fim) + "</button>";
     }).join("");
-    var padrao = turnos[0] || { inicio: min(f.abre), fim: min(f.abre) + R.jornadaDiariaMax * 60 + (fora(state) ? 60 : 0) };
+    var padrao = turnos[0] || { inicio: min(f.abre), fim: min(f.abre) + R.jornadaDiariaMax * 60 + (fora(state) ? imin(state) : 0) };
     $("#dlgIni").value = c.tipo === "turno" ? c.inicio : hhmm(padrao.inicio);
     $("#dlgFim").value = c.tipo === "turno" ? c.fim : hhmm(padrao.fim);
     $("#dlgIni").dataset.rot = c.rotulo || "";
@@ -1213,7 +1222,7 @@
     var c = { inicio: $("#dlgIni").value, fim: $("#dlgFim").value };
     var R = VERSOES[state.versao];
     var d = trab(c, state), p = pausaMin(c, state);
-    $("#dlgDur").textContent = horas(d) + (p ? " de trabalho + " + (p >= 60 ? "1 h" : p + " min") + " de almoço" : "") + (d > R.jornadaDiariaMax + 2 + 1e-9 ? " · acima do limite de " + horas(R.jornadaDiariaMax + 2) + " por dia" : d > R.jornadaDiariaMax + 1e-9 ? " · " + horas(d - R.jornadaDiariaMax) + " de hora extra" : "") + (!fora(state) && d > 6 ? " · inclui 1 h de intervalo a combinar" : "");
+    $("#dlgDur").textContent = horas(d) + (p ? " de trabalho + " + (p >= 60 ? hm(p / 60) : p + " min") + " de almoço" : "") + (d > R.jornadaDiariaMax + 2 + 1e-9 ? " · acima do limite de " + horas(R.jornadaDiariaMax + 2) + " por dia" : d > R.jornadaDiariaMax + 1e-9 ? " · " + horas(d - R.jornadaDiariaMax) + " de hora extra" : "") + (!fora(state) && d > 6 ? " · inclui 1 h de intervalo a combinar" : "");
   }
 
   function salvarCelula() {
@@ -1390,6 +1399,18 @@
     }
     $("#btnRegen").addEventListener("click", function () { montarDeNovo(this, "Montar a escala de novo com estes dados"); if (!this.dataset.conf) window.scrollTo({ top: 0, behavior: "smooth" }); });
     $("#btnRegen2").addEventListener("click", function () { montarDeNovo(this, "Montar a escala de novo"); });
+    // Intervalo de 1 h ou 2 h: remonta as escalas na hora, com Desfazer.
+    $("#fIntervalo").addEventListener("change", function () {
+      var novo = Number(this.value) === 120 ? 120 : 60;
+      if (novo === imin(state)) return;
+      var snap = JSON.stringify(state);
+      state.intervaloMin = novo;
+      gerarTudo(state); state.pendente = false;
+      salvar(); render();
+      desfazerSnap = snap;
+      dica("<b>Intervalo de " + hm(novo / 60) + ".</b> Escalas de 42 h e 40 h montadas de novo: o turno de quem trabalha mais de 6 h fica " + hm(novo / 60) + " mais longo na loja.",
+        '<button type="button" class="b ghost sm" data-dica="desfazer">Desfazer</button>');
+    });
 
     function pdf() { fecharMenu(); toast("Na janela de impressão, escolha “Salvar como PDF”."); setTimeout(function () { window.print(); }, 400); }
     $("#btnPdf").addEventListener("click", pdf);
@@ -1676,7 +1697,7 @@
     var R = VERSOES[s.versao], m = metricas(s), c = m.calc;
     return {
       versao: s.versao, semana: s.semana,
-      regras: { jornadaSemanal: R.jornadaSemanal, jornadaDiariaMax: R.jornadaDiariaMax, almocoForaDaJornada: fora(s) },
+      regras: { jornadaSemanal: R.jornadaSemanal, jornadaDiariaMax: R.jornadaDiariaMax, almocoForaDaJornada: fora(s), intervaloMin: imin(s) },
       negocio: s.negocio,
       funcionamento: DIAS.reduce(function (o, d) { var f = s.funcionamento[d]; o[d] = f ? { aberto: true, abre: f.abre, fecha: f.fecha, pessoas: Number(f.pessoas) || 1 } : { aberto: false, abre: "", fecha: "", pessoas: 0 }; return o; }, {}),
       equipe: s.equipe.map(function (p) { return { id: p.id, nome: p.nome, funcao: p.funcao, salario: p.salario || 0, horas: parcial(p, s.versao) ? Number(p.horas) : 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [], sexo: p.sexo || "", naoFolgaCom: p.naoFolgaCom || [] }; }),
@@ -2249,8 +2270,7 @@
   // cai nesse grupo; senão um turno do tamanho da jornada encostado na abertura ou no fechamento.
   function turnoDoGrupo(g, d, faixa) {
     if (faixa) { var t = faixa.split("-"); return { inicio: t[0], fim: t[1] }; }
-    var f = state.funcionamento[d], R = VERSOES[state.versao], J = Math.round(R.jornadaDiariaMax * 60);
-    if (fora(state)) J += J > 360 ? 60 : J > 240 ? 15 : 0;
+    var f = state.funcionamento[d], R = VERSOES[state.versao], J = presencaDe(Math.round(R.jornadaDiariaMax * 60), fora(state), imin(state));
     var dia = montarDias(state.funcionamento, regrasMotor(state, state.versao))[d];
     var achou = ((dia && dia.turnos) || []).filter(function (t) { return grupoDe({ tipo: "turno", inicio: hhmm(t.inicio), fim: hhmm(t.fim) }, f) === g; })[0];
     if (achou) return { inicio: hhmm(achou.inicio), fim: hhmm(achou.fim), rotulo: achou.rotulo };

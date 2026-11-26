@@ -390,6 +390,50 @@ try {
     ok(JSON.stringify(r17) === "[[],[],[]]", "IA tirar o par de um lado só desfaz o par: " + JSON.stringify(r17));
   }
 
+  console.log("18. intervalo de 2 h");
+  const durMin = c => { const m = h => parseInt(h) * 60 + +h.slice(3); let a = m(c.inicio), b = m(c.fim); if (b <= a) b += 1440; return b - a; };
+  {
+    const r18 = await p2.evaluate(b => {
+      const J = window.__j40h, c = o => JSON.parse(JSON.stringify(o));
+      const norm = [undefined, 120, 90].map(x => J.normalizar(Object.assign(c(b), { intervaloMin: x, equipe: [{ id: "p0", nome: "Ana" }] })).intervaloMin);
+      const eq = ["Ana", "Bia", "Caio", "Duda", "Edu"].map((n, i) => ({ id: "p" + i, nome: n, funcao: "" }));
+      const s = Object.assign(c(b), { intervaloMin: 120, equipe: eq });
+      J.gerarTudo(s);
+      const cels = ["A", "B"].flatMap(w => eq.flatMap(p => Object.values(s.escalas["42"][w][p.id]).filter(x => x.tipo === "turno")));
+      const horas = ["A", "B"].flatMap(w => J.calcular(s, "42", w).pessoas.map(p => p.horas));
+      const d1 = Object.assign(c(b), { intervalo: "dentro", intervaloMin: 120, equipe: c(eq) }), d2 = Object.assign(c(b), { intervalo: "dentro", intervaloMin: 60, equipe: c(eq) });
+      J.gerarTudo(d1); J.gerarTudo(d2);
+      return { norm, cels, horas, dentro: JSON.stringify(d1.escalas) === JSON.stringify(d2.escalas) };
+    }, baseP);
+    ok(JSON.stringify(r18.norm) === "[60,120,60]", "normalizar: intervaloMin 60 por padrão, 120 quando escolhido: " + JSON.stringify(r18.norm));
+    ok(r18.cels.length && r18.cels.every(x => durMin(x) === 624 || x.rotulo === "Turno único"), "2 h: turno de quem é integral = 8h24 + 2 h na loja");
+    ok(r18.horas.every(h => h <= 42 + 1e-9), "2 h: ninguém passa de 42 h");
+    ok(r18.dentro, "almoço dentro do turno: intervaloMin não muda nada");
+
+    const est18 = Object.assign({}, baseP, { intervalo: "fora", equipe: ["Ana", "Bia", "Caio", "Duda", "Edu"].map((n, i) => ({ id: "p" + i, nome: n, funcao: "" })) });
+    const p6 = await (await browser.newContext({ viewport: { width: 1360, height: 900 } })).newPage();
+    await p6.addInitScript(() => { try { localStorage.setItem("j40h:vista", "pessoa"); } catch (e) {} });
+    const e6 = []; p6.on("pageerror", e => e6.push(e.message));
+    await p6.goto(BASE + "/app/#d=" + Buffer.from(JSON.stringify(est18)).toString("base64url"));
+    await p6.waitForSelector("#grid button.cell");
+    const antes18 = await p6.evaluate(() => JSON.stringify(window.__j40h.state.escalas));
+    await p6.click("#cfg > summary");
+    await p6.selectOption("#fIntervalo", "120");
+    const st18 = await p6.evaluate(() => { const s = window.__j40h.state; return { im: s.intervaloMin, t: s.escalas["42"].A.p0 }; });
+    ok(st18.im === 120 && Object.values(st18.t).some(x => x.tipo === "turno" && durMin(x) === 624), "trocar para 2 h remonta a escala");
+    const alms = await p6.$$eval("#grid small.alm", xs => xs.map(x => x.textContent));
+    const dif = t => { const m = t.match(/(\d+)h(\d\d)?–(\d+)h(\d\d)?/); return m ? (+m[3] * 60 + +(m[4] || 0)) - (+m[1] * 60 + +(m[2] || 0)) : -1; };
+    ok(alms.length && alms.every(t => dif(t) === 120), "grade mostra almoço de 2 h: " + alms.slice(0, 3).join(", "));
+    await p6.click('[data-dica="desfazer"]');
+    ok(await p6.evaluate(a => window.__j40h.state.intervaloMin === 60 && JSON.stringify(window.__j40h.state.escalas) === a, antes18), "Desfazer volta para 1 h e a escala de antes");
+    await p6.goto(BASE + "/app/#d=" + Buffer.from(JSON.stringify(Object.assign({}, est18, { intervalo: "dentro" }))).toString("base64url"));
+    await p6.reload();
+    await p6.waitForSelector("#grid button.cell");
+    ok(await p6.isDisabled("#fIntervalo"), "almoço dentro do turno: escolha do intervalo desativada");
+    ok(!e6.length, "intervalo sem erro de JavaScript" + (e6.length ? ": " + e6.join(" | ") : ""));
+    await p6.close();
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();
