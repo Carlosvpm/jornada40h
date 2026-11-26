@@ -434,6 +434,52 @@ try {
     await p6.close();
   }
 
+  console.log("19. jornada própria");
+  {
+    const r19 = await p2.evaluate(b => {
+      const J = window.__j40h, c = o => JSON.parse(JSON.stringify(o)), out = {};
+      out.norm = ["6", 9, 0, undefined].map(x => J.normalizar(Object.assign(c(b), { equipe: [{ id: "p0", nome: "Ana", horasDia: x }] })).equipe[0].horasDia);
+      const eq = extra => ["Ana", "Bia", "Caio", "Duda", "Edu"].map((n, i) => Object.assign({ id: "p" + i, nome: n, funcao: "" }, i === 0 ? extra : {}));
+      const s = J.normalizar(Object.assign(c(b), { equipe: eq({ horasDia: 6 }) }));
+      const dur = x => { const m = h => parseInt(h) * 60 + +h.slice(3); let a = m(x.inicio), e = m(x.fim); if (e <= a) e += 1440; return e - a; };
+      out.ana = ["42", "40"].flatMap(v => ["A", "B"].map(w => {
+        const cs = Object.values(s.escalas[v][w].p0), ts = cs.filter(x => x.tipo === "turno");
+        return { durs: ts.map(dur), folgas: cs.length - ts.length, horas: J.calcular(s, v, w).pessoas[0].horas };
+      }));
+      const s24 = J.normalizar(Object.assign(c(b), { equipe: eq({ horasDia: 6, horas: 24 }) }));
+      out.lim24 = ["A", "B"].map(w => { const p = J.calcular(s24, "42", w).pessoas[0]; return [p.limite, p.horas]; });
+      const s8 = J.normalizar(Object.assign(c(b), { equipe: eq({ horasDia: 8 }) }));
+      out.j8 = [J.jornadaPropria(s8.equipe[0], "40"), J.jornadaPropria(s8.equipe[0], "42")];
+      out.j8dur = Object.values(s8.escalas["42"].A.p0).filter(x => x.tipo === "turno").map(dur);
+      const sem = J.normalizar(Object.assign(c(b), { equipe: eq({}) }));
+      out.folha = [J.metricas(sem).folha, J.metricas(s).folha];
+      const ed = c(s); ed.escalas["42"].A.p0.seg = { tipo: "turno", inicio: "06:00", fim: "15:00", rotulo: "" };
+      out.aviso = J.calcular(ed, "42", "A").avisos;
+      return out;
+    }, baseP);
+    ok(JSON.stringify(r19.norm) === "[6,8.4,null,null]", "normalizar horasDia: " + JSON.stringify(r19.norm));
+    ok(r19.ana.every(x => x.durs.length && x.durs.every(d => d === 375) && x.folgas === 2 && x.horas <= 30 + 1e-9), "Ana com 6 h por dia em 42/40, A/B, mesmo depois dos reparos: " + JSON.stringify(r19.ana));
+    ok(r19.lim24.every(([l, h]) => l === 24 && h <= 24 + 1e-9), "horas por semana menor limita a semana: " + JSON.stringify(r19.lim24));
+    ok(JSON.stringify(r19.j8) === "[false,true]" && r19.j8dur.every(d => d === 540), "8 h por dia: integral na de 40 h, jornada própria na de 42 h");
+    const esperado = 1800 * 1.7 * (1 - 30 / 42);
+    ok(Math.abs(r19.folha[0] - r19.folha[1] - esperado) < 1, "custo proporcional às 30 h: " + JSON.stringify(r19.folha));
+    ok(r19.aviso.some(a => /Ana faz 8 h na segunda: acima da jornada própria de 6 h por dia/.test(a)), "aviso de dia acima da jornada própria: " + JSON.stringify(r19.aviso));
+
+    const p7 = await (await browser.newContext({ viewport: { width: 1360, height: 900 } })).newPage();
+    await p7.addInitScript(() => { try { localStorage.setItem("j40h:vista", "pessoa"); } catch (e) {} });
+    const e7 = []; p7.on("pageerror", e => e7.push(e.message));
+    await p7.goto(BASE + "/app/#d=" + hash);
+    await p7.waitForSelector("#grid button.cell");
+    await p7.click('#grid [data-pessoa="p0"]');
+    await p7.fill("#pHorasDia", "6");
+    await p7.click('#dlgPForm button[value="ok"]');
+    const st19 = await p7.evaluate(() => { const s = window.__j40h.state; return { hd: s.equipe[0].horasDia, pend: !!s.pendente }; });
+    ok(st19.hd === 6 && st19.pend, "ficha grava horas por dia e pede para montar de novo");
+    ok((await p7.textContent('#equipeStrip [data-pessoa="p0"]')).includes("6 h/dia"), "chip mostra 6 h/dia");
+    ok(!e7.length, "jornada própria sem erro de JavaScript" + (e7.length ? ": " + e7.join(" | ") : ""));
+    await p7.close();
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();

@@ -617,7 +617,10 @@ function gerarEscala(input) {
         if (c.tipo !== "turno") continue;
         var corte = Math.min(excesso, c.horas - 1);
         if (corte <= 0) continue;
-        c.fim = paraHora(paraMinutos(c.fim) - Math.round(corte * 60));
+        // O fim sai do trabalho que sobra mais o intervalo que esse trabalho pede (turno curto pede menos).
+        var trabNovo = Math.round((c.horas - corte) * 60);
+        var ini = paraMinutos(c.inicio);
+        c.fim = paraHora(ini + (dias[DIAS[i]].intervaloFora ? presencaDe(trabNovo, true, dias[DIAS[i]].intervaloMin) : trabNovo));
         c.horas -= corte;
         excesso -= corte;
       }

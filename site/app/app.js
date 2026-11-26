@@ -133,7 +133,7 @@
     s.equipe = (s.equipe || []).map(function (p) {
       var np = Array.isArray(p.naoPode) ? p.naoPode.filter(function (d) { return DIAS.indexOf(d) >= 0; }) : [];
       var hs = Number(p.horas) > 0 ? Math.min(60, Math.round(Number(p.horas))) : null;
-      return { id: p.id || uid(), nome: p.nome || "", funcao: p.funcao || "", salario: p.salario || null, horas: hs, folgaFixa: p.folgaFixa || "", naoPode: np,
+      return { id: p.id || uid(), nome: p.nome || "", funcao: p.funcao || "", salario: p.salario || null, horas: hs, horasDia: horasDiaDe(p.horasDia), folgaFixa: p.folgaFixa || "", naoPode: np,
         sexo: p.sexo === "F" || p.sexo === "M" ? p.sexo : "", naoFolgaCom: Array.isArray(p.naoFolgaCom) ? p.naoFolgaCom.slice() : [] };
     });
     simetrizarPares(s.equipe);
@@ -209,8 +209,18 @@
 
   // Meio período: carga semanal (horas) menor que a jornada da versão. O motor monta os turnos de quem
   // é tempo integral; quem é meio período entra depois, nos horários que ainda faltam gente.
-  function parcial(p, v) { var h = Number(p.horas) || 0; return h > 0 && h < VERSOES[v].jornadaSemanal - 1e-9; }
-  function limiteSemana(p, v) { return parcial(p, v) ? Number(p.horas) : VERSOES[v].jornadaSemanal; }
+  // Jornada própria: horasDia menor que a jornada diária da versão. A pessoa fica no motor, com turno desse
+  // tamanho, 5 dias por semana; horas (se houver) limita a semana. Só horas, sem horasDia = meio período.
+  function horasDiaDe(x) { var n = Number(x); return n > 0 ? Math.min(8.4, Math.round(n * 10) / 10) : null; }
+  function jornadaPropria(p, v) { var h = Number(p.horasDia) || 0; return h > 0 && h < VERSOES[v].jornadaDiariaMax - 1e-9; }
+  function parcial(p, v) { var h = Number(p.horas) || 0; return !jornadaPropria(p, v) && h > 0 && h < VERSOES[v].jornadaSemanal - 1e-9; }
+  function limiteSemana(p, v) {
+    var J = VERSOES[v].jornadaSemanal;
+    if (parcial(p, v)) return Number(p.horas);
+    if (jornadaPropria(p, v)) return Math.min(Number(p.horas) > 0 ? Number(p.horas) : Infinity, Number(p.horasDia) * 5, J);
+    return J;
+  }
+  function diaMax(p, v) { return jornadaPropria(p, v) ? Number(p.horasDia) : VERSOES[v].jornadaDiariaMax; }
 
   function entradaMotor(s, v, sem, lista) {
     var vistos = {}, nomeDe = {}, L = lista || s.equipe;
@@ -225,6 +235,7 @@
       if (p.folgaFixa) f.folgaFixa = p.folgaFixa;
       if (p.naoPode && p.naoPode.length) f.naoPode = p.naoPode.slice();
       if (p.sexo) f.sexo = p.sexo;
+      if (v && jornadaPropria(p, v)) { f.horasDia = Number(p.horasDia); f.horasSemana = limiteSemana(p, v); }
       // Parceiros fora da lista (meio período) não entram no motor: ficam só no alerta.
       var par = (p.naoFolgaCom || []).filter(function (id) { return nomeDe[id]; }).map(function (id) { return nomeDe[id]; });
       if (par.length) f.naoFolgaCom = par;
@@ -252,7 +263,10 @@
         g[p.id][d] = c.tipo === "turno" ? { tipo: "turno", inicio: c.inicio, fim: c.fim, rotulo: c.rotulo } : { tipo: c.tipo };
       });
     });
-    repararDescanso(g, integrais.map(function (p) { return p.id; }));
+    // Reparo das 11 h troca turnos entre pessoas do mesmo dia: só entre quem tem o mesmo tamanho de turno.
+    var porTam = {};
+    integrais.forEach(function (p) { var k = String(diaMax(p, v)); (porTam[k] = porTam[k] || []).push(p.id); });
+    Object.keys(porTam).forEach(function (k) { repararDescanso(g, porTam[k]); });
     // Almoço de quem é tempo integral antes: o meio período entra nos buracos que sobram, inclusive na hora do almoço.
     marcarAlmocos(s, g, integrais.map(function (p) { return p.id; }));
     cobrirComReserva(s, v, g, integrais);
@@ -394,11 +408,13 @@
             if (x) lin[x] = { tipo: "livre" };
             // Turnos do motor e um sob medida que começa no primeiro horário descoberto (cobre os almoços
             // sem precisar abrir a loja).
-            var maior = Math.max.apply(null, dia.turnos.map(function (t) { return t.fim - t.inicio; }));
-            var cands = dia.turnos.concat([{ inicio: buraco[0], fim: Math.min(dia.fecha, buraco[0] + maior), rotulo: "Meio" }]);
+            // Quem tem jornada própria só recebe turnos do tamanho dela.
+            var base = jornadaPropria(p, v) ? turnosDoDia(dia.abre, dia.fecha, presencaDe(Math.round(Number(p.horasDia) * 60), fora(s), imin(s))) : dia.turnos;
+            var maior = Math.max.apply(null, base.map(function (t) { return t.fim - t.inicio; }));
+            var cands = base.concat([{ inicio: buraco[0], fim: Math.min(dia.fecha, buraco[0] + maior), rotulo: "Meio" }]);
             cands.forEach(function (t) {
               var c = { tipo: "turno", inicio: hhmm(t.inicio % 1440), fim: hhmm(t.fim % 1440), rotulo: t.rotulo };
-              if (h - (c0 ? trab(c0, s) : 0) + trab(c, s) > R.jornadaSemanal + 1e-9) return;
+              if (h - (c0 ? trab(c0, s) : 0) + trab(c, s) > limiteSemana(p, v) + 1e-9) return;
               if (descanso(lin[DIAS[i - 1]], c) < INTERJORNADA_MIN || descanso(c, lin[DIAS[i + 1]]) < INTERJORNADA_MIN) return;
               var fx = faixaTurno(c, dia.abre), ganho = buraco.filter(function (b) { return fx[0] <= b && b < fx[1]; }).length;
               if (ganho && (!melhor || ganho > melhor.ganho)) melhor = { ganho: ganho, id: p.id, d: d, c: c, x: x };
@@ -607,7 +623,7 @@
         });
         ids.forEach(function (a, ia) {
           ids.forEach(function (b, ib) {
-            if (ib <= ia || notas[a] + notas[b] === 0) return;
+            if (ib <= ia || notas[a] + notas[b] === 0 || diaMax(pessoa[a], v) !== diaMax(pessoa[b], v)) return;
             opcoes.forEach(function (ds) {
               if (ds.length === 1) {
                 var ca = E[w][a][ds[0]], cb = E[w][b][ds[0]];
@@ -678,6 +694,7 @@
         if (c.tipo !== "turno") { folgas++; return; }
         var du = trab(c, s); h += du;
         if (du > R.jornadaDiariaMax + 2 + 1e-9) { erros[d] = 1; res.erros.push(nome + " faz " + horas(du) + " " + prep(d) + ": passa do máximo de " + horas(R.jornadaDiariaMax + 2) + " por dia (jornada + 2 h extras)" + lei("he") + "."); }
+        else if (jornadaPropria(p, v) && du > Number(p.horasDia) + 1e-9) res.avisos.push(nome + " faz " + horas(du) + " " + prep(d) + ": acima da jornada própria de " + horas(Number(p.horasDia)) + " por dia.");
         else if (du > R.jornadaDiariaMax + 1e-9) res.avisos.push(nome + " faz " + horas(du) + " " + prep(d) + ": " + horas(du - R.jornadaDiariaMax) + " de hora extra, paga com adicional" + lei("he") + ".");
         var prox = DIAS[i + 1];
         if (prox) {
@@ -703,7 +720,7 @@
         if (dAnt < INTERJORNADA_MIN) { erros[DIAS[0]] = 1; res.erros.push(nome + " descansa só " + horas(dAnt / 60) + " entre o domingo da semana " + ant + " e a segunda da semana " + sem + " (mínimo de 11 h entre um dia e outro)" + lei("interjornada") + "."); }
       }
       var lim = limiteSemana(p, v);
-      if (h > lim + 1e-9) res.erros.push(nome + " soma " + horas(h) + " na semana, " + horas(h - lim) + " acima " + (lim < R.jornadaSemanal ? "das " + horas(lim) + " do contrato de meio período" : "da jornada de " + R.rotulo) + " (vira hora extra)" + lei("jornada") + ".");
+      if (h > lim + 1e-9) res.erros.push(nome + " soma " + horas(h) + " na semana, " + horas(h - lim) + " acima " + (lim < R.jornadaSemanal ? "das " + horas(lim) + (jornadaPropria(p, v) ? " da jornada própria" : " do contrato de meio período") : "da jornada de " + R.rotulo) + " (vira hora extra)" + lei("jornada") + ".");
       if (folgas < 2) res.erros.push(nome + " tem " + (folgas === 1 ? "só 1 folga" : "nenhuma folga") + " na semana. Na escala 5x2 são 2; a lei exige pelo menos 1 descanso de 24 h" + lei("dsr") + ".");
       res.pessoas.push({ id: p.id, nome: nome, horas: h, folgas: folgas, erros: erros, extra: Math.max(0, h - lim), limite: lim });
     });
@@ -748,7 +765,7 @@
   function custoPessoa(p, s, v) {
     var enc = Number(s.custos.encargos) || 1;
     if (Number(p.salario) > 0) return Number(p.salario) * enc;
-    return (Number(s.custos.salario) || 0) * enc * (parcial(p, v) ? Number(p.horas) / VERSOES[v].jornadaSemanal : 1);
+    return (Number(s.custos.salario) || 0) * enc * (parcial(p, v) || jornadaPropria(p, v) ? limiteSemana(p, v) / VERSOES[v].jornadaSemanal : 1);
   }
 
   // Saídas para cobrir as horas descobertas, com custo mensal.
@@ -994,6 +1011,7 @@
       var pc = calc.pessoas[i], over = pc.horas > pc.limite + 1e-9;
       var tags = [];
       if (parcial(p, state.versao)) tags.push("meio período " + p.horas + " h");
+      if (jornadaPropria(p, state.versao)) tags.push(String(p.horasDia).replace(".", ",") + " h/dia" + (pc.limite < Number(p.horasDia) * 5 - 1e-9 ? ", " + horas(pc.limite) + " na semana" : ""));
       if (p.folgaFixa) tags.push("folga " + NOME_DIA_CURTO[p.folgaFixa].toLowerCase());
       if (p.naoPode && p.naoPode.length) tags.push("não pode " + p.naoPode.map(function (d) { return NOME_DIA_CURTO[d].toLowerCase(); }).join(", "));
       return '<button type="button" class="pp-chip c' + (i % 8) + '" data-pessoa="' + p.id + '" title="Editar ' + esc(p.nome) + '"><span class="ini">' + esc(iniciais(pc.nome)) + "</span><span><b>" + esc(pc.nome) + '</b><small><span class="' + (over ? "over" : "") + '">' + horas(pc.horas) + "</span>" + (p.funcao ? " · " + esc(p.funcao) : "") + (tags.length ? " · " + esc(tags.join(" · ")) : "") + "</small></span></button>";
@@ -1176,12 +1194,13 @@
     $("#fIntervalo").disabled = state.intervalo === "dentro";
     $("#fIntervalo").title = state.intervalo === "dentro" ? "Vale quando o almoço fica fora do turno (veja o aviso nos alertas)." : "";
 
-    var e = "<thead><tr><th>Nome</th><th>Função</th><th>Salário (opcional)</th><th>Horas/semana</th><th>Folga fixa</th><th>Não pode trabalhar</th><th></th></tr></thead><tbody>";
+    var e = "<thead><tr><th>Nome</th><th>Função</th><th>Salário (opcional)</th><th>Horas/semana</th><th>Horas/dia</th><th>Folga fixa</th><th>Não pode trabalhar</th><th></th></tr></thead><tbody>";
     state.equipe.forEach(function (p) {
       e += '<tr data-id="' + p.id + '"><td><input type="text" maxlength="40" data-e="nome" value="' + esc(p.nome) + '"></td>' +
         '<td><input type="text" maxlength="40" data-e="funcao" value="' + esc(p.funcao) + '"></td>' +
         '<td><input type="number" min="0" step="10" data-e="salario" placeholder="média" value="' + (p.salario || "") + '"></td>' +
         '<td><input type="number" min="0" max="60" step="1" data-e="horas" placeholder="integral" value="' + (p.horas || "") + '"></td>' +
+        '<td><input type="number" min="0" max="8.4" step="0.1" data-e="horasDia" placeholder="da empresa" value="' + (p.horasDia || "") + '"></td>' +
         '<td><select data-e="folgaFixa"><option value="">rodízio</option>' + DIAS.map(function (d) { return '<option value="' + d + '"' + (p.folgaFixa === d ? " selected" : "") + ">" + NOME_DIA[d] + "</option>"; }).join("") + "</select></td>" +
         '<td>' + chipsDias(p.naoPode, "np") + "</td>" +
         '<td><button type="button" class="x" data-del="' + p.id + '" title="Remover">×</button></td></tr>';
@@ -1368,8 +1387,8 @@
         marcarPendente(); salvar(); render(); return;
       }
       var k = e.target.dataset.e;
-      p[k] = k === "salario" ? (Number(e.target.value) || null) : k === "horas" ? (Number(e.target.value) > 0 ? Math.min(60, Math.round(Number(e.target.value))) : null) : e.target.value.trim();
-      if (k === "folgaFixa" || k === "horas") marcarPendente();
+      p[k] = k === "salario" ? (Number(e.target.value) || null) : k === "horas" ? (Number(e.target.value) > 0 ? Math.min(60, Math.round(Number(e.target.value))) : null) : k === "horasDia" ? horasDiaDe(e.target.value) : e.target.value.trim();
+      if (k === "folgaFixa" || k === "horas" || k === "horasDia") marcarPendente();
       salvar(); render();
     });
     $("#tblEquipe").addEventListener("click", function (e) {
@@ -1501,6 +1520,7 @@
     $("#pFuncao").value = p ? p.funcao : "";
     $("#pSal").value = p && p.salario ? p.salario : "";
     $("#pHoras").value = p && p.horas ? p.horas : "";
+    $("#pHorasDia").value = p && p.horasDia ? p.horasDia : "";
     $("#pFixa").innerHTML = '<option value="">rodízio</option>' + DIAS.map(function (d) { return '<option value="' + d + '"' + (p && p.folgaFixa === d ? " selected" : "") + ">" + NOME_DIA[d] + "</option>"; }).join("");
     $("#pNaoPode").innerHTML = chipsDias(p ? p.naoPode : [], "pnp").replace(/^<div class="dias-chk">|<\/div>$/g, "");
     $("#pSexo").value = p && p.sexo ? p.sexo : "";
@@ -1532,6 +1552,8 @@
     p.salario = Number($("#pSal").value) || null;
     var hs = Number($("#pHoras").value) > 0 ? Math.min(60, Math.round(Number($("#pHoras").value))) : null;
     if (hs !== (p.horas || null)) { p.horas = hs; marcarPendente(); }
+    var hd = horasDiaDe($("#pHorasDia").value);
+    if (hd !== (p.horasDia || null)) { p.horasDia = hd; marcarPendente(); }
     p.folgaFixa = fixa;
     p.naoPode = naoPode;
     var sexo = $("#pSexo").value;
@@ -2268,11 +2290,14 @@
 
   // Horário para quem cai num turno: o mais comum da linha naquele dia; senão o turno do motor que
   // cai nesse grupo; senão um turno do tamanho da jornada encostado na abertura ou no fechamento.
-  function turnoDoGrupo(g, d, faixa) {
-    if (faixa) { var t = faixa.split("-"); return { inicio: t[0], fim: t[1] }; }
-    var f = state.funcionamento[d], R = VERSOES[state.versao], J = presencaDe(Math.round(R.jornadaDiariaMax * 60), fora(state), imin(state));
+  // p (opcional): quem tem jornada própria recebe um turno do tamanho dela, não o da linha.
+  function turnoDoGrupo(g, d, faixa, p) {
+    var prop = p && jornadaPropria(p, state.versao);
+    if (faixa && !prop) { var t = faixa.split("-"); return { inicio: t[0], fim: t[1] }; }
+    var f = state.funcionamento[d], R = VERSOES[state.versao], J = presencaDe(Math.round(diaMax(p || {}, state.versao) * 60), fora(state), imin(state));
     var dia = montarDias(state.funcionamento, regrasMotor(state, state.versao))[d];
-    var achou = ((dia && dia.turnos) || []).filter(function (t) { return grupoDe({ tipo: "turno", inicio: hhmm(t.inicio), fim: hhmm(t.fim) }, f) === g; })[0];
+    var lista = prop ? (dia && dia.aberto ? turnosDoDia(dia.abre, dia.fecha, J) : []) : ((dia && dia.turnos) || []);
+    var achou = lista.filter(function (t) { return grupoDe({ tipo: "turno", inicio: hhmm(t.inicio), fim: hhmm(t.fim) }, f) === g; })[0];
     if (achou) return { inicio: hhmm(achou.inicio), fim: hhmm(achou.fim), rotulo: achou.rotulo };
     var a = min(f.abre), b = min(f.fecha); if (b <= a) b += 1440;
     var aberto = b - a, len = Math.min(J, aberto);
@@ -2298,14 +2323,14 @@
     var pe = state.equipe.filter(function (x) { return x.id === id; })[0], nome = pe ? pe.nome : "Pessoa";
     var nova;
     if (g === "folga" || g === "livre") nova = { tipo: g };
-    else { var t = turnoDoGrupo(g, para, faixa); nova = { tipo: "turno", inicio: t.inicio, fim: t.fim, rotulo: t.rotulo || "" }; }
+    else { var t = turnoDoGrupo(g, para, faixa, pe); nova = { tipo: "turno", inicio: t.inicio, fim: t.fim, rotulo: t.rotulo || "" }; }
     if (de !== para) {
       // O dia antigo recebe o que a pessoa fazia no dia novo, no turno equivalente do dia antigo.
       var gAtual = grupoDe(atual, state.funcionamento[para]);
       if (atual.tipo !== "turno") grade[id][de] = { tipo: atual.tipo };
       else {
         var td = document.querySelector('#grid td[data-ag="' + gAtual + '"][data-ad="' + de + '"]');
-        var t2 = turnoDoGrupo(gAtual, de, td ? td.dataset.faixa : "");
+        var t2 = turnoDoGrupo(gAtual, de, td ? td.dataset.faixa : "", pe);
         grade[id][de] = { tipo: "turno", inicio: t2.inicio, fim: t2.fim, rotulo: t2.rotulo || "" };
       }
     }
@@ -2568,5 +2593,5 @@
   }
 
   // Usado pelo teste automatizado.
-  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, normalizar: normalizar, conflitosPar: conflitosPar, mulheresSemDomingo: mulheresSemDomingo, problemasLei: problemasLei, render: function () { render(); } };
+  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, normalizar: normalizar, jornadaPropria: jornadaPropria, conflitosPar: conflitosPar, mulheresSemDomingo: mulheresSemDomingo, problemasLei: problemasLei, render: function () { render(); } };
 })();

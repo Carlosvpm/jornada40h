@@ -240,7 +240,11 @@
     </div>
     <div class="row2">
       <label>Salário (opcional)<input type="number" id="pSal" min="0" step="10" inputmode="decimal" placeholder="usa a média"></label>
-      <label>Horas por semana<input type="number" id="pHoras" min="0" max="60" step="1" inputmode="numeric" placeholder="tempo integral"><small>só para meio período: entra nos horários que faltam</small></label>
+      <label>Horas por semana<input type="number" id="pHoras" min="0" max="60" step="1" inputmode="numeric" placeholder="da empresa"></label>
+    </div>
+    <div class="row2">
+      <label>Horas por dia<input type="number" id="pHorasDia" min="1" max="8.4" step="0.1" inputmode="decimal" placeholder="da empresa"></label>
+      <p class="muted sm">Vazio = jornada da empresa. Só horas por semana: meio período, nos horários que faltam. Com horas por dia: turno desse tamanho, 5 dias por semana.</p>
     </div>
     <div class="row2">
       <label>Folga fixa<select id="pFixa"></select></label>
