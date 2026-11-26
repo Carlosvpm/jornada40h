@@ -499,6 +499,35 @@ try {
     ok(JSON.stringify(r20.dois) === "[120,true]", "proposta com intervalo de 2 h remonta: " + JSON.stringify(r20.dois));
   }
 
+  console.log("21. revisão final");
+  {
+    const r21 = await p2.evaluate(est => {
+      const J = window.__j40h, c = o => JSON.parse(JSON.stringify(o)), out = {};
+      const erros = (s, nomes) => ["42", "40"].flatMap(v => ["A", "B"].flatMap(w => J.calcular(s, v, w).erros.filter(e => nomes.some(n => e.startsWith(n + " ")))));
+      const a7 = J.normalizar(Object.assign(c(est), { intervalo: "fora", equipe: c(est.equipe).map((p, i) => Object.assign(p, i === 0 ? { horasDia: 7 } : {})) }));
+      out.descanso = erros(a7, ["Ana"]);
+      const par = J.normalizar(Object.assign(c(est), { intervalo: "fora", equipe: c(est.equipe).map((p, i) => Object.assign(p, i === 0 ? { horasDia: 7 } : i === 1 ? { horasDia: 7, horas: 20 } : {})) }));
+      out.semana = erros(par, ["Ana", "Bia"]);
+      const curto = {}; ["seg", "ter", "qua", "qui", "sex", "sab", "dom"].forEach(d => { curto[d] = { abre: "07:00", fecha: "15:00", pessoas: 1 }; });
+      const sc = J.normalizar(Object.assign(c(est), { funcionamento: curto, intervalo: "fora", equipe: c(est.equipe).map((p, i) => Object.assign(p, i === 0 ? { horasDia: 6 } : {})) }));
+      out.dia = J.turnoDoGrupo("dia", "seg", "", sc.equipe[0], sc);
+      return out;
+    }, estado);
+    ok(!r21.descanso.length, "Ana com 7 h por dia sem erro de descanso: " + JSON.stringify(r21.descanso));
+    ok(!r21.semana.length, "mesmo tamanho de turno com limites diferentes: ninguém passa da semana: " + JSON.stringify(r21.semana));
+    const dd = r21.dia ? durMin(r21.dia) : 0;
+    ok(dd > 0 && dd <= 375, "arrastar para o turno do dia respeita a jornada própria: " + JSON.stringify(r21.dia));
+    const p8 = await (await browser.newContext({ viewport: { width: 1360, height: 900 } })).newPage();
+    await p8.addInitScript(() => { try { localStorage.setItem("j40h:vista", "pessoa"); } catch (e) {} });
+    await p8.goto(BASE + "/app/#d=" + Buffer.from(JSON.stringify(Object.assign({}, estado, { intervalo: "fora" }))).toString("base64url"));
+    await p8.waitForSelector("#grid button.cell");
+    await p8.click("#cfg > summary");
+    await p8.selectOption("#fIntervalo", "120");
+    ok((await p8.textContent("#gradeNota")).includes("2 h de almoço"), "nota da grade fala em 2 h de almoço");
+    ok((await p8.textContent("#iaDica")).includes("2 h de almoço") && !(await p8.textContent("#iaDica")).includes("mais longo"), "dica da troca diz o almoço novo, sem 'mais longo'");
+    await p8.close();
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();

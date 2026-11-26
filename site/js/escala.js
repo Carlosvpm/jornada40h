@@ -140,6 +140,19 @@ function exemploEquipe(n, tipo) {
 /* Passo 1 — dias, horas abertas, demanda e turnos possíveis             */
 /* ===================================================================== */
 
+/**
+ * Turnos de quem tem jornada própria (trabMin de trabalho por dia). Se o dia é mais curto que o turno dela
+ * com o intervalo, o turno vai até onde cabe sem passar das horas dela (o intervalo que esse trabalho pede).
+ */
+function turnosProprios(abre, fecha, trabMin, fora, intervaloMin) {
+  var pres = presencaDe(trabMin, fora, intervaloMin), len = fecha - abre;
+  if (len >= pres) return turnosDoDia(abre, fecha, pres);
+  var P = len;
+  while (P > 30 && P - (fora ? intervaloDe(P, intervaloMin) : 0) > trabMin) P -= 15;
+  if (P >= len) return [{ rotulo: "Turno único", inicio: abre, fim: fecha }];
+  return [{ rotulo: "Abertura", inicio: abre, fim: abre + P }, { rotulo: "Fechamento", inicio: fecha - P, fim: fecha }];
+}
+
 /** Turnos possíveis de um dia [abre, fecha) com no máximo maxMin na loja (abertura / meio / fechamento). */
 function turnosDoDia(abre, fecha, maxMin) {
   var turnos = [];
@@ -430,7 +443,7 @@ function escalarDia(dia, pessoasDisp, contagem, blocos) {
   ordem.forEach(function (p) {
     var melhor = -1, melhorChave = null;
     // Quem tem jornada própria usa turnos do tamanho dela (mesmos rótulos: abertura, meio, fechamento).
-    var turnos = p.presMin ? turnosDoDia(dia.abre, dia.fecha, p.presMin) : dia.turnos;
+    var turnos = p.trabMin ? turnosProprios(dia.abre, dia.fecha, p.trabMin, dia.intervaloFora, dia.intervaloMin) : dia.turnos;
     turnos.forEach(function (t, i) {
       var ganho = ganhoTurno(blocos, t);
       if (ganho === 0) return;
@@ -535,7 +548,7 @@ function gerarEscala(input) {
     p.indice = i;
     // Jornada própria: horasDia (menor que a jornada diária) e horasSemana (até a jornada semanal).
     var hd = Number(p.horasDia) || 0;
-    if (hd > 0 && hd < regras.jornadaDiariaMax - 1e-9) p.presMin = presencaDe(Math.round(hd * 60), !!regras.intervaloFora, regras.intervaloMin);
+    if (hd > 0 && hd < regras.jornadaDiariaMax - 1e-9) p.trabMin = Math.round(hd * 60);
     var hs = Number(p.horasSemana) || 0;
     p.limite = hs > 0 ? Math.min(hs, regras.jornadaSemanal) : regras.jornadaSemanal;
     return p;
@@ -777,4 +790,4 @@ function resumoEscala(saida) {
 /* Exportação (Node) — no Apps Script as funções ficam globais            */
 /* ===================================================================== */
 
-if (typeof module !== "undefined") module.exports = { gerarEscala, exemploEquipe, resumoEscala, intervaloDe, turnosDoDia, presencaDe, DIAS, NOME_DIA, NOME_DIA_CURTO, fmtHoras, fmtReais };
+if (typeof module !== "undefined") module.exports = { gerarEscala, exemploEquipe, resumoEscala, intervaloDe, turnosDoDia, turnosProprios, presencaDe, DIAS, NOME_DIA, NOME_DIA_CURTO, fmtHoras, fmtReais };

@@ -174,5 +174,14 @@ for (const sem of ["A", "B"]) {
   ok(JSON.stringify(igual.grade) === JSON.stringify(sem.grade), "horasDia igual ou acima da jornada diária = integral");
 }
 
+console.log("7. revisão final");
+{
+  const curto = func(SEG_DOM, "07:00", "15:00", 2);
+  const r = ["A", "B"].map(w => monta(curto, comAna({ horasDia: 6.5 }), w, V42_2));
+  const trab = c => dur(c) - intervaloDe(dur(c), 120);
+  const ts = r.flatMap(s => turnosDe(s, "Ana"));
+  ok(ts.length && ts.every(c => trab(c) <= 390), "dia mais curto que o turno com 2 h: Ana não passa de 6,5 h" + " " + JSON.stringify(ts.map(c => c.inicio + "-" + c.fim)));
+}
+
 console.log(falhas ? `\n${falhas} falha(s)` : "\nTudo ok");
 process.exit(falhas ? 1 : 0);

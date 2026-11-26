@@ -221,6 +221,42 @@
     return J;
   }
   function diaMax(p, v) { return jornadaPropria(p, v) ? Number(p.horasDia) : VERSOES[v].jornadaDiariaMax; }
+  // Reparos que trocam turnos entre pessoas só trocam dentro da mesma classe: mesmo tamanho e mesmo limite semanal.
+  function classeTurno(p, v) { return diaMax(p, v) + "|" + limiteSemana(p, v); }
+  // Turnos de quem tem jornada própria num dia aberto (mesmo gerador do motor).
+  function turnosDaPessoa(s, v, p, d) {
+    var dia = montarDias(s.funcionamento, regrasMotor(s, v))[d];
+    if (!dia || !dia.aberto) return [];
+    return turnosProprios(dia.abre, dia.fecha, Math.round(Number(p.horasDia) * 60), fora(s), imin(s));
+  }
+  // Quem tem jornada própria pode ficar sozinha na classe, sem com quem trocar para ter 11 h de descanso.
+  // Busca exata por pessoa: em cada dia de trabalho, o turno dela pode virar abertura, meio ou fechamento com
+  // as mesmas horas de trabalho (não muda a semana dela); primeiro tenta o turno atual.
+  function repararProprios(s, v, g, pessoas) {
+    pessoas.forEach(function (p) {
+      var lin = g[p.id]; if (!lin) return;
+      if (DIAS.every(function (d, i) { return i === 0 || descanso(lin[DIAS[i - 1]], lin[d]) >= INTERJORNADA_MIN; })) return;
+      var ops = DIAS.map(function (d) {
+        var c = lin[d]; if (!c || c.tipo !== "turno") return [c];
+        var tr = Math.round(trab(c, s) * 60), dia = montarDias(s.funcionamento, regrasMotor(s, v))[d];
+        var outros = dia && dia.aberto ? turnosProprios(dia.abre, dia.fecha, tr, fora(s), imin(s)).map(function (t) {
+          return { tipo: "turno", inicio: hhmm(t.inicio % 1440), fim: hhmm(t.fim % 1440), rotulo: t.rotulo };
+        }).filter(function (x) { return Math.abs(trab(x, s) - trab(c, s)) < 1e-9 && !(x.inicio === c.inicio && x.fim === c.fim); }) : [];
+        return [c].concat(outros);
+      });
+      var escolha = [];
+      (function busca(i) {
+        if (i === DIAS.length) return true;
+        for (var k = 0; k < ops[i].length; k++) {
+          if (i > 0 && descanso(escolha[i - 1], ops[i][k]) < INTERJORNADA_MIN) continue;
+          escolha[i] = ops[i][k];
+          if (busca(i + 1)) return true;
+        }
+        return false;
+      })(0) && DIAS.forEach(function (d, i) { lin[d] = escolha[i]; });
+    });
+  }
+
 
   function entradaMotor(s, v, sem, lista) {
     var vistos = {}, nomeDe = {}, L = lista || s.equipe;
@@ -265,8 +301,10 @@
     });
     // Reparo das 11 h troca turnos entre pessoas do mesmo dia: só entre quem tem o mesmo tamanho de turno.
     var porTam = {};
-    integrais.forEach(function (p) { var k = String(diaMax(p, v)); (porTam[k] = porTam[k] || []).push(p.id); });
+    integrais.forEach(function (p) { var k = classeTurno(p, v); (porTam[k] = porTam[k] || []).push(p.id); });
     Object.keys(porTam).forEach(function (k) { repararDescanso(g, porTam[k]); });
+    // Quem ainda ficou sem 11 h (sozinho na classe ou sem troca possível): muda o próprio turno, mesmas horas.
+    repararProprios(s, v, g, integrais);
     // Almoço de quem é tempo integral antes: o meio período entra nos buracos que sobram, inclusive na hora do almoço.
     marcarAlmocos(s, g, integrais.map(function (p) { return p.id; }));
     cobrirComReserva(s, v, g, integrais);
@@ -409,7 +447,7 @@
             // Turnos do motor e um sob medida que começa no primeiro horário descoberto (cobre os almoços
             // sem precisar abrir a loja).
             // Quem tem jornada própria só recebe turnos do tamanho dela.
-            var base = jornadaPropria(p, v) ? turnosDoDia(dia.abre, dia.fecha, presencaDe(Math.round(Number(p.horasDia) * 60), fora(s), imin(s))) : dia.turnos;
+            var base = jornadaPropria(p, v) ? turnosProprios(dia.abre, dia.fecha, Math.round(Number(p.horasDia) * 60), fora(s), imin(s)) : dia.turnos;
             var maior = Math.max.apply(null, base.map(function (t) { return t.fim - t.inicio; }));
             var cands = base.concat([{ inicio: buraco[0], fim: Math.min(dia.fecha, buraco[0] + maior), rotulo: "Meio" }]);
             cands.forEach(function (t) {
@@ -623,7 +661,7 @@
         });
         ids.forEach(function (a, ia) {
           ids.forEach(function (b, ib) {
-            if (ib <= ia || notas[a] + notas[b] === 0 || diaMax(pessoa[a], v) !== diaMax(pessoa[b], v)) return;
+            if (ib <= ia || notas[a] + notas[b] === 0 || classeTurno(pessoa[a], v) !== classeTurno(pessoa[b], v)) return;
             opcoes.forEach(function (ds) {
               if (ds.length === 1) {
                 var ca = E[w][a][ds[0]], cb = E[w][b][ds[0]];
@@ -919,7 +957,7 @@
     $("#pend").hidden = !state.pendente;
     renderEquipe(calc);
     renderExplica(calc);
-    $("#gradeNota").textContent = "Semana " + state.semana + ": quem folga no fim de semana alterna entre as semanas A e B. " + (fora(state) ? "Cada turno tem a jornada de trabalho + 1 h de almoço, marcado no cartão (alm.): o almoço não conta como trabalho e foi escalonado para não esvaziar o balcão." : "Intervalo de refeição (1 h para turnos acima de 6 h) fica dentro do turno e não conta como trabalho: combine o horário para não esvaziar o balcão.");
+    $("#gradeNota").textContent = "Semana " + state.semana + ": quem folga no fim de semana alterna entre as semanas A e B. " + (fora(state) ? "Cada turno tem a jornada de trabalho + " + hm(imin(state) / 60) + " de almoço, marcado no cartão (alm.): o almoço não conta como trabalho e foi escalonado para não esvaziar o balcão." : "Intervalo de refeição (1 h para turnos acima de 6 h) fica dentro do turno e não conta como trabalho: combine o horário para não esvaziar o balcão.");
   }
 
   function thDias() {
@@ -1427,7 +1465,7 @@
       gerarTudo(state); state.pendente = false;
       salvar(); render();
       desfazerSnap = snap;
-      dica("<b>Intervalo de " + hm(novo / 60) + ".</b> Escalas de 42 h e 40 h montadas de novo: o turno de quem trabalha mais de 6 h fica " + hm(novo / 60) + " mais longo na loja.",
+      dica("<b>Intervalo de " + hm(novo / 60) + ".</b> Escalas de 42 h e 40 h montadas de novo: quem trabalha mais de 6 h por dia tem " + hm(novo / 60) + " de almoço, fora da jornada.",
         '<button type="button" class="b ghost sm" data-dica="desfazer">Desfazer</button>');
     });
 
@@ -2294,12 +2332,19 @@
   // Horário para quem cai num turno: o mais comum da linha naquele dia; senão o turno do motor que
   // cai nesse grupo; senão um turno do tamanho da jornada encostado na abertura ou no fechamento.
   // p (opcional): quem tem jornada própria recebe um turno do tamanho dela, não o da linha.
-  function turnoDoGrupo(g, d, faixa, p) {
-    var prop = p && jornadaPropria(p, state.versao);
+  function turnoDoGrupo(g, d, faixa, p, st) {
+    var S = st || state;
+    var prop = p && jornadaPropria(p, S.versao);
     if (faixa && !prop) { var t = faixa.split("-"); return { inicio: t[0], fim: t[1] }; }
-    var f = state.funcionamento[d], R = VERSOES[state.versao], J = presencaDe(Math.round(diaMax(p || {}, state.versao) * 60), fora(state), imin(state));
-    var dia = montarDias(state.funcionamento, regrasMotor(state, state.versao))[d];
-    var lista = prop ? (dia && dia.aberto ? turnosDoDia(dia.abre, dia.fecha, J) : []) : ((dia && dia.turnos) || []);
+    var f = S.funcionamento[d], R = VERSOES[S.versao], J = presencaDe(Math.round(R.jornadaDiariaMax * 60), fora(S), imin(S));
+    var dia = montarDias(S.funcionamento, regrasMotor(S, S.versao))[d];
+    if (prop) {
+      // Jornada própria: só turnos do tamanho dela; o do grupo, senão o mais perto (fechamento = o último).
+      var meus = turnosDaPessoa(S, S.versao, p, d).map(function (t) { return { inicio: hhmm(t.inicio), fim: hhmm(t.fim), rotulo: t.rotulo }; });
+      var doGrupo = meus.filter(function (t) { return grupoDe({ tipo: "turno", inicio: t.inicio, fim: t.fim }, f) === g; })[0];
+      return doGrupo || (g === "fechamento" ? meus[meus.length - 1] : meus[0]);
+    }
+    var lista = (dia && dia.turnos) || [];
     var achou = lista.filter(function (t) { return grupoDe({ tipo: "turno", inicio: hhmm(t.inicio), fim: hhmm(t.fim) }, f) === g; })[0];
     if (achou) return { inicio: hhmm(achou.inicio), fim: hhmm(achou.fim), rotulo: achou.rotulo };
     var a = min(f.abre), b = min(f.fecha); if (b <= a) b += 1440;
@@ -2596,5 +2641,5 @@
   }
 
   // Usado pelo teste automatizado.
-  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, normalizar: normalizar, jornadaPropria: jornadaPropria, conflitosPar: conflitosPar, mulheresSemDomingo: mulheresSemDomingo, problemasLei: problemasLei, render: function () { render(); } };
+  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, normalizar: normalizar, jornadaPropria: jornadaPropria, turnoDoGrupo: turnoDoGrupo, conflitosPar: conflitosPar, mulheresSemDomingo: mulheresSemDomingo, problemasLei: problemasLei, render: function () { render(); } };
 })();
