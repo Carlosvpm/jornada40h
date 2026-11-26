@@ -1480,6 +1480,12 @@
     $("#pHoras").value = p && p.horas ? p.horas : "";
     $("#pFixa").innerHTML = '<option value="">rodízio</option>' + DIAS.map(function (d) { return '<option value="' + d + '"' + (p && p.folgaFixa === d ? " selected" : "") + ">" + NOME_DIA[d] + "</option>"; }).join("");
     $("#pNaoPode").innerHTML = chipsDias(p ? p.naoPode : [], "pnp").replace(/^<div class="dias-chk">|<\/div>$/g, "");
+    $("#pSexo").value = p && p.sexo ? p.sexo : "";
+    var colegas = state.equipe.filter(function (x) { return !p || x.id !== p.id; }), juntos = p ? p.naoFolgaCom || [] : [];
+    $("#pJuntosBox").hidden = !colegas.length;
+    $("#pJuntos").innerHTML = colegas.map(function (x) {
+      return '<label><input type="checkbox" data-pj="' + esc(x.id) + '"' + (juntos.indexOf(x.id) >= 0 ? " checked" : "") + "><span>" + esc(x.nome || "pessoa") + "</span></label>";
+    }).join("");
     $("#pRemover").hidden = !p;
     $("#pRemover").classList.remove("confirma"); $("#pRemover").textContent = "Remover da equipe";
     $("#dlgP").showModal();
@@ -1491,6 +1497,7 @@
     var snap = JSON.stringify(state), antes = metricas(state);
     var naoPode = Array.prototype.map.call(document.querySelectorAll("#pNaoPode [data-pnp]:checked"), function (x) { return x.dataset.pnp; });
     var fixa = $("#pFixa").value;
+    var juntos = Array.prototype.map.call(document.querySelectorAll("#pJuntos [data-pj]:checked"), function (x) { return x.dataset.pj; });
     var p = pessoaEd ? state.equipe.filter(function (x) { return x.id === pessoaEd; })[0] : null;
     if (!p) {
       p = { id: uid(), nome: nome, funcao: "", salario: null, folgaFixa: "", naoPode: [] };
@@ -1504,6 +1511,17 @@
     if (hs !== (p.horas || null)) { p.horas = hs; marcarPendente(); }
     p.folgaFixa = fixa;
     p.naoPode = naoPode;
+    var sexo = $("#pSexo").value;
+    if ((p.sexo || "") !== sexo) { p.sexo = sexo; marcarPendente(); }
+    var antesJ = (p.naoFolgaCom || []).slice().sort().join();
+    p.naoFolgaCom = juntos;
+    state.equipe.forEach(function (q) {
+      if (q === p) return;
+      var l = (q.naoFolgaCom || []).filter(function (id) { return id !== p.id; });
+      if (juntos.indexOf(q.id) >= 0) l.push(p.id);
+      q.naoFolgaCom = l;
+    });
+    if (juntos.slice().sort().join() !== antesJ) marcarPendente();
     salvar(); renderCfg(); render();
     verificarPiora(snap, antes, "Editei " + nome);
   }
@@ -2194,6 +2212,7 @@
       if (state.equipe.length <= 1) return toast("A escala precisa de pelo menos 1 pessoa.");
       if (!b.classList.contains("confirma")) { b.classList.add("confirma"); b.textContent = "Confirmar remoção"; return; }
       state.equipe = state.equipe.filter(function (p) { return p.id !== pessoaEd; });
+      state.equipe.forEach(function (p) { p.naoFolgaCom = (p.naoFolgaCom || []).filter(function (id) { return id !== pessoaEd; }); });
       $("#dlgP").close();
       marcarPendente(); salvar(); renderCfg(); render();
       toast("Pessoa removida da equipe.");

@@ -243,10 +243,15 @@
     </div>
     <div class="row2">
       <label>Folga fixa<select id="pFixa"></select></label>
+      <label>Sexo<select id="pSexo"><option value="">Não informar</option><option value="F">Feminino</option><option value="M">Masculino</option></select><small>mulher folga no domingo pelo menos a cada 2 semanas</small></label>
     </div>
     <p class="lbl-dias">Dias que não pode trabalhar</p>
     <div class="dias-chk" id="pNaoPode"></div>
-    <p class="muted sm">Folga fixa e dias que não pode valem quando a escala é montada de novo.</p>
+    <div id="pJuntosBox">
+      <p class="lbl-dias">Não pode folgar no mesmo dia que</p>
+      <div class="dias-chk" id="pJuntos"></div>
+    </div>
+    <p class="muted sm">Folga fixa, dias que não pode e quem não folga junto valem quando a escala é montada de novo.</p>
     <div class="dlg-acts">
       <button class="b ghost perigo" id="pRemover" type="button">Remover da equipe</button>
       <span class="sp"></span>

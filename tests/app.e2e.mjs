@@ -328,6 +328,29 @@ try {
     await p3.close();
   }
 
+  console.log("15. cadastro: sexo e não folgar junto");
+  {
+    const p4 = await (await browser.newContext({ viewport: { width: 1360, height: 900 } })).newPage();
+    await p4.addInitScript(() => { try { localStorage.setItem("j40h:vista", "pessoa"); } catch (e) {} });
+    const e4 = []; p4.on("pageerror", e => e4.push(e.message));
+    await p4.goto(BASE + "/app/#d=" + hash);
+    await p4.waitForSelector("#grid button.cell");
+    await p4.click('#grid [data-pessoa="p0"]');
+    await p4.selectOption("#pSexo", "F");
+    await p4.check('#pJuntos [data-pj="p1"]', { force: true });
+    await p4.click('#dlgPForm button[value="ok"]');
+    const st = await p4.evaluate(() => { const s = window.__j40h.state; return { a: s.equipe[0], b: s.equipe[1], pend: !!s.pendente }; });
+    ok(st.a.sexo === "F" && JSON.stringify(st.a.naoFolgaCom) === '["p1"]' && JSON.stringify(st.b.naoFolgaCom) === '["p0"]', "salvar grava sexo e o par dos dois lados");
+    ok(st.pend, "mudança de sexo/par pede para montar de novo");
+    await p4.click('#grid [data-pessoa="p1"]');
+    ok(await p4.isChecked('#pJuntos [data-pj="p0"]'), "ficha da Bia mostra a Ana marcada");
+    await p4.click("#pRemover"); await p4.click("#pRemover");
+    const rest = await p4.evaluate(() => window.__j40h.state.equipe[0].naoFolgaCom);
+    ok(Array.isArray(rest) && !rest.length, "remover a Bia tira ela do par da Ana");
+    ok(!e4.length, "cadastro sem erro de JavaScript" + (e4.length ? ": " + e4.join(" | ") : ""));
+    await p4.close();
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();
