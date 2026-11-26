@@ -279,6 +279,55 @@ try {
     ok(!dif.length, "mesma escala de antes" + (dif.length ? ": " + dif.join(", ") : ""));
   }
 
+  console.log("14. par que não folga junto e domingo da mulher");
+  const D7 = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
+  const sete = {}; D7.forEach(d => { sete[d] = { abre: "06:00", fecha: "19:00", pessoas: 2 }; });
+  const baseP = { negocio: { nome: "Padaria Exemplo", tipo: "Padaria" }, funcionamento: sete, custos: { salario: 1800, encargos: 1.7, he: 50 }, versao: "42", semana: "A", intervalo: "fora" };
+  const r14 = await p2.evaluate(([b, D]) => {
+    const J = window.__j40h, c = o => JSON.parse(JSON.stringify(o)), out = {};
+    const n = J.normalizar(Object.assign(c(b), { equipe: [{ id: "p0", nome: "Ana", naoFolgaCom: ["p1", "zz", "p0"] }, { id: "p1", nome: "Bia" }, { id: "p2", nome: "Caio", sexo: "X" }] }));
+    out.norm = n.equipe.map(p => [p.naoFolgaCom, p.sexo]);
+    const par = Object.assign(c(b), { equipe: ["Ana", "Bia", "Caio", "Duda", "Edu"].map((x, i) => ({ id: "p" + i, nome: x, funcao: "atendente", naoFolgaCom: i === 0 ? ["p1"] : i === 1 ? ["p0"] : [] })) });
+    J.gerarTudo(par);
+    out.par = ["42", "40"].flatMap(v => ["A", "B"].flatMap(w => J.conflitosPar(par, v, w)));
+    const dup = Object.assign(c(b), { equipe: ["Ana", "Ana", "Caio", "Duda", "Edu"].map((x, i) => ({ id: "p" + i, nome: x, funcao: "", naoFolgaCom: i === 0 ? ["p2"] : i === 2 ? ["p0"] : [] })) });
+    J.gerarTudo(dup);
+    out.dup = ["42", "40"].flatMap(v => ["A", "B"].flatMap(w => J.conflitosPar(dup, v, w)));
+    const merc = {}; D.forEach(d => { merc[d] = { abre: "07:00", fecha: d === "dom" ? "12:00" : "20:00", pessoas: 4 }; });
+    const mu = Object.assign(c(b), { funcionamento: merc, equipe: Array.from({ length: 9 }, (_, i) => ({ id: "p" + i, nome: "Pessoa " + (i + 1), funcao: "", sexo: i < 4 ? "F" : "" })) });
+    J.gerarTudo(mu);
+    out.mulher = ["42", "40"].flatMap(v => J.mulheresSemDomingo(mu, v));
+    // Grade à mão: Ana (mulher) trabalha os dois domingos; Caio (homem) também.
+    const T = { tipo: "turno", inicio: "06:00", fim: "15:00" }, F = { tipo: "folga" }, g = {};
+    ["A", "B"].forEach(w => { g[w] = {}; ["p0", "p2"].forEach(id => { g[w][id] = {}; D.forEach(d => { g[w][id][d] = d === "seg" || d === "ter" ? F : T; }); }); });
+    const dom = Object.assign(c(b), { equipe: [{ id: "p0", nome: "Ana", funcao: "", sexo: "F" }, { id: "p2", nome: "Caio", funcao: "" }], escalas: { 42: g, 40: c(g) } });
+    out.lei = J.problemasLei(dom, "42").map(x => x.txt);
+    out.domingo = J.metricas(dom).domingo;
+    return out;
+  }, [baseP, D7]);
+  ok(JSON.stringify(r14.norm) === JSON.stringify([[["p1"], ""], [["p0"], ""], [[], ""]]), "normalizar simetriza o par, tira id inexistente e sexo inválido: " + JSON.stringify(r14.norm));
+  ok(!r14.par.length, "escala montada sem o par folgando junto" + (r14.par.length ? ": " + JSON.stringify(r14.par) : ""));
+  ok(!r14.dup.length, "nomes repetidos: par respeitado" + (r14.dup.length ? ": " + JSON.stringify(r14.dup) : ""));
+  ok(!r14.mulher.length, "4 mulheres no mercado: todas folgam domingo em A ou B" + (r14.mulher.length ? ": " + r14.mulher.join(", ") : ""));
+  ok(r14.lei.some(t => /Ana/.test(t) && /CLT, art\. 386/.test(t)) && r14.lei.some(t => /Caio/.test(t) && /10\.101/.test(t) && !/Ana/.test(t)), "alerta da mulher cita o art. 386 e o geral fica só com o homem");
+  ok(r14.domingo === 2, "métrica de domingo continua contando todos");
+  // Pela tela: grade à mão com Ana e Bia de folga na quinta da A; Bia em meio período.
+  {
+    const T = { tipo: "turno", inicio: "06:00", fim: "15:00" }, F = { tipo: "folga" }, g = { A: {}, B: {} };
+    ["p0", "p1"].forEach(id => ["A", "B"].forEach(w => { g[w][id] = {}; D7.forEach(d => { g[w][id][d] = (w === "A" ? ["qui", "dom"] : ["seg", "ter"]).includes(d) ? (id === "p0" && w === "A" && d === "dom" ? T : F) : T; }); }));
+    g.A.p0.sab = F;
+    const est = Object.assign({}, baseP, { equipe: [{ id: "p0", nome: "Ana", funcao: "", naoFolgaCom: ["p1"] }, { id: "p1", nome: "Bia", funcao: "", horas: 20, naoFolgaCom: ["p0"] }], escalas: { 42: g, 40: JSON.parse(JSON.stringify(g)) } });
+    const p3 = await (await browser.newContext()).newPage();
+    const e3 = []; p3.on("pageerror", e => e3.push(e.message));
+    await p3.goto(BASE + "/app/#d=" + Buffer.from(JSON.stringify(est)).toString("base64url"));
+    await p3.waitForSelector("#grid [data-p], #grid button.cell");
+    const txt = await p3.textContent("#alertas");
+    ok(/Ana e Bia folgam no mesmo dia \(quinta, semana A\), mas foram marcadas para não folgar juntas\./.test(txt), "alerta do par na tela");
+    ok(await p3.evaluate(() => window.__j40h.metricas(window.__j40h.state).pares) === 3, "métrica conta as 3 folgas juntas (qui da A; seg e ter da B)");
+    ok(!e3.length, "par com meio período sem erro de JavaScript" + (e3.length ? ": " + e3.join(" | ") : ""));
+    await p3.close();
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();

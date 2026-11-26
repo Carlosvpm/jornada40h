@@ -30,6 +30,7 @@
     dsr: { ref: "CLT, art. 67; Lei 605/1949, art. 1º", fonte: "clt", regra: "Todo empregado tem um descanso semanal de 24 horas seguidas, de preferência no domingo. A escala 5x2 dá 2 folgas por semana, acima desse mínimo." },
     intervalo: { ref: "CLT, art. 71", fonte: "clt", regra: "Turno de mais de 6 h tem intervalo de 1 a 2 h para refeição; de 4 a 6 h, 15 minutos. O intervalo não conta como hora trabalhada (§ 2º)." },
     domingo: { ref: "Lei 10.101/2000, art. 6º", fonte: "l10101", regra: "No comércio, o trabalho no domingo é permitido (respeitada a lei do município), e a folga semanal precisa cair no domingo pelo menos 1 vez a cada 3 semanas. Para mulheres, a CLT (art. 386) pede revezamento quinzenal." },
+    mulher: { ref: "CLT, art. 386", fonte: "clt", regra: "Havendo trabalho aos domingos, a escala das mulheres é de revezamento quinzenal: a folga cai no domingo pelo menos 1 vez a cada 2 semanas." },
     revezamento: { ref: "CLT, art. 67, parágrafo único", fonte: "clt", regra: "Onde há trabalho no domingo, a escala de revezamento é organizada por mês e fica à vista da fiscalização." }
   };
   function lei(k) { return " (" + LEIS[k].ref + ")"; }
@@ -129,12 +130,28 @@
     s.equipe = (s.equipe || []).map(function (p) {
       var np = Array.isArray(p.naoPode) ? p.naoPode.filter(function (d) { return DIAS.indexOf(d) >= 0; }) : [];
       var hs = Number(p.horas) > 0 ? Math.min(60, Math.round(Number(p.horas))) : null;
-      return { id: p.id || uid(), nome: p.nome || "", funcao: p.funcao || "", salario: p.salario || null, horas: hs, folgaFixa: p.folgaFixa || "", naoPode: np };
+      return { id: p.id || uid(), nome: p.nome || "", funcao: p.funcao || "", salario: p.salario || null, horas: hs, folgaFixa: p.folgaFixa || "", naoPode: np,
+        sexo: p.sexo === "F" || p.sexo === "M" ? p.sexo : "", naoFolgaCom: Array.isArray(p.naoFolgaCom) ? p.naoFolgaCom.slice() : [] };
     });
+    simetrizarPares(s.equipe);
     s.pendente = !!s.pendente;
     if (s.intervalo !== "fora" && s.intervalo !== "dentro") s.intervalo = undefined;
     if (!s.escalas || !s.escalas["42"] || !s.escalas["40"]) { s.intervalo = s.intervalo || "fora"; gerarTudo(s); }
     return s;
+  }
+
+  // Par que não folga junto: só ids que existem, sem a própria pessoa, sem repetição, e sempre dos dois lados.
+  function simetrizarPares(equipe) {
+    var ids = equipe.map(function (p) { return p.id; });
+    equipe.forEach(function (p) {
+      p.naoFolgaCom = (p.naoFolgaCom || []).filter(function (id, i, a) { return id !== p.id && ids.indexOf(id) >= 0 && a.indexOf(id) === i; });
+    });
+    equipe.forEach(function (p) {
+      p.naoFolgaCom.forEach(function (id) {
+        var q = equipe[ids.indexOf(id)];
+        if (q.naoFolgaCom.indexOf(p.id) < 0) q.naoFolgaCom.push(p.id);
+      });
+    });
   }
 
   var salvarTimer = null;
@@ -192,14 +209,21 @@
   function limiteSemana(p, v) { return parcial(p, v) ? Number(p.horas) : VERSOES[v].jornadaSemanal; }
 
   function entradaMotor(s, v, sem, lista) {
-    var vistos = {};
-    var funcionarios = (lista || s.equipe).map(function (p, i) {
+    var vistos = {}, nomeDe = {}, L = lista || s.equipe;
+    L.forEach(function (p, i) {
       var nome = (p.nome || "Pessoa " + (i + 1)).trim();
       while (vistos[nome]) nome = nome + " ·";
       vistos[nome] = true;
-      var f = { nome: nome, funcao: p.funcao };
+      nomeDe[p.id] = nome;
+    });
+    var funcionarios = L.map(function (p) {
+      var f = { nome: nomeDe[p.id], funcao: p.funcao };
       if (p.folgaFixa) f.folgaFixa = p.folgaFixa;
       if (p.naoPode && p.naoPode.length) f.naoPode = p.naoPode.slice();
+      if (p.sexo) f.sexo = p.sexo;
+      // Parceiros fora da lista (meio período) não entram no motor: ficam só no alerta.
+      var par = (p.naoFolgaCom || []).filter(function (id) { return nomeDe[id]; }).map(function (id) { return nomeDe[id]; });
+      if (par.length) f.naoFolgaCom = par;
       return f;
     });
     return {
@@ -542,7 +566,13 @@
         });
         if (h > lim + 1e-9) n += 10;
       });
-      if (s.funcionamento.dom && SEMANAS.every(function (w) { return turno(w, id, "dom"); })) n += 10;
+      if (s.funcionamento.dom && SEMANAS.every(function (w) { return turno(w, id, "dom"); })) n += p.sexo === "F" ? 100 : 10;
+      (p.naoFolgaCom || []).forEach(function (q) {
+        if (ids.indexOf(q) < 0) return;
+        SEMANAS.forEach(function (w) {
+          DIAS.forEach(function (d) { if (s.funcionamento[d] && celula(s, v, w, id, d).tipo === "folga" && celula(s, v, w, q, d).tipo === "folga") n += 10; });
+        });
+      });
       var L = seq.length, ini = -1;
       for (var i = 0; i < L; i++) if (seq[i].tipo !== "turno") { ini = i; break; }
       if (ini < 0) return n + 1000;
@@ -1081,7 +1111,7 @@
 
   function baseLegal() {
     return '<p><b>Base legal.</b> Cada alerta da escala cita a regra de onde vem:</p><ul class="leis">' +
-      ["jornada", "he", "interjornada", "dsr", "intervalo", "domingo", "revezamento"].map(function (k) {
+      ["jornada", "he", "interjornada", "dsr", "intervalo", "domingo", "mulher", "revezamento"].map(function (k) {
         var L = LEIS[k];
         return '<li><a class="lei" href="' + FONTE[L.fonte] + '" target="_blank" rel="noopener">' + esc(L.ref) + "</a>: " + esc(L.regra) + "</li>";
       }).join("") +
@@ -1097,10 +1127,15 @@
       if (dia.aberto && dia.falta) li.push("<li>" + NOME_DIA[d] + ": " + esc(textoFaixa(dia.faixas)) + " (" + horas(dia.falta) + ").</li>");
     });
     calc.avisos.forEach(function (a) { li.push("<li>" + esc(a) + "</li>"); });
+    conflitosPar(state, state.versao, state.semana).forEach(function (x) {
+      li.push("<li>" + esc(x.a + " e " + x.b + " folgam no mesmo dia (" + NOME_DIA[x.d].toLowerCase() + ", semana " + state.semana + "), mas foram marcadas para não folgar juntas.") + "</li>");
+    });
     if (state.intervalo === "dentro") li.push("<li>O almoço está dentro do turno: na prática cada pessoa trabalha 1 h a menos por dia que a jornada" + esc(lei("intervalo")) + ', e na hora do almoço o balcão fica com uma pessoa a menos sem aparecer nesta conta.<button type="button" class="b ghost sm" data-almoco>Ver a mudança</button></li>');
     // Domingo: no comércio, o descanso precisa cair no domingo ao menos 1 vez a cada 3 semanas.
     if (state.funcionamento.dom) {
-      var semDomingo = trabalhaTodoDomingo(state);
+      var mu = mulheresSemDomingo(state);
+      if (mu.length) li.push('<li class="erro">' + esc(textoMulherDomingo(mu)) + "</li>");
+      var semDomingo = trabalhaTodoDomingo(state).filter(function (n) { return mu.indexOf(n) < 0; });
       if (semDomingo.length) li.push("<li>" + esc(semDomingo.join(", ")) + (semDomingo.length === 1 ? " trabalha" : " trabalham") + " no domingo nas semanas A e B. No comércio, a folga precisa cair no domingo pelo menos 1 vez a cada 3 semanas" + esc(lei("domingo")) + ": ajuste numa das semanas.</li>");
     }
     if (calc.sobra > 0.01) li.push("<li>Há " + horas(calc.sobra) + " por semana com gente a mais que o necessário: serve de reserva para faltas, férias e atestados.</li>");
@@ -1547,10 +1582,36 @@
     }).map(function (p) { return p.nome; });
   }
 
+  // Mulheres com turno no domingo nas semanas A e B (a folga precisa cair no domingo a cada 2 semanas).
+  function mulheresSemDomingo(s, v) {
+    if (!s.funcionamento.dom) return [];
+    v = v || s.versao;
+    return s.equipe.filter(function (p) {
+      return p.sexo === "F" && SEMANAS.every(function (w) { return celula(s, v, w, p.id, "dom").tipo === "turno"; });
+    }).map(function (p) { return p.nome; });
+  }
+
+  // Dias abertos em que duas pessoas marcadas para não folgar juntas estão de folga (cada par e dia uma vez).
+  function conflitosPar(s, v, w) {
+    var out = [];
+    s.equipe.forEach(function (p, i) {
+      (p.naoFolgaCom || []).forEach(function (id) {
+        var j = -1;
+        s.equipe.forEach(function (q, k) { if (q.id === id) j = k; });
+        if (j <= i) return;
+        DIAS.forEach(function (d) {
+          if (s.funcionamento[d] && celula(s, v, w, p.id, d).tipo === "folga" && celula(s, v, w, id, d).tipo === "folga") out.push({ a: p.nome, b: s.equipe[j].nome, d: d });
+        });
+      });
+    });
+    return out;
+  }
+
   function metricas(s) {
     var c = calcular(s, s.versao, s.semana), k = custos(s, s.versao, c);
     var best = k.ops.filter(function (o) { return o.best; })[0];
-    return { falta: c.falta, erros: c.erros.length, domingo: trabalhaTodoDomingo(s).length, custo: best ? best.custo : 0, folha: k.folha, calc: c, cus: k };
+    var pares = SEMANAS.reduce(function (t, w) { return t + conflitosPar(s, s.versao, w).length; }, 0);
+    return { falta: c.falta, erros: c.erros.length, domingo: trabalhaTodoDomingo(s).length, pares: pares, custo: best ? best.custo : 0, folha: k.folha, calc: c, cus: k };
   }
 
   function problemas(a, b) {
@@ -1558,6 +1619,7 @@
     if (b.falta > a.falta + 0.01) p.push("mais " + horas(b.falta - a.falta) + " sem cobertura por semana");
     if (b.erros > a.erros) p.push((b.erros - a.erros) + (b.erros - a.erros === 1 ? " ponto novo fora da lei" : " pontos novos fora da lei"));
     if (b.domingo > a.domingo) p.push((b.domingo - a.domingo) + (b.domingo - a.domingo === 1 ? " pessoa a mais" : " pessoas a mais") + " sem nenhuma folga no domingo nas semanas A e B (Lei 10.101/2000, art. 6º)");
+    if (b.pares > a.pares) p.push("mais " + (b.pares - a.pares) + (b.pares - a.pares === 1 ? " folga" : " folgas") + " no mesmo dia de quem não pode folgar junto");
     if (b.custo > a.custo + 1) p.push("custo extra sobe " + brl(b.custo - a.custo) + "/mês");
     return p;
   }
@@ -1597,7 +1659,7 @@
       regras: { jornadaSemanal: R.jornadaSemanal, jornadaDiariaMax: R.jornadaDiariaMax, almocoForaDaJornada: fora(s) },
       negocio: s.negocio,
       funcionamento: DIAS.reduce(function (o, d) { var f = s.funcionamento[d]; o[d] = f ? { aberto: true, abre: f.abre, fecha: f.fecha, pessoas: Number(f.pessoas) || 1 } : { aberto: false, abre: "", fecha: "", pessoas: 0 }; return o; }, {}),
-      equipe: s.equipe.map(function (p) { return { id: p.id, nome: p.nome, funcao: p.funcao, salario: p.salario || 0, horas: parcial(p, s.versao) ? Number(p.horas) : 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [] }; }),
+      equipe: s.equipe.map(function (p) { return { id: p.id, nome: p.nome, funcao: p.funcao, salario: p.salario || 0, horas: parcial(p, s.versao) ? Number(p.horas) : 0, folgaFixa: p.folgaFixa || "", naoPode: p.naoPode || [], sexo: p.sexo || "", naoFolgaCom: p.naoFolgaCom || [] }; }),
       custos: s.custos,
       grade: s.equipe.map(function (p, i) {
         return { pessoaId: p.id, nome: p.nome, horasSemana: c.pessoas[i].horas, dias: DIAS.reduce(function (o, d) {
@@ -1609,6 +1671,8 @@
         horasSemCobertura: c.falta,
         ondeFalta: DIAS.filter(function (d) { return c.dias[d].aberto && c.dias[d].falta; }).map(function (d) { return NOME_DIA[d] + ": " + textoFaixa(c.dias[d].faixas); }),
         pontosForaDaLei: c.erros, avisos: c.avisos, trabalhamDomingoNasSemanasAeB: trabalhaTodoDomingo(s),
+        mulheresSemDomingoNasSemanasAeB: mulheresSemDomingo(s),
+        paresFolgandoJuntos: conflitosPar(s, s.versao, s.semana).map(function (x) { return x.a + " e " + x.b + " (" + NOME_DIA[x.d].toLowerCase() + ")"; }),
         folhaMes: Math.round(m.folha),
         opcoesDeCusto: m.cus.ops.map(function (o) { return { titulo: o.titulo, custoMes: Math.round(o.custo), resolve: o.viavel, maisBarata: !!o.best, detalhe: o.txt }; })
       }
@@ -2316,10 +2380,16 @@
   // com o ajuste proposto e o antes/depois. Aplicar (com Desfazer) ou Pular, que só vale até fechar o navegador.
   var REV_KEY = "j40h:revisao-pulada";
 
+  function textoMulherDomingo(mu) {
+    return mu.join(", ") + (mu.length === 1 ? " trabalha" : " trabalham") + " no domingo nas semanas A e B; a folga da mulher precisa cair no domingo pelo menos 1 vez a cada 2 semanas" + lei("mulher") + ".";
+  }
+
   function problemasLei(s, v) {
     var l = [];
     SEMANAS.forEach(function (w) { calcular(s, v, w).erros.forEach(function (e) { l.push({ w: w, txt: e }); }); });
-    var dom = trabalhaTodoDomingo(s, v);
+    var mu = mulheresSemDomingo(s, v);
+    var dom = trabalhaTodoDomingo(s, v).filter(function (n) { return mu.indexOf(n) < 0; });
+    if (mu.length) l.push({ w: "", txt: textoMulherDomingo(mu) });
     if (dom.length) l.push({ w: "", txt: dom.join(", ") + (dom.length === 1 ? " trabalha" : " trabalham") + " no domingo nas semanas A e B; no comércio, a folga precisa cair no domingo pelo menos 1 vez a cada 3 semanas" + lei("domingo") + "." });
     return l;
   }
@@ -2441,5 +2511,5 @@
   }
 
   // Usado pelo teste automatizado.
-  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, render: function () { render(); } };
+  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, normalizar: normalizar, conflitosPar: conflitosPar, mulheresSemDomingo: mulheresSemDomingo, problemasLei: problemasLei, render: function () { render(); } };
 })();
