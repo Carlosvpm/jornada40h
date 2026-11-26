@@ -159,6 +159,13 @@
   }
   // Necessidade da meia hora que começa em t (minutos no eixo do dia): total e por função (nome normalizado).
   function necessidade(s, d, t) { var dn = diaNec(s, d); return dn ? necessidadeBloco(dn, t) : { total: 0, porFuncao: {} }; }
+  // Maior número de pessoas pedido ao mesmo tempo no dia (pessoas do dia ou pico, o que for maior).
+  function pessoasNecessarias(s, d) {
+    var f = s.funcionamento[d]; if (!f) return 0;
+    var dn = diaNec(s, d), m = dn.pessoas;
+    dn.picos.forEach(function (pc) { for (var t = pc.ini; t < pc.fim; t += 30) m = Math.max(m, necessidadeBloco(dn, t).total); });
+    return m;
+  }
   // Horas de gente pedidas no dia (pessoas × horas, mais os picos).
   function horasPedidas(s, d) {
     var f = s.funcionamento[d]; if (!f) return 0;
@@ -1346,7 +1353,13 @@
       var dia = calc.dias[d];
       if (dia.aberto && dia.falta) li.push("<li>" + NOME_DIA[d] + ": " + esc(textoFaixa(dia.faixas)) + " (" + horas(dia.falta) + ").</li>");
     });
-    calc.picos.forEach(function (x) { li.push("<li>" + esc(textoPico(x)) + " no horário de pico.</li>"); });
+    calc.picos.forEach(function (x) {
+      var k = normFuncao(x.funcao), tem = state.equipe.filter(function (p) { return normFuncao(p.funcao) === k; }).length;
+      var pede = necessidade(state, x.d, x.ini).porFuncao[k] || 0, extra = "";
+      // Faltam pessoas com a função na equipe (não é só a escala): contratar sem função não resolve.
+      if (tem < pede) extra = " — " + (tem === 0 ? "ninguém da equipe é " : tem === 1 ? "só 1 pessoa da equipe é " : "só " + tem + " pessoas da equipe são ") + x.funcao + ": cadastre mais alguém com essa função ou contrate";
+      li.push("<li>" + esc(textoPico(x) + " no horário de pico" + extra) + ".</li>");
+    });
     calc.avisos.forEach(function (a) { li.push("<li>" + esc(a) + "</li>"); });
     conflitosPar(state, state.versao, state.semana).forEach(function (x) {
       li.push("<li>" + esc(x.a + " e " + x.b + " folgam no mesmo dia (" + NOME_DIA[x.d].toLowerCase() + ", semana " + state.semana + "), mas foram marcadas para não folgar juntas.") + "</li>");
@@ -1423,7 +1436,7 @@
     $("#tblPicos").innerHTML = (ps.length ? "<thead><tr><th>Dias</th><th>Das</th><th>Às</th><th>Função</th><th>Pessoas</th><th></th></tr></thead>" : "") + "<tbody>" + ps.map(function (pc) {
       return '<tr data-pico="' + esc(pc.id) + '"><td>' + chipsDias(pc.dias, "pd") + "</td>" +
         '<td><input type="time" step="60" data-pk="inicio" value="' + esc(pc.inicio) + '"></td>' +
-        '<td><input type="time" step="60" data-pk="fim" value="' + esc(pc.fim) + '"></td>' +
+        '<td><input type="time" step="60" data-pk="fim" value="' + esc(pc.fim) + '"><small class="muted sm noite" data-noite' + (min(pc.fim) > min(pc.inicio) ? " hidden" : "") + '>termina no dia seguinte</small></td>' +
         '<td><select data-pk="funcao">' + opc(pc.funcao) + "</select></td>" +
         '<td><input type="number" min="1" max="50" step="1" data-pk="pessoas" value="' + pc.pessoas + '"></td>' +
         '<td><button type="button" class="x" data-pdel="' + esc(pc.id) + '" title="Remover">×</button></td></tr>';
@@ -1517,7 +1530,7 @@
           });
           linhas.push([]);
           linhas.push(["Horário", ""].concat(DIAS.map(function (d) { var f = state.funcionamento[d]; return f ? f.abre + " às " + f.fecha : "Fechado"; })));
-          linhas.push(["Pessoas necessárias", ""].concat(DIAS.map(function (d) { var f = state.funcionamento[d]; return f ? Number(f.pessoas) : 0; })));
+          linhas.push(["Pessoas necessárias", ""].concat(DIAS.map(function (d) { var f = state.funcionamento[d]; return pessoasNecessarias(state, d); })));
           linhas.push(["Pessoas trabalhando", ""].concat(DIAS.map(function (d) { return calc.trabalhandoNoDia[d] || 0; })));
           linhas.push(["Horas descobertas", ""].concat(DIAS.map(function (d) { return calc.dias[d].aberto ? calc.dias[d].falta : 0; })).concat([calc.falta]));
           linhas.push(["Onde falta gente", ""].concat(DIAS.map(function (d) { return calc.dias[d].aberto && calc.dias[d].falta ? textoFaixa(calc.dias[d].faixas) : ""; })));
@@ -1623,7 +1636,11 @@
       if (state.funcoes.some(function (x) { return x !== f && normFuncao(x.nome) === normFuncao(novo); })) { toast("Já existe uma função com esse nome."); renderFuncoesPicos(); return; }
       state.equipe.forEach(function (p) { if (antigo && normFuncao(p.funcao) === normFuncao(antigo)) p.funcao = novo; });
       f.nome = novo;
-      salvar(); renderCfg(); render();
+      // Atualiza só os nomes na tela (redesenhar a configuração tiraria o foco do próximo campo).
+      Array.prototype.forEach.call(document.querySelectorAll('#tblEquipe input[data-e="funcao"]'), function (x) { if (antigo && normFuncao(x.value) === normFuncao(antigo)) x.value = novo; });
+      Array.prototype.forEach.call(document.querySelectorAll("#tblPicos option"), function (o) { if (o.value === f.id) o.textContent = novo; });
+      $("#listaFuncoes").innerHTML = state.funcoes.map(function (x) { return '<option value="' + esc(x.nome) + '">'; }).join("");
+      salvar(); render();
     });
     $("#tblFuncoes").addEventListener("click", function (e) {
       var b = e.target.closest("[data-fdel]"); if (!b || b.disabled) return;
@@ -1641,7 +1658,12 @@
       var pc = state.picos.filter(function (x) { return x.id === tr.dataset.pico; })[0]; if (!pc) return;
       if (e.target.dataset.pd) pc.dias = Array.prototype.map.call(tr.querySelectorAll("[data-pd]:checked"), function (x) { return x.dataset.pd; });
       var k = e.target.dataset.pk;
-      if (k === "inicio" || k === "fim") pc[k] = e.target.value || pc[k];
+      if (k === "inicio" || k === "fim") {
+        var outro = k === "inicio" ? pc.fim : pc.inicio, val = e.target.value || pc[k];
+        if (val === outro) { e.target.value = pc[k]; return toast("O pico precisa terminar depois de começar."); }
+        pc[k] = val;
+        var noite = tr.querySelector("[data-noite]"); if (noite) noite.hidden = min(pc.fim) > min(pc.inicio);
+      }
       if (k === "funcao") pc.funcao = e.target.value;
       if (k === "pessoas") pc.pessoas = Math.max(1, Math.min(50, Math.round(Number(e.target.value) || 1)));
       marcarPendente(); salvar(); render();
@@ -2080,17 +2102,16 @@
     if (prop.custos) ["salario", "encargos", "he"].forEach(function (k) { var v = Number(prop.custos[k]); if (v > 0) s.custos[k] = v; });
     // Funções e picos vêm pelo nome da função; nome novo entra no catálogo. Ausentes = ficam como estavam.
     normalizarFuncoesPicos(s);
+    // "Caixas" ou "Caíxa" achando "caixa": compara sem acento e sem o plural.
+    var parecida = function (nome) { return normFuncao(nome).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/(es|s)$/, ""); };
     var idFuncao = function (nome) {
       nome = String(nome || "").trim().slice(0, 40); if (!nome) return "";
-      var f = s.funcoes.filter(function (x) { return normFuncao(x.nome) === normFuncao(nome); })[0];
+      var f = s.funcoes.filter(function (x) { return normFuncao(x.nome) === normFuncao(nome); })[0] ||
+        s.funcoes.filter(function (x) { return parecida(x.nome) === parecida(nome); })[0];
       if (!f) { f = { id: uid(), nome: nome }; s.funcoes.push(f); }
       return f.id;
     };
-    if (Array.isArray(prop.funcoes)) {
-      var pedidas = prop.funcoes.map(normFuncao);
-      s.funcoes = s.funcoes.filter(function (f) { return pedidas.indexOf(normFuncao(f.nome)) >= 0 || funcaoEmUsoEm(s, f); });
-      prop.funcoes.forEach(idFuncao);
-    }
+    var pedidas = Array.isArray(prop.funcoes) ? prop.funcoes.map(idFuncao) : null;
     if (Array.isArray(prop.picos)) {
       var velhos = (s.picos || []).slice();
       s.picos = prop.picos.slice(0, 40).map(function (pc) {
@@ -2103,6 +2124,8 @@
         for (var j = 0; j < velhos.length; j++) if (velhos[j] && chave(velhos[j]) === chave(pc)) { pc.id = velhos[j].id; velhos[j] = null; return; }
       });
     }
+    // Depois de trocar os picos: sai do catálogo o que a IA não listou e ninguém (pessoa ou pico) usa.
+    if (pedidas) s.funcoes = s.funcoes.filter(function (f) { return pedidas.indexOf(f.id) >= 0 || funcaoEmUsoEm(s, f); });
     if (prop.remontar) { gerarTudo(s); s.pendente = false; }
     else if (JSON.stringify([s.funcionamento, s.equipe, s.intervaloMin, s.picos]) !== antesEstr) s.pendente = true;
     (prop.celulas || []).forEach(function (c) {
@@ -2127,6 +2150,17 @@
         txt: "Você pediu <b>" + maxP + " pessoas trabalhando ao mesmo tempo</b> (" + dias.map(function (d) { return NOME_DIA_CURTO[d].toLowerCase(); }).join(", ") + ") e a equipe tem " + n + ". Com 2 folgas por semana para cada um, isso nunca fecha: é por isso que sobram horas sem cobertura. " + maxP + " é o total da equipe ou quantas precisam estar na loja juntas?",
         ex: "Ex.: são " + n + " no total. Normalmente ficam " + Math.max(1, Math.round(n / 2)) + " ao mesmo tempo, e no domingo 2.",
         pre: "Correção do número de pessoas ao mesmo tempo. O painel perguntou: \"Você pediu " + maxP + " pessoas trabalhando ao mesmo tempo e a equipe tem " + n + ". É o total da equipe ou quantas precisam estar juntas?\" Minha resposta: ",
+        chips: []
+      });
+    }
+    var maxPico = abertos.reduce(function (m, d) { return Math.max(m, pessoasNecessarias(s, d)); }, 0);
+    if (n >= 2 && maxPico > maxP && maxPico >= n) {
+      var diasP = abertos.filter(function (d) { return pessoasNecessarias(s, d) >= n; });
+      lista.push({
+        k: "pico:" + maxPico + ":" + n,
+        txt: "Um horário de pico pede <b>" + maxPico + " pessoas trabalhando ao mesmo tempo</b> (" + diasP.map(function (d) { return NOME_DIA_CURTO[d].toLowerCase(); }).join(", ") + ") e a equipe tem " + n + ". Com folgas e almoço, isso não fecha. São mesmo " + maxPico + " pessoas juntas nesse horário?",
+        ex: "Ex.: no pico ficam " + Math.max(1, n - 2) + " pessoas juntas.",
+        pre: "Correção do horário de pico. O painel perguntou: \"Um horário de pico pede " + maxPico + " pessoas ao mesmo tempo e a equipe tem " + n + ". São mesmo " + maxPico + " juntas?\" Minha resposta: ",
         chips: []
       });
     }
@@ -2900,5 +2934,5 @@
   }
 
   // Usado pelo teste automatizado.
-  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, problemas: problemas, normalizar: normalizar, necessidade: necessidade, jornadaPropria: jornadaPropria, turnoDoGrupo: turnoDoGrupo, conflitosPar: conflitosPar, mulheresSemDomingo: mulheresSemDomingo, problemasLei: problemasLei, render: function () { render(); } };
+  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, problemas: problemas, duvidas: duvidas, pessoasNecessarias: pessoasNecessarias, normalizar: normalizar, necessidade: necessidade, jornadaPropria: jornadaPropria, turnoDoGrupo: turnoDoGrupo, conflitosPar: conflitosPar, mulheresSemDomingo: mulheresSemDomingo, problemasLei: problemasLei, render: function () { render(); } };
 })();

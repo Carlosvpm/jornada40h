@@ -683,6 +683,54 @@ try {
     ok(r.pend === false && r.id === "k", "proposta da IA igual ao atual não deixa a escala pendente: " + JSON.stringify([r.pend, r.id]));
   }
 
+  console.log("26. ajustes finos de função e pico");
+  {
+    const r = await p2.evaluate(est => {
+      const J = window.__j40h, c = o => JSON.parse(JSON.stringify(o)), out = {};
+      const base = J.normalizar(Object.assign(c(est), { intervalo: "fora" }));
+      base.funcoes.push({ id: "fz", nome: "Fiscal" });
+      base.picos = [{ id: "k1", dias: ["sab"], inicio: "08:00", fim: "10:00", funcao: "fz", pessoas: 1 }];
+      const ctx = J.contextoIA(base);
+      const novo = J.aplicarProposta({ equipe: ctx.equipe, funcoes: ["atendente", "caixa"], picos: [{ dias: ["seg"], inicio: "11:00", fim: "14:00", funcao: "Caixas", pessoas: 1 }], remontar: false, celulas: [] }, base);
+      out.funcoes = novo.funcoes.map(f => f.nome).sort();
+      out.picoCaixa = novo.picos[0].funcao === base.funcoes.find(f => f.nome === "caixa").id;
+      const sT = J.normalizar(Object.assign(c(est), { intervalo: "fora", picos: [{ dias: ["seg"], inicio: "11:00", fim: "14:00", funcao: "", pessoas: 4 }] }));
+      out.nec = [J.pessoasNecessarias(sT, "seg"), J.pessoasNecessarias(sT, "ter")];
+      const sG = J.normalizar(Object.assign(c(est), { intervalo: "fora", picos: [{ dias: ["sab"], inicio: "11:00", fim: "14:00", funcao: "", pessoas: 9 }] }));
+      out.duv = J.duvidas(sG).map(d => d.k);
+      return out;
+    }, estado);
+    ok(JSON.stringify(r.funcoes) === '["atendente","caixa"]', "IA: função só de pico removido sai do catálogo: " + JSON.stringify(r.funcoes));
+    ok(r.picoCaixa, "IA: 'Caixas' no pico vira a função caixa (sem função nova)");
+    ok(JSON.stringify(r.nec) === "[4,2]", "pessoas necessárias do dia contam o pico: " + JSON.stringify(r.nec));
+    ok(r.duv.some(k => /^pico:/.test(k)), "dúvida quando o pico pede mais gente que a equipe: " + JSON.stringify(r.duv));
+
+    const pa = await (await browser.newContext({ viewport: { width: 1360, height: 900 } })).newPage();
+    await pa.addInitScript(() => { try { localStorage.setItem("j40h:vista", "pessoa"); } catch (e) {} });
+    const ea = []; pa.on("pageerror", e => ea.push(e.message));
+    const est26 = Object.assign({}, estado, { intervalo: "fora", funcoes: [{ id: "fa", nome: "atendente" }, { id: "fc", nome: "caixa" }],
+      picos: [{ id: "k1", dias: ["seg"], inicio: "11:00", fim: "14:00", funcao: "fc", pessoas: 3 }] });
+    await pa.goto(BASE + "/app/#d=" + Buffer.from(JSON.stringify(est26)).toString("base64url"));
+    await pa.waitForSelector("#grid button.cell");
+    ok(/só 2 pessoas da equipe são caixa/.test(await pa.textContent("#alertas")), "alerta diz quantos da equipe têm a função");
+    await pa.click("#cfg > summary");
+    const linha = '#tblPicos tr[data-pico="k1"]';
+    await pa.fill(`${linha} [data-pk="fim"]`, "11:00");
+    await pa.press(`${linha} [data-pk="fim"]`, "Tab");
+    const s26 = await pa.evaluate(() => window.__j40h.state.picos[0]);
+    ok(s26 && s26.fim === "14:00" && await pa.inputValue(`${linha} [data-pk="fim"]`) === "14:00", "pico com início igual ao fim é recusado");
+    await pa.fill(`${linha} [data-pk="fim"]`, "10:00");
+    await pa.press(`${linha} [data-pk="fim"]`, "Tab");
+    ok(/dia seguinte/.test(await pa.textContent(linha)), "fim antes do início avisa que vai para o dia seguinte");
+    await pa.fill('#tblFuncoes input[data-fn="fc"]', "Operador");
+    await pa.press('#tblFuncoes input[data-fn="fc"]', "Tab");
+    ok(await pa.evaluate(() => document.activeElement && document.activeElement.tagName !== "BODY"), "renomear função não perde o foco");
+    const vals = await pa.$$eval('#tblEquipe input[data-e="funcao"]', xs => xs.map(x => x.value));
+    ok(vals.filter(v => v === "Operador").length === 2, "tabela da equipe mostra o nome novo: " + JSON.stringify(vals));
+    ok(!ea.length, "sem erro de JavaScript (26)" + (ea.length ? ": " + ea.join(" | ") : ""));
+    await pa.close();
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();

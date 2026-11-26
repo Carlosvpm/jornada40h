@@ -246,7 +246,7 @@ function montarDias(funcionamento, regras, picos) {
       for (var t = abre; t < fecha; t += BLOCO_MIN) {
         var nb = necessidadeBloco({ pessoas: pessoas, picos: pd }, t);
         demanda += nb.total * Math.min(BLOCO_MIN, fecha - t) / 60;
-        for (var f in nb.porFuncao) picoFuncao[f] = Math.max(picoFuncao[f] || 0, nb.porFuncao[f]);
+        for (var fn in nb.porFuncao) picoFuncao[fn] = Math.max(picoFuncao[fn] || 0, nb.porFuncao[fn]);
       }
     }
     info[d] = {

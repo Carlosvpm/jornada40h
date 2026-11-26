@@ -659,3 +659,4 @@ dialog h3 { margin: 0 0 14px; text-transform: none; letter-spacing: -.01em; colo
 }
 .kpi.kpi-pulsa { animation: kpiPulsa .9s ease-out both; }
 @keyframes kpiPulsa { 0% { transform: translateY(0); } 30% { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(230,184,74,.25); border-color: var(--gold); } 100% { transform: translateY(0); } }
+#tblPicos .noite:not([hidden]) { display: block; margin-top: 4px; }
