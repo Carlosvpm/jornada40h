@@ -545,7 +545,7 @@ try {
       const sC = comP([{ dias: ["seg"], inicio: "11:00", fim: "14:00", funcao: cx, pessoas: 1 }]);
       out.nec = [J.necessidade(sT, "seg", 720).total, J.necessidade(sT, "seg", 600).total, J.necessidade(sC, "seg", 720).porFuncao.caixa];
       const s0 = comP([]);
-      out.falta = [J.calcular(s0, "42", "A").falta, J.calcular(sT, "42", "A").falta];
+      out.falta = [J.calcular(s0, "42", "A").dias.seg.blocos.filter(b => b.need === 4).length, J.calcular(sT, "42", "A").dias.seg.blocos.filter(b => b.need === 4).length];
       const sF = comP([{ dias: ["seg"], inicio: "18:00", fim: "20:00", funcao: "", pessoas: 5 }]);
       out.fora = J.calcular(sF, "42", "A").dias.seg.blocos.filter(b => b.need === 5).length;
       return out;
@@ -553,8 +553,43 @@ try {
     ok(JSON.stringify(r22.funcoes) === '["atendente","caixa"]' && r22.ids === 2, "funções nascem da equipe: " + JSON.stringify(r22.funcoes));
     ok(JSON.stringify(r22.picos) === '[["",1]]', "pico com função inexistente vira qualquer; inválidos somem: " + JSON.stringify(r22.picos));
     ok(JSON.stringify(r22.nec) === "[4,2,1]", "necessidade: total e por função: " + JSON.stringify(r22.nec));
-    ok(r22.falta[1] > r22.falta[0], "pico aumenta a falta: " + JSON.stringify(r22.falta));
+    ok(r22.falta[0] === 0 && r22.falta[1] === 6, "pico entra na necessidade da cobertura: " + JSON.stringify(r22.falta));
     ok(r22.fora === 2, "pico depois do fechamento conta só no aberto");
+  }
+
+  console.log("22b. almoço fora do pico e alerta de pico");
+  {
+    const r = await p2.evaluate(est => {
+      const J = window.__j40h, c = o => JSON.parse(JSON.stringify(o)), out = {};
+      const n = J.normalizar(Object.assign(c(est), { intervalo: "fora" }));
+      const cx = n.funcoes.find(f => f.nome === "caixa").id;
+      const com = (picos, extra) => J.normalizar(Object.assign(c(est), { intervalo: "fora", funcoes: n.funcoes, picos }, extra || {}));
+      const s1 = com([{ dias: ["seg", "ter", "qua", "qui", "sex"], inicio: "11:00", fim: "14:00", funcao: cx, pessoas: 1 }]);
+      out.pico1 = ["42", "40"].flatMap(v => ["A", "B"].flatMap(w => J.calcular(s1, v, w).picos.map(x => v + w + x.d + ":" + x.ini)));
+      const s3 = com([{ dias: ["seg"], inicio: "11:00", fim: "14:00", funcao: cx, pessoas: 3 }]);
+      out.m3 = J.metricas(s3).picos; out.m0 = J.metricas(com([])).picos;
+      out.prob = J.problemas(J.metricas(com([])), J.metricas(s3));
+      const fs2 = n.funcoes.concat([{ id: "pd", nome: "padeiro" }]);
+      const sp = J.normalizar(Object.assign(c(est), { intervalo: "fora", funcoes: fs2, picos: [{ dias: ["ter"], inicio: "06:00", fim: "08:00", funcao: "pd", pessoas: 1 }] }));
+      out.padeiro = J.calcular(sp, "42", "A").picos.map(x => x.funcao + x.def);
+      const big = com([{ dias: ["seg", "ter", "qua", "qui", "sex", "sab"], inicio: "10:00", fim: "15:00", funcao: "", pessoas: 6 }]);
+      out.contratar = J.metricas(big).cus.ops.some(o => o.id === "contratar" && o.plano);
+      return out;
+    }, estado);
+    ok(!r.pico1.length, "um caixa no pico de seg a sex, com almoço fora do pico: " + JSON.stringify(r.pico1));
+    ok(r.m3 > 0 && r.m0 === 0 && r.prob.some(t => /pico/.test(t)), "métrica e antes/depois contam pico descoberto: " + JSON.stringify([r.m3, r.prob]));
+    ok(JSON.stringify(r.padeiro) === '["padeiro1"]', "pico de função que ninguém tem: alerta, sem travar: " + JSON.stringify(r.padeiro));
+    ok(r.contratar, "pico alto entra na sugestão de contratar");
+    const p9 = await (await browser.newContext({ viewport: { width: 1360, height: 900 } })).newPage();
+    await p9.addInitScript(() => { try { localStorage.setItem("j40h:vista", "pessoa"); } catch (e) {} });
+    const e9 = []; p9.on("pageerror", e => e9.push(e.message));
+    const est9 = Object.assign({}, estado, { intervalo: "fora", funcoes: [{ id: "fa", nome: "atendente" }, { id: "fc", nome: "caixa" }], picos: [{ id: "k1", dias: ["seg"], inicio: "11:00", fim: "14:00", funcao: "fc", pessoas: 3 }] });
+    await p9.goto(BASE + "/app/#d=" + Buffer.from(JSON.stringify(est9)).toString("base64url"));
+    await p9.waitForSelector("#grid button.cell");
+    const al = await p9.textContent("#alertas");
+    ok(/Segunda 11h–14h: faltam? \d caixa/.test(al), "alerta 'Segunda 11h–14h: falta(m) N caixa'");
+    ok(!e9.length, "pico sem erro de JavaScript" + (e9.length ? ": " + e9.join(" | ") : ""));
+    await p9.close();
   }
 
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));

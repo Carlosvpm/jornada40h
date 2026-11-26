@@ -434,27 +434,36 @@
     if (!fora(s)) return;
     DIAS.forEach(function (d) {
       var f = s.funcionamento[d]; if (!f) return;
-      var a = min(f.abre), need = Math.max(1, Number(f.pessoas) || 1), n = {};
+      var a = min(f.abre), dn = diaNec(s, d), n = {}, nf = {}, funcDe = {};
+      var need = function (t) { return necessidadeBloco(dn, t).total; };
+      s.equipe.forEach(function (p) { funcDe[p.id] = normFuncao(p.funcao); });
       var cs = ids.map(function (id) { return g[id] && g[id][d]; }).filter(function (c) { return c && c.tipo === "turno"; });
+      var fDaCel = {};
+      ids.forEach(function (id) { var c = g[id] && g[id][d]; if (c && c.tipo === "turno") fDaCel[cs.indexOf(c)] = funcDe[id] || ""; });
       cs.forEach(function (c) { delete c.almoco; });
       Object.keys(g).forEach(function (id) {
         var c = g[id][d]; if (!c || c.tipo !== "turno") return;
-        var ps = cs.indexOf(c) >= 0 ? [faixaTurno(c, a)] : presencas(c, s, a);
-        ps.forEach(function (x) { for (var t = a + Math.ceil((x[0] - a) / 30) * 30; t < x[1]; t += 30) n[t] = (n[t] || 0) + 1; });
+        var ps = cs.indexOf(c) >= 0 ? [faixaTurno(c, a)] : presencas(c, s, a), k = funcDe[id] || "";
+        ps.forEach(function (x) { for (var t = a + Math.ceil((x[0] - a) / 30) * 30; t < x[1]; t += 30) { n[t] = (n[t] || 0) + 1; if (k) { nf[k] = nf[k] || {}; nf[k][t] = (nf[k][t] || 0) + 1; } } });
       });
-      cs.sort(function (p, q) { return faixaTurno(p, a)[0] - faixaTurno(q, a)[0]; }).forEach(function (c) {
-        var L = pausaMin(c, s);
+      cs.map(function (c, i) { return { c: c, k: fDaCel[i] || "" }; }).sort(function (p, q) { return faixaTurno(p.c, a)[0] - faixaTurno(q.c, a)[0]; }).forEach(function (o) {
+        var c = o.c, k = o.k, L = pausaMin(c, s);
         if (L < 60) return;
         // Horários na mesma grade de 30 min da cobertura, que começa na abertura.
         var x = faixaTurno(c, a), meio = a + Math.round((x[0] + (x[1] - x[0] - L) / 2 - a) / 30) * 30, melhor = null;
         for (var t = a + Math.ceil((x[0] + 90 - a) / 30) * 30; t + L <= x[1] - 90; t += 30) {
           var folga = Infinity;
-          for (var u = t; u < t + L; u += 30) folga = Math.min(folga, (n[u] || 0) - need);
+          for (var u = t; u < t + L; u += 30) {
+            folga = Math.min(folga, (n[u] || 0) - need(u));
+            // Pico da função dela nessa meia hora: o almoço não pode deixar a função abaixo do pedido.
+            var pf = k ? necessidadeBloco(dn, u).porFuncao[k] || 0 : 0;
+            if (pf) folga = Math.min(folga, ((nf[k] || {})[u] || 0) - pf);
+          }
           if (!melhor || folga > melhor.f || (folga === melhor.f && Math.abs(t - meio) < Math.abs(melhor.t - meio))) melhor = { t: t, f: folga };
         }
         var ini = melhor ? melhor.t : meio;
         c.almoco = hhmm(ini % 1440);
-        for (var w = ini; w < ini + L; w += 30) n[w] = (n[w] || 0) - 1;
+        for (var w = ini; w < ini + L; w += 30) { n[w] = (n[w] || 0) - 1; if (k && nf[k]) nf[k][w] = (nf[k][w] || 0) - 1; }
       });
     });
   }
@@ -1246,6 +1255,10 @@
       '</ul><p class="nota">Texto conferido na compilação do Planalto. A convenção coletiva da sua categoria pode ter regras próprias (piso, adicional maior, folga no domingo); na dúvida, confirme com seu contador. Veja também as <a href="' + FONTE.ec141 + '" target="_blank" rel="noopener">regras de transição da EC 141/2026</a>.</p>';
   }
 
+  // "Segunda 11h–14h: falta 1 caixa"
+  function textoPico(x) { return NOME_DIA[x.d] + " " + falada(x.ini) + "–" + falada(x.fim) + ": " + (x.def === 1 ? "falta 1 " : "faltam " + x.def + " ") + x.funcao; }
+  function horasPico(c) { return c.picos.reduce(function (t, x) { return t + x.def * (x.fim - x.ini) / 60; }, 0); }
+
   function renderAlertas(calc, cus) {
     var li = [];
     calc.erros.forEach(function (e) { li.push('<li class="erro">' + esc(e) + "</li>"); });
@@ -1254,6 +1267,7 @@
       var dia = calc.dias[d];
       if (dia.aberto && dia.falta) li.push("<li>" + NOME_DIA[d] + ": " + esc(textoFaixa(dia.faixas)) + " (" + horas(dia.falta) + ").</li>");
     });
+    calc.picos.forEach(function (x) { li.push("<li>" + esc(textoPico(x)) + " no horário de pico.</li>"); });
     calc.avisos.forEach(function (a) { li.push("<li>" + esc(a) + "</li>"); });
     conflitosPar(state, state.versao, state.semana).forEach(function (x) {
       li.push("<li>" + esc(x.a + " e " + x.b + " folgam no mesmo dia (" + NOME_DIA[x.d].toLowerCase() + ", semana " + state.semana + "), mas foram marcadas para não folgar juntas.") + "</li>");
@@ -1776,7 +1790,7 @@
     var c = calcular(s, s.versao, s.semana), k = custos(s, s.versao, c);
     var best = k.ops.filter(function (o) { return o.best; })[0];
     var pares = SEMANAS.reduce(function (t, w) { return t + conflitosPar(s, s.versao, w).length; }, 0);
-    return { falta: c.falta, erros: c.erros.length, domingo: trabalhaTodoDomingo(s).length, pares: pares, custo: best ? best.custo : 0, folha: k.folha, calc: c, cus: k };
+    return { falta: c.falta, erros: c.erros.length, domingo: trabalhaTodoDomingo(s).length, pares: pares, picos: horasPico(c), custo: best ? best.custo : 0, folha: k.folha, calc: c, cus: k };
   }
 
   function problemas(a, b) {
@@ -1785,6 +1799,7 @@
     if (b.erros > a.erros) p.push((b.erros - a.erros) + (b.erros - a.erros === 1 ? " ponto novo fora da lei" : " pontos novos fora da lei"));
     if (b.domingo > a.domingo) p.push((b.domingo - a.domingo) + (b.domingo - a.domingo === 1 ? " pessoa a mais" : " pessoas a mais") + " sem nenhuma folga no domingo nas semanas A e B (Lei 10.101/2000, art. 6º)");
     if (b.pares > a.pares) p.push("mais " + (b.pares - a.pares) + (b.pares - a.pares === 1 ? " folga" : " folgas") + " no mesmo dia de quem não pode folgar junto");
+    if ((b.picos || 0) > (a.picos || 0) + 0.01) p.push("mais " + horas(b.picos - (a.picos || 0)) + " de pico sem a função pedida");
     if (b.custo > a.custo + 1) p.push("custo extra sobe " + brl(b.custo - a.custo) + "/mês");
     return p;
   }
@@ -2705,5 +2720,5 @@
   }
 
   // Usado pelo teste automatizado.
-  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, normalizar: normalizar, necessidade: necessidade, jornadaPropria: jornadaPropria, turnoDoGrupo: turnoDoGrupo, conflitosPar: conflitosPar, mulheresSemDomingo: mulheresSemDomingo, problemasLei: problemasLei, render: function () { render(); } };
+  window.__j40h = { get state() { return state; }, calcular: calcular, gerarTudo: gerarTudo, custos: custos, linkPessoal: linkPessoal, contextoIA: contextoIA, semanasIA: semanasIA, aplicarProposta: aplicarProposta, metricas: metricas, problemas: problemas, normalizar: normalizar, necessidade: necessidade, jornadaPropria: jornadaPropria, turnoDoGrupo: turnoDoGrupo, conflitosPar: conflitosPar, mulheresSemDomingo: mulheresSemDomingo, problemasLei: problemasLei, render: function () { render(); } };
 })();
