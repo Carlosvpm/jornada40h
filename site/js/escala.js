@@ -276,11 +276,37 @@ function distribuirFolgas(funcionarios, dias, regras, semana, avisos) {
   // Custo de tirar mais uma pessoa do dia d: demanda ÷ pessoas que sobram.
   function custoFolga(d) { return dias[d].demanda / (disponiveis[d] - 1); }
 
+  // Grupos do rodízio: semana A = primeira metade da equipe, B = segunda. Com mulheres e domingo aberto,
+  // elas se alternam entre A e B (para todas folgarem no domingo a cada 2 semanas) e vêm primeiro no grupo.
+  var metade = Math.ceil(funcionarios.length / 2);
+  var grupo = semana === "B" ? funcionarios.slice(metade) : funcionarios.slice(0, metade);
+  var mulheres = dias.dom.aberto ? funcionarios.filter(function (p) { return p.sexo === "F"; }) : [];
+  if (mulheres.length) {
+    var gA = mulheres.filter(function (p, i) { return i % 2 === 0; });
+    var gB = mulheres.filter(function (p, i) { return i % 2 === 1; });
+    funcionarios.forEach(function (p) {
+      if (p.sexo === "F") return;
+      if (gA.length < metade) gA.push(p); else gB.push(p);
+    });
+    grupo = semana === "B" ? gB : gA;
+  }
+
+  // Mulher: folga no domingo na semana do grupo dela (CLT, art. 386), antes de qualquer outra folga e
+  // mesmo que aperte a cobertura do domingo (a lei vem antes).
+  grupo.forEach(function (p) {
+    if (p.sexo !== "F" || folgas[p.nome].dom) return;
+    folgas[p.nome].dom = true;
+    disponiveis.dom--;
+    if (restantes[p.nome] > 0) restantes[p.nome]--;
+    else {
+      var trabalha = abertos.filter(function (d) { return !folgas[p.nome][d]; }).length;
+      avisos.push(p.nome + " trabalha " + trabalha + " dias nesta semana para folgar no domingo (CLT, art. 386).");
+    }
+  });
+
   // 2. rodízio de fim de semana
   var fds = FIM_DE_SEMANA.filter(function (d) { return dias[d].aberto; });
   if (fds.length && extrasPorPessoa > 0) {
-    var metade = Math.ceil(funcionarios.length / 2);
-    var grupo = semana === "B" ? funcionarios.slice(metade) : funcionarios.slice(0, metade);
     var folgasFds = {};
     fds.forEach(function (d) { folgasFds[d] = funcionarios.length - disponiveis[d]; });
     grupo.forEach(function (p) {

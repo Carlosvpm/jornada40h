@@ -89,5 +89,34 @@ for (const sem of ["A", "B"]) for (const [rv, rg] of [["42", V42], ["40", V40]])
   ok(junto(s, "Ana", "Bia").includes("qua") && s.avisos.some(a => /Ana e Bia folgam no mesmo dia \(quarta\)/.test(a)), "par: folga fixa igual vence o par, com aviso");
 }
 
+console.log("3. mulher folga no domingo a cada 2 semanas");
+const mulheres = (lista, idx, extra = {}) => lista.map((n, i) => Object.assign({ nome: n }, idx.includes(i) ? { sexo: "F" } : {}, extra[n] || {}));
+{
+  const eq = mulheres(NOVE, [0, 1, 2, 3]);
+  const A = monta(MERCADO, eq, "A"), B = monta(MERCADO, eq, "B");
+  const sem = [0, 1, 2, 3].map(i => NOVE[i]).filter(n => !folgasDe(A, n).includes("dom") && !folgasDe(B, n).includes("dom"));
+  ok(!sem.length, "mulher: folga no domingo em A ou B" + (sem.length ? ": " + sem.join(", ") : ""));
+  const domA = n => folgasDe(A, n).includes("dom"), domB = n => folgasDe(B, n).includes("dom");
+  ok(domA(NOVE[0]) && domA(NOVE[2]) && domB(NOVE[1]) && domB(NOVE[3]), "mulheres alternam entre A e B");
+}
+{
+  const eq = mulheres(CINCO, [0], { Ana: { folgaFixa: "sab" } });
+  const A = monta(SETE, eq, "A"), B = monta(SETE, eq, "B");
+  const tem = [A, B].some(s => { const f = folgasDe(s, "Ana"); return f.includes("sab") && f.includes("dom") && f.length === 2; });
+  ok(tem, "mulher com folga fixa no sábado ganha o domingo na semana dela");
+}
+{
+  const fechado = Object.assign({}, MERCADO, { dom: null });
+  const com = monta(fechado, mulheres(NOVE, [0, 1, 2, 3]), "A"), sem = monta(fechado, mulheres(NOVE, []), "A");
+  ok(JSON.stringify(com.grade.map(l => l.dias)) === JSON.stringify(sem.grade.map(l => l.dias)), "domingo fechado: grupos de hoje");
+}
+{
+  const cinco = func(["seg", "ter", "qua", "qui", "dom"], "08:00", "16:00", 1);
+  const eq = mulheres(["Ana", "Bia", "Caio"], [0]);
+  const A = monta(cinco, eq, "A"), B = monta(cinco, eq, "B");
+  const s = [A, B].find(x => folgasDe(x, "Ana").includes("dom"));
+  ok(!!s && s.avisos.some(a => /Ana trabalha 4 dias nesta semana para folgar no domingo/.test(a)), "abre 5 dias com domingo: folga no domingo e aviso");
+}
+
 console.log(falhas ? `\n${falhas} falha(s)` : "\nTudo ok");
 process.exit(falhas ? 1 : 0);
