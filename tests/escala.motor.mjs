@@ -154,5 +154,25 @@ ok(intervaloDe(600, 120) === 120 && intervaloDe(540, 120) === 120 && intervaloDe
   ok(JSON.stringify(a.grade) === JSON.stringify(b.grade), "intervalo 1 h explícito = padrão");
 }
 
+console.log("6. jornada própria");
+const comAna = extra => CINCO.map(n => Object.assign({ nome: n, funcao: "atendente" }, n === "Ana" ? extra : {}));
+for (const sem of ["A", "B"]) {
+  const s = monta(SETE, comAna({ horasDia: 6 }), sem);
+  const ta = turnosDe(s, "Ana");
+  ok(ta.length === 5 && ta.every(c => dur(c) === 375 && (c.rotulo === "Meio" || c.inicio === "06:00" || c.fim === "19:00")) && s.grade[0].horasSemana === 30, `jornada própria: turnos da Ana com 6 h de trabalho (${sem})` + " " + JSON.stringify(ta.map(c => c.inicio + "-" + c.fim)));
+  const outros = CINCO.slice(1).flatMap(n => turnosDe(s, n));
+  ok(outros.every(c => dur(c) === 564), `jornada própria: os outros seguem a jornada da empresa (${sem})`);
+}
+{
+  const s = monta(SETE, comAna({ horasDia: 6, horasSemana: 24 }), "A");
+  ok(s.grade[0].horasSemana === 24 && s.avisos.some(a => /Ana passaria de 24 h na semana/.test(a)), "jornada própria: horasSemana menor encurta com aviso");
+  const m = monta(SETE, comAna({ horasDia: 6, horasSemana: 40 }), "A");
+  ok(m.grade[0].horasSemana === 30 && !m.avisos.some(a => /Ana passaria/.test(a)), "jornada própria: horasSemana maior fica em 5 × horasDia");
+  const i2 = monta(SETE, comAna({ horasDia: 7 }), "A", V42_2);
+  ok(turnosDe(i2, "Ana").every(c => dur(c) === 540) && turnosDe(i2, "Ana").length === 5, "jornada própria com 2 h de intervalo");
+  const igual = monta(SETE, comAna({ horasDia: 8.4 }), "A"), sem = monta(SETE, comAna({}), "A");
+  ok(JSON.stringify(igual.grade) === JSON.stringify(sem.grade), "horasDia igual ou acima da jornada diária = integral");
+}
+
 console.log(falhas ? `\n${falhas} falha(s)` : "\nTudo ok");
 process.exit(falhas ? 1 : 0);

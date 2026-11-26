@@ -140,6 +140,30 @@ function exemploEquipe(n, tipo) {
 /* Passo 1 — dias, horas abertas, demanda e turnos possíveis             */
 /* ===================================================================== */
 
+/** Turnos possíveis de um dia [abre, fecha) com no máximo maxMin na loja (abertura / meio / fechamento). */
+function turnosDoDia(abre, fecha, maxMin) {
+  var turnos = [];
+  if (fecha - abre <= maxMin) {
+    turnos.push({ rotulo: "Turno único", inicio: abre, fim: fecha });
+  } else if (fecha - abre <= 2 * maxMin) {
+    turnos.push({ rotulo: "Abertura", inicio: abre, fim: abre + maxMin });
+    turnos.push({ rotulo: "Fechamento", inicio: fecha - maxMin, fim: fecha });
+  } else {
+    // Dia muito longo (> 2 jornadas): abertura, meio e fechamento.
+    var meioIni = Math.round((abre + fecha) / 2 - maxMin / 2);
+    turnos.push({ rotulo: "Abertura", inicio: abre, fim: abre + maxMin });
+    turnos.push({ rotulo: "Meio", inicio: meioIni, fim: meioIni + maxMin });
+    turnos.push({ rotulo: "Fechamento", inicio: fecha - maxMin, fim: fecha });
+  }
+  return turnos;
+}
+
+/** Tempo na loja (min) de quem trabalha trabMin por dia: com o almoço fora da jornada, soma o intervalo. */
+function presencaDe(trabMin, fora, intervaloMin) {
+  if (!fora) return trabMin;
+  return trabMin + (trabMin > 360 ? (intervaloMin === 120 ? 120 : 60) : trabMin > 240 ? 15 : 0);
+}
+
 /**
  * Para cada dia aberto calcula: abre/fecha em minutos, horas abertas,
  * pessoas necessárias ao mesmo tempo, demanda (pessoa-horas) e os turnos
@@ -161,19 +185,7 @@ function montarDias(funcionamento, regras) {
     if (fecha <= abre) fecha += 1440; // fecha depois da meia-noite
     var pessoas = Math.max(1, Math.round(Number(f.pessoas) || 1));
     var horas = (fecha - abre) / 60;
-    var turnos = [];
-    if (fecha - abre <= maxMin) {
-      turnos.push({ rotulo: "Turno único", inicio: abre, fim: fecha });
-    } else if (fecha - abre <= 2 * maxMin) {
-      turnos.push({ rotulo: "Abertura", inicio: abre, fim: abre + maxMin });
-      turnos.push({ rotulo: "Fechamento", inicio: fecha - maxMin, fim: fecha });
-    } else {
-      // Dia muito longo (> 2 jornadas): abertura, meio e fechamento.
-      var meioIni = Math.round((abre + fecha) / 2 - maxMin / 2);
-      turnos.push({ rotulo: "Abertura", inicio: abre, fim: abre + maxMin });
-      turnos.push({ rotulo: "Meio", inicio: meioIni, fim: meioIni + maxMin });
-      turnos.push({ rotulo: "Fechamento", inicio: fecha - maxMin, fim: fecha });
-    }
+    var turnos = turnosDoDia(abre, fecha, maxMin);
     // Com o almoço fora da jornada, cada pessoa no balcão sai 1 h para almoçar: o dia pede essas horas a
     // mais e, para alguém cobrir os almoços, gente além da que fica ao mesmo tempo.
     var almocoH = 0, extraAlmoco = 0;
@@ -409,7 +421,7 @@ function aplicarTurno(blocos, turno) {
  * Quem não acrescenta cobertura fica "livre" (reserva).
  */
 function escalarDia(dia, pessoasDisp, contagem, blocos) {
-  var porTurno = dia.turnos.map(function () { return 0; });
+  var porRotulo = {};
   var resultado = {};
   // Quem fez menos turnos na semana escolhe primeiro (equilíbrio de carga).
   var ordem = pessoasDisp.slice().sort(function (a, b) {
@@ -417,16 +429,18 @@ function escalarDia(dia, pessoasDisp, contagem, blocos) {
   });
   ordem.forEach(function (p) {
     var melhor = -1, melhorChave = null;
-    dia.turnos.forEach(function (t, i) {
+    // Quem tem jornada própria usa turnos do tamanho dela (mesmos rótulos: abertura, meio, fechamento).
+    var turnos = p.presMin ? turnosDoDia(dia.abre, dia.fecha, p.presMin) : dia.turnos;
+    turnos.forEach(function (t, i) {
       var ganho = ganhoTurno(blocos, t);
       if (ganho === 0) return;
-      var chave = [ -ganho, porTurno[i], contagem[p.nome][t.rotulo] || 0, i ];
+      var chave = [ -ganho, porRotulo[t.rotulo] || 0, contagem[p.nome][t.rotulo] || 0, i ];
       if (melhor < 0 || comparaChave(chave, melhorChave) < 0) { melhor = i; melhorChave = chave; }
     });
     if (melhor < 0) { resultado[p.nome] = { tipo: "livre" }; return; }
-    var t = dia.turnos[melhor];
+    var t = turnos[melhor];
     aplicarTurno(blocos, t);
-    porTurno[melhor]++;
+    porRotulo[t.rotulo] = (porRotulo[t.rotulo] || 0) + 1;
     contagem[p.nome][t.rotulo] = (contagem[p.nome][t.rotulo] || 0) + 1;
     contagem[p.nome].total++;
     var pres = t.fim - t.inicio;
@@ -490,6 +504,9 @@ function rotuloGrupo(grupo) {
 
 /**
  * Gera a escala semanal. Veja o README para o formato de entrada e saída.
+ * Campos opcionais: regras.intervaloMin (60 ou 120: intervalo de quem trabalha mais de 6 h, com intervaloFora);
+ * por funcionário, horasDia (jornada própria: turno com essas horas de trabalho, se menor que jornadaDiariaMax)
+ * e horasSemana (limite semanal dela, até jornadaSemanal).
  */
 function gerarEscala(input) {
   input = input || {};
@@ -516,6 +533,11 @@ function gerarEscala(input) {
     p.nome = p.nome || ("Pessoa " + (i + 1));
     p.funcao = p.funcao || "";
     p.indice = i;
+    // Jornada própria: horasDia (menor que a jornada diária) e horasSemana (até a jornada semanal).
+    var hd = Number(p.horasDia) || 0;
+    if (hd > 0 && hd < regras.jornadaDiariaMax - 1e-9) p.presMin = presencaDe(Math.round(hd * 60), !!regras.intervaloFora, regras.intervaloMin);
+    var hs = Number(p.horasSemana) || 0;
+    p.limite = hs > 0 ? Math.min(hs, regras.jornadaSemanal) : regras.jornadaSemanal;
     return p;
   });
 
@@ -587,8 +609,8 @@ function gerarEscala(input) {
   var grade = funcionarios.map(function (p) {
     var horas = 0;
     DIAS.forEach(function (d) { var c = gradePorNome[p.nome][d]; if (c.tipo === "turno") horas += c.horas; });
-    if (horas > regras.jornadaSemanal + 1e-9) {
-      var excesso = horas - regras.jornadaSemanal;
+    if (horas > p.limite + 1e-9) {
+      var excesso = horas - p.limite;
       // Encurta o fim dos últimos turnos até caber na jornada.
       for (var i = DIAS.length - 1; i >= 0 && excesso > 1e-9; i--) {
         var c = gradePorNome[p.nome][DIAS[i]];
@@ -599,8 +621,8 @@ function gerarEscala(input) {
         c.horas -= corte;
         excesso -= corte;
       }
-      horas = regras.jornadaSemanal;
-      avisos.push(p.nome + " passaria de " + regras.jornadaSemanal + " h na semana; os últimos turnos foram encurtados para caber na jornada.");
+      horas = p.limite;
+      avisos.push(p.nome + " passaria de " + fmtHoras(p.limite) + " na semana; os últimos turnos foram encurtados para caber na jornada.");
     }
     var diasObj = {};
     DIAS.forEach(function (d) {
@@ -752,4 +774,4 @@ function resumoEscala(saida) {
 /* Exportação (Node) — no Apps Script as funções ficam globais            */
 /* ===================================================================== */
 
-if (typeof module !== "undefined") module.exports = { gerarEscala, exemploEquipe, resumoEscala, intervaloDe, DIAS, NOME_DIA, NOME_DIA_CURTO, fmtHoras, fmtReais };
+if (typeof module !== "undefined") module.exports = { gerarEscala, exemploEquipe, resumoEscala, intervaloDe, turnosDoDia, presencaDe, DIAS, NOME_DIA, NOME_DIA_CURTO, fmtHoras, fmtReais };
