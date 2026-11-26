@@ -145,7 +145,7 @@
         funcao: fs.some(function (f) { return f.id === pc.funcao; }) ? pc.funcao : "",
         pessoas: Math.max(1, Math.min(50, Math.round(Number(pc.pessoas) || 1)))
       };
-    }).filter(function (pc) { return pc.dias.length && hora.test(pc.inicio) && hora.test(pc.fim) && pc.inicio !== pc.fim; });
+    }).filter(function (pc) { return hora.test(pc.inicio) && hora.test(pc.fim) && pc.inicio !== pc.fim; });
   }
   function nomeFuncao(s, id) { var f = (s.funcoes || []).filter(function (x) { return x.id === id; })[0]; return f ? f.nome : ""; }
   // Picos para o motor e para as contas: função pelo nome.
@@ -1313,7 +1313,7 @@
     var e = "<thead><tr><th>Nome</th><th>Função</th><th>Salário (opcional)</th><th>Horas/semana</th><th>Horas/dia</th><th>Folga fixa</th><th>Não pode trabalhar</th><th></th></tr></thead><tbody>";
     state.equipe.forEach(function (p) {
       e += '<tr data-id="' + p.id + '"><td><input type="text" maxlength="40" data-e="nome" value="' + esc(p.nome) + '"></td>' +
-        '<td><input type="text" maxlength="40" data-e="funcao" value="' + esc(p.funcao) + '"></td>' +
+        '<td><input type="text" maxlength="40" data-e="funcao" list="listaFuncoes" value="' + esc(p.funcao) + '"></td>' +
         '<td><input type="number" min="0" step="10" data-e="salario" placeholder="média" value="' + (p.salario || "") + '"></td>' +
         '<td><input type="number" min="0" max="60" step="1" data-e="horas" placeholder="integral" value="' + (p.horas || "") + '"></td>' +
         '<td><input type="number" min="0" max="8.4" step="0.1" data-e="horasDia" placeholder="empresa" value="' + (p.horasDia || "") + '"></td>' +
@@ -1322,6 +1322,32 @@
         '<td><button type="button" class="x" data-del="' + p.id + '" title="Remover">×</button></td></tr>';
     });
     $("#tblEquipe").innerHTML = e + "</tbody>";
+    renderFuncoesPicos();
+  }
+
+  function funcaoEmUso(f) {
+    var k = normFuncao(f.nome);
+    return (k && state.equipe.some(function (p) { return normFuncao(p.funcao) === k; })) || (state.picos || []).some(function (pc) { return pc.funcao === f.id; });
+  }
+
+  function renderFuncoesPicos() {
+    var fs = state.funcoes || [];
+    $("#listaFuncoes").innerHTML = fs.map(function (f) { return '<option value="' + esc(f.nome) + '">'; }).join("");
+    $("#tblFuncoes").innerHTML = "<tbody>" + fs.map(function (f) {
+      var n = state.equipe.filter(function (p) { return f.nome && normFuncao(p.funcao) === normFuncao(f.nome); }).length, uso = funcaoEmUso(f);
+      return '<tr><td><input type="text" maxlength="40" data-fn="' + esc(f.id) + '" value="' + esc(f.nome) + '" placeholder="nome da função"></td><td class="muted sm">' + n + (n === 1 ? " pessoa" : " pessoas") + "</td>" +
+        '<td><button type="button" class="x" data-fdel="' + esc(f.id) + '"' + (uso ? ' disabled title="Em uso por alguém da equipe ou num horário de pico"' : ' title="Remover"') + ">×</button></td></tr>";
+    }).join("") + "</tbody>";
+    var opc = function (sel) { return '<option value="">qualquer função</option>' + fs.filter(function (f) { return f.nome; }).map(function (f) { return '<option value="' + esc(f.id) + '"' + (f.id === sel ? " selected" : "") + ">" + esc(f.nome) + "</option>"; }).join(""); };
+    var ps = state.picos || [];
+    $("#tblPicos").innerHTML = (ps.length ? "<thead><tr><th>Dias</th><th>Das</th><th>Às</th><th>Função</th><th>Pessoas</th><th></th></tr></thead>" : "") + "<tbody>" + ps.map(function (pc) {
+      return '<tr data-pico="' + esc(pc.id) + '"><td>' + chipsDias(pc.dias, "pd") + "</td>" +
+        '<td><input type="time" step="60" data-pk="inicio" value="' + esc(pc.inicio) + '"></td>' +
+        '<td><input type="time" step="60" data-pk="fim" value="' + esc(pc.fim) + '"></td>' +
+        '<td><select data-pk="funcao">' + opc(pc.funcao) + "</select></td>" +
+        '<td><input type="number" min="1" max="50" step="1" data-pk="pessoas" value="' + pc.pessoas + '"></td>' +
+        '<td><button type="button" class="x" data-pdel="' + esc(pc.id) + '" title="Remover">×</button></td></tr>';
+    }).join("") + "</tbody>";
   }
 
   /* ------------------------------------------------------------------ */
@@ -1504,8 +1530,51 @@
       }
       var k = e.target.dataset.e;
       p[k] = k === "salario" ? (Number(e.target.value) || null) : k === "horas" ? (Number(e.target.value) > 0 ? Math.min(60, Math.round(Number(e.target.value))) : null) : k === "horasDia" ? horasDiaDe(e.target.value) : e.target.value.trim();
-      if (k === "folgaFixa" || k === "horas" || k === "horasDia") marcarPendente();
+      if (k === "folgaFixa" || k === "horas" || k === "horasDia" || (k === "funcao" && (state.picos || []).length)) marcarPendente();
+      if (k === "funcao") { normalizarFuncoesPicos(state); renderFuncoesPicos(); }
       salvar(); render();
+    });
+    // Funções: renomear (atualiza quem tem a função), adicionar e remover (só sem uso).
+    $("#tblFuncoes").addEventListener("change", function (e) {
+      var id = e.target.dataset.fn; if (!id) return;
+      var f = state.funcoes.filter(function (x) { return x.id === id; })[0]; if (!f) return;
+      var novo = e.target.value.trim().slice(0, 40), antigo = f.nome;
+      if (!novo) { if (!funcaoEmUso(f)) state.funcoes = state.funcoes.filter(function (x) { return x !== f; }); salvar(); renderCfg(); return; }
+      if (state.funcoes.some(function (x) { return x !== f && normFuncao(x.nome) === normFuncao(novo); })) { toast("Já existe uma função com esse nome."); renderFuncoesPicos(); return; }
+      state.equipe.forEach(function (p) { if (antigo && normFuncao(p.funcao) === normFuncao(antigo)) p.funcao = novo; });
+      f.nome = novo;
+      salvar(); renderCfg(); render();
+    });
+    $("#tblFuncoes").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-fdel]"); if (!b || b.disabled) return;
+      state.funcoes = state.funcoes.filter(function (x) { return x.id !== b.dataset.fdel; });
+      salvar(); renderCfg();
+    });
+    $("#btnAddFuncao").addEventListener("click", function () {
+      state.funcoes.push({ id: uid(), nome: "" });
+      renderFuncoesPicos();
+      var ins = document.querySelectorAll("#tblFuncoes input[data-fn]"); if (ins.length) ins[ins.length - 1].focus();
+    });
+    // Horários de pico: cada mudança vale quando a escala é montada de novo.
+    $("#tblPicos").addEventListener("change", function (e) {
+      var tr = e.target.closest("tr[data-pico]"); if (!tr) return;
+      var pc = state.picos.filter(function (x) { return x.id === tr.dataset.pico; })[0]; if (!pc) return;
+      if (e.target.dataset.pd) pc.dias = Array.prototype.map.call(tr.querySelectorAll("[data-pd]:checked"), function (x) { return x.dataset.pd; });
+      var k = e.target.dataset.pk;
+      if (k === "inicio" || k === "fim") pc[k] = e.target.value || pc[k];
+      if (k === "funcao") pc.funcao = e.target.value;
+      if (k === "pessoas") pc.pessoas = Math.max(1, Math.min(50, Math.round(Number(e.target.value) || 1)));
+      marcarPendente(); salvar(); render();
+    });
+    $("#tblPicos").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-pdel]"); if (!b) return;
+      state.picos = state.picos.filter(function (x) { return x.id !== b.dataset.pdel; });
+      marcarPendente(); salvar(); renderCfg(); render();
+    });
+    $("#btnAddPico").addEventListener("click", function () {
+      state.picos = state.picos || [];
+      state.picos.push({ id: uid(), dias: [], inicio: "11:00", fim: "14:00", funcao: "", pessoas: 1 });
+      renderFuncoesPicos();
     });
     $("#tblEquipe").addEventListener("click", function (e) {
       var b = e.target.closest("[data-del]"); if (!b) return;
@@ -1664,7 +1733,10 @@
       marcarPendente();
     } else if (p.folgaFixa !== fixa || p.naoPode.join() !== naoPode.join()) marcarPendente();
     p.nome = nome;
+    var funcAntes = p.funcao;
     p.funcao = $("#pFuncao").value.trim();
+    if (normFuncao(funcAntes) !== normFuncao(p.funcao) && (state.picos || []).length) marcarPendente();
+    normalizarFuncoesPicos(state);
     p.salario = Number($("#pSal").value) || null;
     var hs = Number($("#pHoras").value) > 0 ? Math.min(60, Math.round(Number($("#pHoras").value))) : null;
     if (hs !== (p.horas || null)) { p.horas = hs; marcarPendente(); }

@@ -192,6 +192,17 @@
           <div class="grid-scroll"><table class="tbl" id="tblHorario"></table></div>
           <label class="cfg-int">Intervalo para refeição<select id="fIntervalo"><option value="60">1 h</option><option value="120">2 h</option></select><small>Turno de mais de 6 h tem de 1 a 2 h de intervalo, que não conta como hora trabalhada (CLT, art. 71).</small></label>
 
+          <h3>Funções</h3>
+          <p class="muted sm">As funções da sua equipe. Renomear muda o nome em quem tem a função.</p>
+          <div class="grid-scroll"><table class="tbl tbl-fn" id="tblFuncoes"></table></div>
+          <button class="b ghost sm" id="btnAddFuncao" type="button">+ Adicionar função</button>
+
+          <h3>Horários de pico</h3>
+          <p class="muted sm">Horários em que precisa de mais gente ou de uma função (ex.: 1 caixa das 11h às 14h). Valem quando a escala é montada de novo.</p>
+          <div class="grid-scroll"><table class="tbl" id="tblPicos"></table></div>
+          <button class="b ghost sm" id="btnAddPico" type="button">+ Adicionar horário de pico</button>
+          <datalist id="listaFuncoes"></datalist>
+
           <h3>Equipe</h3>
           <div class="grid-scroll"><table class="tbl" id="tblEquipe"></table></div>
           <button class="b ghost sm" id="btnAddPessoa" type="button">+ Adicionar pessoa</button>
@@ -236,7 +247,7 @@
     <h3 id="dlgPTitulo">Pessoa</h3>
     <div class="row2">
       <label>Nome<input type="text" id="pNome" maxlength="40" autocomplete="off"></label>
-      <label>Função<input type="text" id="pFuncao" maxlength="40" placeholder="atendente, caixa…" autocomplete="off"></label>
+      <label>Função<input type="text" id="pFuncao" maxlength="40" placeholder="atendente, caixa…" autocomplete="off" list="listaFuncoes"></label>
     </div>
     <div class="row2">
       <label>Salário (opcional)<input type="number" id="pSal" min="0" step="10" inputmode="decimal" placeholder="usa a média"></label>

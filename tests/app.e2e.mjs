@@ -592,6 +592,50 @@ try {
     await p9.close();
   }
 
+  console.log("24. telas de função e pico");
+  {
+    const pa = await (await browser.newContext({ viewport: { width: 1360, height: 900 } })).newPage();
+    await pa.addInitScript(() => { try { localStorage.setItem("j40h:vista", "pessoa"); } catch (e) {} });
+    const ea = []; pa.on("pageerror", e => ea.push(e.message));
+    await pa.goto(BASE + "/app/#d=" + Buffer.from(JSON.stringify(Object.assign({}, estado, { intervalo: "fora" }))).toString("base64url"));
+    await pa.waitForSelector("#grid button.cell");
+    await pa.click("#cfg > summary");
+    const st = () => pa.evaluate(() => JSON.parse(JSON.stringify(window.__j40h.state)));
+    await pa.click("#btnAddFuncao");
+    await pa.fill("#tblFuncoes tr:last-child input[data-fn]", "Padeiro");
+    await pa.press("#tblFuncoes tr:last-child input[data-fn]", "Enter");
+    let s1 = await st();
+    ok(s1.funcoes.some(f => f.nome === "Padeiro"), "adicionar função");
+    ok(await pa.isEnabled('#tblFuncoes tr:last-child [data-fdel]') && await pa.isDisabled(`#tblFuncoes [data-fdel="${s1.funcoes.find(f => f.nome === "caixa").id}"]`), "remover só função sem uso");
+    await pa.click('#tblFuncoes tr:last-child [data-fdel]');
+    s1 = await st();
+    ok(!s1.funcoes.some(f => f.nome === "Padeiro"), "função sem uso removida");
+    const cx = s1.funcoes.find(f => f.nome === "caixa").id;
+    await pa.click("#btnAddPico");
+    const linha = "#tblPicos tbody tr:last-child";
+    for (const d of ["seg", "ter"]) await pa.check(`${linha} [data-pd="${d}"]`, { force: true });
+    await pa.fill(`${linha} [data-pk="inicio"]`, "11:00");
+    await pa.fill(`${linha} [data-pk="fim"]`, "14:00");
+    await pa.selectOption(`${linha} [data-pk="funcao"]`, cx);
+    await pa.fill(`${linha} [data-pk="pessoas"]`, "2");
+    await pa.press(`${linha} [data-pk="pessoas"]`, "Tab");
+    s1 = await st();
+    ok(s1.picos.length === 1 && JSON.stringify(s1.picos[0].dias) === '["seg","ter"]' && s1.picos[0].inicio === "11:00" && s1.picos[0].fim === "14:00" && s1.picos[0].funcao === cx && s1.picos[0].pessoas === 2 && s1.pendente, "pico cadastrado e escala marcada para montar de novo: " + JSON.stringify(s1.picos));
+    await pa.fill(`#tblFuncoes input[data-fn="${cx}"]`, "Operador de caixa");
+    await pa.press(`#tblFuncoes input[data-fn="${cx}"]`, "Enter");
+    s1 = await st();
+    ok(s1.equipe.filter(p => p.funcao === "Operador de caixa").length === 2 && s1.picos[0].funcao === cx, "renomear função atualiza a equipe e o pico segue");
+    await pa.click(`${linha} [data-pdel]`);
+    ok((await st()).picos.length === 0, "remover pico");
+    ok(await pa.getAttribute("#pFuncao", "list") === "listaFuncoes", "ficha usa a lista de funções");
+    await pa.click('#grid [data-pessoa="p0"]');
+    await pa.fill("#pFuncao", "Confeiteiro");
+    await pa.click('#dlgPForm button[value="ok"]');
+    ok((await st()).funcoes.some(f => f.nome === "Confeiteiro"), "função nova da ficha entra no catálogo");
+    ok(!ea.length, "telas sem erro de JavaScript" + (ea.length ? ": " + ea.join(" | ") : ""));
+    await pa.close();
+  }
+
   ok(!erros.length, "sem erro de JavaScript" + (erros.length ? ": " + erros.join(" | ") : ""));
 } finally {
   await browser.close();
