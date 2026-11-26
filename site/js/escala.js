@@ -177,12 +177,44 @@ function presencaDe(trabMin, fora, intervaloMin) {
   return trabMin + (trabMin > 360 ? (intervaloMin === 120 ? 120 : 60) : trabMin > 240 ? 15 : 0);
 }
 
+/** Nome de função comparável: sem espaços nas pontas e em minúsculas. */
+function normFuncao(nome) { return String(nome || "").trim().toLowerCase(); }
+
+/**
+ * Picos que valem num dia aberto, no eixo de minutos do dia (início antes da abertura − 2 h = depois da
+ * meia-noite; fim antes do início = no dia seguinte): [{ ini, fim, funcao (normalizada), pessoas }].
+ */
+function picosDoDia(picos, d, abre) {
+  var out = [];
+  (picos || []).forEach(function (pc) {
+    if (!pc || (pc.dias || []).indexOf(d) < 0) return;
+    var n = Math.max(1, Math.round(Number(pc.pessoas) || 1));
+    var ini = paraMinutos(pc.inicio), fim = paraMinutos(pc.fim);
+    if (isNaN(ini) || isNaN(fim) || ini === fim) return;
+    if (ini < abre - 120) ini += 1440;
+    if (fim <= ini) fim += 1440;
+    out.push({ ini: ini, fim: fim, funcao: normFuncao(pc.funcao), pessoas: n });
+  });
+  return out;
+}
+
+/** Necessidade de um bloco que começa em t: total (máximo entre pessoas e a soma dos picos) e por função. */
+function necessidadeBloco(dia, t) {
+  var soma = 0, porFuncao = {};
+  (dia.picos || []).forEach(function (pc) {
+    if (t < pc.ini || t >= pc.fim) return;
+    soma += pc.pessoas;
+    if (pc.funcao) porFuncao[pc.funcao] = (porFuncao[pc.funcao] || 0) + pc.pessoas;
+  });
+  return { total: Math.max(dia.pessoas, soma), porFuncao: porFuncao };
+}
+
 /**
  * Para cada dia aberto calcula: abre/fecha em minutos, horas abertas,
  * pessoas necessárias ao mesmo tempo, demanda (pessoa-horas) e os turnos
  * possíveis (abertura / meio / fechamento), já limitados à jornada diária.
  */
-function montarDias(funcionamento, regras) {
+function montarDias(funcionamento, regras, picos) {
   var info = {};
   var maxMin = regras.jornadaDiariaMax * 60;
   // intervaloFora: o almoço fica fora da jornada, então o turno na loja é a jornada + o intervalo
@@ -207,9 +239,19 @@ function montarDias(funcionamento, regras) {
       var maior = Math.max.apply(null, turnos.map(function (t) { return t.fim - t.inicio; }));
       if (almocoH) extraAlmoco = Math.ceil(almocoH * 60 / Math.max(60, maior - 180));
     }
+    var pd = picosDoDia(picos, d, abre), demanda = horas * pessoas, picoFuncao = {};
+    if (pd.length) {
+      // Com pico, a demanda soma o necessário de cada meia hora; picoFuncao guarda o maior pedido por função.
+      demanda = 0;
+      for (var t = abre; t < fecha; t += BLOCO_MIN) {
+        var nb = necessidadeBloco({ pessoas: pessoas, picos: pd }, t);
+        demanda += nb.total * Math.min(BLOCO_MIN, fecha - t) / 60;
+        for (var f in nb.porFuncao) picoFuncao[f] = Math.max(picoFuncao[f] || 0, nb.porFuncao[f]);
+      }
+    }
     info[d] = {
-      aberto: true, abre: abre, fecha: fecha, horas: horas, pessoas: pessoas,
-      demanda: horas * pessoas + almocoH, turnos: turnos,
+      aberto: true, abre: abre, fecha: fecha, horas: horas, pessoas: pessoas, picos: pd, picoFuncao: picoFuncao,
+      demanda: demanda + almocoH, turnos: turnos,
       intervaloFora: fora, intervaloMin: im,
       // quantas pessoas cobririam o dia inteiro sem buraco
       pessoasParaCobrir: pessoas * turnos.length + extraAlmoco
@@ -303,7 +345,16 @@ function distribuirFolgas(funcionarios, dias, regras, semana, avisos) {
   function podeFolgar(d) { return disponiveis[d] - 1 >= 1; }
 
   // Custo de tirar mais uma pessoa do dia d: demanda ÷ pessoas que sobram.
-  function custoFolga(d) { return dias[d].demanda / (disponiveis[d] - 1); }
+  // p (opcional): folga que deixa a função dela abaixo do pico do dia custa muito mais.
+  function custoFolga(d, p) {
+    var c = dias[d].demanda / (disponiveis[d] - 1), f = p ? normFuncao(p.funcao) : "";
+    var pede = f && dias[d].picoFuncao ? dias[d].picoFuncao[f] || 0 : 0;
+    if (pede) {
+      var tem = funcionarios.filter(function (q) { return normFuncao(q.funcao) === f && !folgas[q.nome][d]; }).length;
+      if (tem - 1 < pede) c += 1000;
+    }
+    return c;
+  }
 
   // Grupos do rodízio: semana A = primeira metade da equipe, B = segunda. Com mulheres e domingo aberto,
   // elas se alternam entre A e B (para todas folgarem no domingo a cada 2 semanas) e vêm primeiro no grupo.
@@ -354,7 +405,7 @@ function distribuirFolgas(funcionarios, dias, regras, semana, avisos) {
         if (!podeFolgar(d) || juntoCom(p, d)) return;
         var limite = Math.max(1, mediaPorDia, disponiveis[d] - dias[d].pessoasParaCobrir);
         if (folgasFds[d] >= limite) return;
-        if (!melhor || custoFolga(d) < custoFolga(melhor)) melhor = d;
+        if (!melhor || custoFolga(d, p) < custoFolga(melhor, p)) melhor = d;
       });
       if (melhor) {
         folgas[p.nome][melhor] = true;
@@ -376,7 +427,7 @@ function distribuirFolgas(funcionarios, dias, regras, semana, avisos) {
         if (melhor) return;
         abertos.forEach(function (d) {
           if (folgas[p.nome][d] || !podeFolgar(d) || (!aceitaPar && juntoCom(p, d))) return;
-          if (!melhor || custoFolga(d) < custoFolga(melhor) - 1e-9) melhor = d;
+          if (!melhor || custoFolga(d, p) < custoFolga(melhor, p) - 1e-9) melhor = d;
         });
         forcado = aceitaPar;
       });
@@ -404,25 +455,32 @@ function distribuirFolgas(funcionarios, dias, regras, semana, avisos) {
 function criarBlocos(dia) {
   var blocos = [];
   for (var t = dia.abre; t < dia.fecha; t += BLOCO_MIN) {
-    blocos.push({ hora: paraHora(t), inicio: t, necessario: dia.pessoas, escalado: 0 });
+    var nb = necessidadeBloco(dia, t);
+    blocos.push({ hora: paraHora(t), inicio: t, necessario: nb.total, escalado: 0, porFuncao: nb.porFuncao, escFuncao: {} });
   }
   return blocos;
 }
 
 /** Quantos blocos ainda descobertos este turno cobriria. */
-function ganhoTurno(blocos, turno) {
+// funcao (normalizada): blocos onde falta essa função no pico valem 2 a mais (o caixa vai para o pico de caixa).
+function ganhoTurno(blocos, turno, funcao) {
   var g = 0;
   for (var i = 0; i < blocos.length; i++) {
     var b = blocos[i];
-    if (b.inicio >= turno.inicio && b.inicio < turno.fim && b.escalado < b.necessario) g++;
+    if (b.inicio < turno.inicio || b.inicio >= turno.fim) continue;
+    if (b.escalado < b.necessario) g++;
+    if (funcao && b.porFuncao[funcao] && (b.escFuncao[funcao] || 0) < b.porFuncao[funcao]) g += 2;
   }
   return g;
 }
 
-function aplicarTurno(blocos, turno) {
+function aplicarTurno(blocos, turno, funcao) {
   for (var i = 0; i < blocos.length; i++) {
     var b = blocos[i];
-    if (b.inicio >= turno.inicio && b.inicio < turno.fim) b.escalado++;
+    if (b.inicio >= turno.inicio && b.inicio < turno.fim) {
+      b.escalado++;
+      if (funcao) b.escFuncao[funcao] = (b.escFuncao[funcao] || 0) + 1;
+    }
   }
 }
 
@@ -445,14 +503,14 @@ function escalarDia(dia, pessoasDisp, contagem, blocos) {
     // Quem tem jornada própria usa turnos do tamanho dela (mesmos rótulos: abertura, meio, fechamento).
     var turnos = p.trabMin ? turnosProprios(dia.abre, dia.fecha, p.trabMin, dia.intervaloFora, dia.intervaloMin) : dia.turnos;
     turnos.forEach(function (t, i) {
-      var ganho = ganhoTurno(blocos, t);
+      var ganho = ganhoTurno(blocos, t, normFuncao(p.funcao));
       if (ganho === 0) return;
       var chave = [ -ganho, porRotulo[t.rotulo] || 0, contagem[p.nome][t.rotulo] || 0, i ];
       if (melhor < 0 || comparaChave(chave, melhorChave) < 0) { melhor = i; melhorChave = chave; }
     });
     if (melhor < 0) { resultado[p.nome] = { tipo: "livre" }; return; }
     var t = turnos[melhor];
-    aplicarTurno(blocos, t);
+    aplicarTurno(blocos, t, normFuncao(p.funcao));
     porRotulo[t.rotulo] = (porRotulo[t.rotulo] || 0) + 1;
     contagem[p.nome][t.rotulo] = (contagem[p.nome][t.rotulo] || 0) + 1;
     contagem[p.nome].total++;
@@ -554,7 +612,7 @@ function gerarEscala(input) {
     return p;
   });
 
-  var dias = montarDias(input.funcionamento, regras);
+  var dias = montarDias(input.funcionamento, regras, input.picos);
   var abertos = DIAS.filter(function (d) { return dias[d].aberto; });
 
   // Saída vazia quando não dá para montar nada
@@ -790,4 +848,4 @@ function resumoEscala(saida) {
 /* Exportação (Node) — no Apps Script as funções ficam globais            */
 /* ===================================================================== */
 
-if (typeof module !== "undefined") module.exports = { gerarEscala, exemploEquipe, resumoEscala, intervaloDe, turnosDoDia, turnosProprios, presencaDe, DIAS, NOME_DIA, NOME_DIA_CURTO, fmtHoras, fmtReais };
+if (typeof module !== "undefined") module.exports = { gerarEscala, exemploEquipe, resumoEscala, intervaloDe, normFuncao, picosDoDia, necessidadeBloco, turnosDoDia, turnosProprios, presencaDe, DIAS, NOME_DIA, NOME_DIA_CURTO, fmtHoras, fmtReais };

@@ -183,5 +183,34 @@ console.log("7. revisão final");
   ok(ts.length && ts.every(c => trab(c) <= 390), "dia mais curto que o turno com 2 h: Ana não passa de 6,5 h" + " " + JSON.stringify(ts.map(c => c.inicio + "-" + c.fim)));
 }
 
+console.log("8. picos");
+const montaP = (funcionamento, funcionarios, semana, picos) =>
+  gerarEscala({ negocio: { nome: "X", tipo: "Padaria" }, funcionamento, funcionarios, salarioMedio: 1800, semana, regras: V42, picos });
+{
+  const f = func(SEG_SAB, "06:00", "19:00", 2);
+  const s = montaP(f, Array.from({ length: 7 }, (_, i) => ({ nome: "P" + i })), "A", [{ dias: SEG_SEX, inicio: "11:00", fim: "14:00", funcao: "", pessoas: 3 }]);
+  const bl = s.cobertura.seg.blocos, noPico = b => b.hora >= "11:00" && b.hora < "14:00";
+  ok(bl.filter(noPico).length === 6 && bl.every(b => b.necessario === (noPico(b) ? 3 : 2)), "pico total: 3 pessoas das 11h às 14h");
+  ok(bl.filter(noPico).every(b => b.escalado >= 3), "pico total coberto quando a equipe permite");
+}
+{
+  const eq = ["Ana", "Bia", "Caio", "Duda", "Edu", "Fabio"].map((n, i) => ({ nome: n, funcao: i < 2 ? "Caixa" : "atendente" }));
+  const pico = [{ dias: SEG_SEX, inicio: "11:00", fim: "14:00", funcao: "caixa", pessoas: 1 }];
+  const faltas = [];
+  for (const w of ["A", "B"]) {
+    const s = montaP(SETE, eq, w, pico);
+    SEG_SEX.forEach(d => {
+      const tem = ["Ana", "Bia"].some(n => { const c = s.grade.find(l => l.nome === n).dias[d]; return c.tipo === "turno" && c.inicio <= "11:00" && c.fim >= "14:00"; });
+      if (!tem) faltas.push(w + d);
+    });
+  }
+  ok(!faltas.length, "pico por função: caixa no turno do pico" + (faltas.length ? ": " + faltas.join(",") : ""));
+}
+{
+  const s = montaP(func(SEG_SAB, "06:00", "19:00", 2), CINCO.map(n => ({ nome: n })), "A", [{ dias: ["seg"], inicio: "18:00", fim: "20:00", funcao: "", pessoas: 3 }]);
+  const sobe = s.cobertura.seg.blocos.filter(b => b.necessario === 3).map(b => b.hora);
+  ok(JSON.stringify(sobe) === '["18:00","18:30"]', "pico fora do horário conta só no aberto: " + JSON.stringify(sobe));
+}
+
 console.log(falhas ? `\n${falhas} falha(s)` : "\nTudo ok");
 process.exit(falhas ? 1 : 0);
